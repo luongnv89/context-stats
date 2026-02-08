@@ -41,3 +41,9 @@ coverage/
 # Local config (user-specific)
 statusline.conf
 blogs/
+
+# Local dev/publishing scripts
+publish.sh
+npm-publish.sh
+PUBLISHING_GUIDE.md
+show_raw_claude_code_api.js
