@@ -1,10 +1,17 @@
-# Claude Code Context Stats
+<div align="center">
+  <img src="assets/logo/logo-full.svg" alt="cc-context-stats" width="320"/>
+
+  <h3>Know your zone. Ship with confidence.</h3>
+
+  <p>Real-time context monitoring for Claude Code — so you always know when you're sharp and when to wrap up.</p>
 
 [![PyPI version](https://badge.fury.io/py/cc-context-stats.svg)](https://pypi.org/project/cc-context-stats/)
 [![npm version](https://badge.fury.io/js/cc-context-stats.svg)](https://www.npmjs.com/package/cc-context-stats)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/cc-context-stats)](https://pypi.org/project/cc-context-stats/)
 [![npm Downloads](https://img.shields.io/npm/dm/cc-context-stats)](https://www.npmjs.com/package/cc-context-stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
 
 **Never run out of context unexpectedly** - monitor your session context in real-time.
 

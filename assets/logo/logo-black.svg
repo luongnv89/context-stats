@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
+  <!-- Black version for light backgrounds -->
+
+  <!-- Gauge track arc (light gray) -->
+  <path d="M 12 50 A 22 22 0 1 1 52 50" stroke="#E5E7EB" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Green zone -->
+  <path d="M 12 50 A 22 22 0 0 1 18.2 30.4" stroke="#16A34A" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Yellow zone -->
+  <path d="M 18.2 30.4 A 22 22 0 0 1 45.8 30.4" stroke="#D97706" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Red zone -->
+  <path d="M 45.8 30.4 A 22 22 0 0 1 52 50" stroke="#DC2626" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Needle -->
+  <line x1="32" y1="38" x2="21" y2="27" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Pivot -->
+  <circle cx="32" cy="38" r="3" fill="#16A34A"/>
+
+  <!-- Divider -->
+  <line x1="68" y1="12" x2="68" y2="52" stroke="#D1D5DB" stroke-width="1"/>
+
+  <!-- Wordmark black -->
+  <text x="82" y="30" font-family="'SF Mono', 'Fira Mono', 'Courier New', monospace" font-size="18" font-weight="700" fill="#000000" letter-spacing="-0.5">cc-context</text>
+  <text x="82" y="50" font-family="'SF Mono', 'Fira Mono', 'Courier New', monospace" font-size="14" font-weight="500" fill="#16A34A" letter-spacing="2">stats</text>
+</svg>

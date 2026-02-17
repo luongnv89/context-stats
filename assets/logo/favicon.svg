@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Favicon — ultra-minimal gauge -->
+  <rect width="16" height="16" rx="3" fill="#000000"/>
+  <!-- Gauge arc -->
+  <path d="M 2.5 12 A 6 6 0 1 1 13.5 12" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Green segment -->
+  <path d="M 2.5 12 A 6 6 0 0 1 4.6 6.4" stroke="#22C55E" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Yellow segment -->
+  <path d="M 4.6 6.4 A 6 6 0 0 1 11.4 6.4" stroke="#F59E0B" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Red segment -->
+  <path d="M 11.4 6.4 A 6 6 0 0 1 13.5 12" stroke="#EF4444" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Needle -->
+  <line x1="8" y1="8" x2="5.2" y2="5.2" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round"/>
+  <!-- Pivot -->
+  <circle cx="8" cy="8" r="1" fill="#22C55E"/>
+</svg>
