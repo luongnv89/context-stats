@@ -69,7 +69,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq bats
 
       - name: Install Python dependencies
-        run: pip install -r requirements-dev.txt
+        run: |
+          pip install -r requirements-dev.txt
+          pip install -e .
 
       - name: Install Node.js dependencies
         run: npm ci

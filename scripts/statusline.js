@@ -46,6 +46,7 @@ const RESET = '\x1b[0m';
  * Return the visible width of a string after stripping ANSI escape sequences.
  */
 function visibleWidth(s) {
+    // eslint-disable-next-line no-control-regex
     return s.replace(/\x1b\[[0-9;]*m/g, '').length;
 }
 
