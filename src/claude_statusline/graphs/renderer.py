@@ -68,6 +68,26 @@ class GraphRenderer:
         self.colors = colors or ColorManager(enabled=True)
         self.dimensions = dimensions or GraphDimensions.detect()
         self.token_detail = token_detail
+        self._output_lines: list[str] | None = None
+
+    def begin_buffering(self) -> None:
+        """Start buffering output instead of printing directly."""
+        self._output_lines = []
+
+    def get_buffer(self) -> str:
+        """Return buffered output as a single string and stop buffering."""
+        if self._output_lines is None:
+            return ""
+        result = "\n".join(self._output_lines)
+        self._output_lines = None
+        return result
+
+    def _emit(self, line: str = "") -> None:
+        """Emit a line of output. Buffers if buffering is active, otherwise prints."""
+        if self._output_lines is not None:
+            self._output_lines.append(line)
+        else:
+            print(line)
 
     def render_timeseries(
         self,
@@ -101,14 +121,14 @@ class GraphRenderer:
         height = self.dimensions.graph_height
 
         # Print title and stats
-        print()
-        print(f"{self.colors.bold}{title}{self.colors.reset}")
-        print(
+        self._emit()
+        self._emit(f"{self.colors.bold}{title}{self.colors.reset}")
+        self._emit(
             f"{self.colors.dim}Max: {format_tokens(max_val, self.token_detail)}  "
             f"Min: {format_tokens(min_val, self.token_detail)}  "
             f"Points: {n}{self.colors.reset}"
         )
-        print()
+        self._emit()
 
         # Build the graph grid
         grid = self._build_grid(data, min_val, max_val, value_range, width, height)
@@ -124,13 +144,13 @@ class GraphRenderer:
                 label = ""
 
             row_data = grid[r] if r < len(grid) else " " * width
-            print(
+            self._emit(
                 f"{label:>10} {self.colors.dim}│{self.colors.reset}"
                 f"{color}{row_data}{self.colors.reset}"
             )
 
         # X-axis
-        print(f"{'':>10} {self.colors.dim}└{'─' * width}{self.colors.reset}")
+        self._emit(f"{'':>10} {self.colors.dim}└{'─' * width}{self.colors.reset}")
 
         # Time labels
         if timestamps:
@@ -140,7 +160,7 @@ class GraphRenderer:
             mid_time = format_timestamp(timestamps[mid_idx]) if n > 2 else ""
 
             spacing = width // 3
-            print(
+            self._emit(
                 f"{' ':>11}{self.colors.dim}"
                 f"{first_time:<{spacing}}{mid_time}{last_time:>{spacing}}"
                 f"{self.colors.reset}"
@@ -281,14 +301,14 @@ class GraphRenderer:
             status_text = "Wrap Up Zone"
             status_hint = "Better to wrap up and start a new session"
 
-        print()
-        print(f"{self.colors.bold}Session Summary{self.colors.reset}")
+        self._emit()
+        self._emit(f"{self.colors.bold}Session Summary{self.colors.reset}")
         line_width = self.dimensions.graph_width + 11
-        print(f"{self.colors.dim}{'-' * line_width}{self.colors.reset}")
+        self._emit(f"{self.colors.dim}{'-' * line_width}{self.colors.reset}")
 
         # Context remaining (before status)
         if last.context_window_size > 0:
-            print(
+            self._emit(
                 f"  {status_color}{'Context Remaining:':<20}{self.colors.reset} "
                 f"{format_tokens(remaining_context, self.token_detail)}/{format_tokens(last.context_window_size, self.token_detail)} ({remaining_percentage}%)"
             )
@@ -298,48 +318,48 @@ class GraphRenderer:
             tier = get_activity_tier(entries, last.context_window_size)
             meter_width = min(40, self.dimensions.graph_width - 10)
             meter = render_pacman_meter(usage_percentage, tier, meter_width)
-            print(f"  {status_color}{meter}{self.colors.reset}")
+            self._emit(f"  {status_color}{meter}{self.colors.reset}")
 
         # Status indicator - highlighted
         if last.context_window_size > 0:
-            print(
+            self._emit(
                 f"  {status_color}{self.colors.bold}>>> {status_text.upper()} <<<{self.colors.reset} "
                 f"{self.colors.dim}({status_hint}){self.colors.reset}"
             )
-            print()
+            self._emit()
 
         # Session details (ordered: Last Growth, I/O, Lines, Cost, Model, Duration)
         if deltas:
             current_growth = deltas[-1]
-            print(
+            self._emit(
                 f"  {self.colors.cyan}{'Last Growth:':<20}{self.colors.reset} "
                 f"+{format_tokens(current_growth, self.token_detail)}"
             )
-        print(
+        self._emit(
             f"  {self.colors.blue}{'Input Tokens:':<20}{self.colors.reset} "
             f"{format_tokens(last.current_input_tokens, self.token_detail)}"
         )
-        print(
+        self._emit(
             f"  {self.colors.magenta}{'Output Tokens:':<20}{self.colors.reset} "
             f"{format_tokens(last.current_output_tokens, self.token_detail)}"
         )
         if last.lines_added > 0 or last.lines_removed > 0:
-            print(
+            self._emit(
                 f"  {self.colors.dim}{'Lines Changed:':<20}{self.colors.reset} "
                 f"{self.colors.green}+{last.lines_added:,}{self.colors.reset} / "
                 f"{self.colors.red}-{last.lines_removed:,}{self.colors.reset}"
             )
         if last.cost_usd > 0:
-            print(
+            self._emit(
                 f"  {self.colors.yellow}{'Total Cost:':<20}{self.colors.reset} ${last.cost_usd:.4f}"
             )
         if last.model_id:
-            print(f"  {self.colors.dim}{'Model:':<20}{self.colors.reset} {last.model_id}")
-        print(
+            self._emit(f"  {self.colors.dim}{'Model:':<20}{self.colors.reset} {last.model_id}")
+        self._emit(
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
         )
-        print()
+        self._emit()
 
     def render_footer(self, version: str = "1.0.0", commit_hash: str = "dev") -> None:
         """Render the footer with version info.
@@ -348,9 +368,9 @@ class GraphRenderer:
             version: Package version
             commit_hash: Git commit hash
         """
-        print(
+        self._emit(
             f"{self.colors.dim}Powered by {self.colors.cyan}claude-statusline"
             f"{self.colors.dim} v{version}-{commit_hash} - "
             f"https://github.com/luongnv89/cc-context-stats{self.colors.reset}"
         )
-        print()
+        self._emit()

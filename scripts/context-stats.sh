@@ -1156,39 +1156,40 @@ run_watch_mode() {
     printf "%s%s" "${CLEAR_SCREEN}" "${CURSOR_HOME}"
 
     while true; do
-        # Move cursor to home and clear prior output to avoid stale characters
-        printf "%s%s" "${CURSOR_HOME}" "${CLEAR_TO_END}"
-
         # Re-read terminal dimensions in case of resize
         get_terminal_dimensions
 
-        # Show watch mode indicator with live timestamp
-        local current_time
-        current_time=$(date +%H:%M:%S)
-        echo -e "${DIM}[LIVE ${current_time}] Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit${RESET}"
+        # Capture all output into a variable for atomic write
+        local output
+        output=$(
+            # Show watch mode indicator with live timestamp
+            local current_time
+            current_time=$(date +%H:%M:%S)
+            echo -e "${DIM}[LIVE ${current_time}] Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit${RESET}"
 
-        # Handle case where state_file is empty (no sessions found at all)
-        if [ -z "$state_file" ]; then
-            local wait_msg
-            wait_msg=$(get_waiting_text "$CYCLE_COUNTER")
-            show_waiting_message "" "$wait_msg"
-        # Re-validate and render (file might have new data)
-        elif [ -f "$state_file" ]; then
-            local line_count
-            line_count=$(wc -l <"$state_file" | tr -d ' ')
-            if [ "$line_count" -ge 2 ]; then
-                render_once "$state_file"
+            # Handle case where state_file is empty (no sessions found at all)
+            if [ -z "$state_file" ]; then
+                local wait_msg
+                wait_msg=$(get_waiting_text "$CYCLE_COUNTER")
+                show_waiting_message "" "$wait_msg"
+            # Re-validate and render (file might have new data)
+            elif [ -f "$state_file" ]; then
+                local line_count
+                line_count=$(wc -l <"$state_file" | tr -d ' ')
+                if [ "$line_count" -ge 2 ]; then
+                    render_once "$state_file"
+                else
+                    show_waiting_message "$SESSION_ID" "Waiting for more data points..."
+                    echo -e "  ${DIM}Current: ${line_count} point(s), need at least 2${RESET}"
+                fi
             else
-                show_waiting_message "$SESSION_ID" "Waiting for more data points..."
-                echo -e "  ${DIM}Current: ${line_count} point(s), need at least 2${RESET}"
+                # File doesn't exist yet (new session)
+                show_waiting_message "$SESSION_ID" "Waiting for session data..."
             fi
-        else
-            # File doesn't exist yet (new session)
-            show_waiting_message "$SESSION_ID" "Waiting for session data..."
-        fi
+        )
 
-        # Clear any remaining lines from previous render (in case terminal resized smaller)
-        printf "%s" "${CLEAR_TO_END}"
+        # Atomic write: CURSOR_HOME + content + CLEAR_TO_END (clean up stale trailing lines)
+        printf "%s%s\n%s" "${CURSOR_HOME}" "$output" "${CLEAR_TO_END}"
 
         CYCLE_COUNTER=$((CYCLE_COUNTER + 1))
         sleep "$WATCH_INTERVAL"

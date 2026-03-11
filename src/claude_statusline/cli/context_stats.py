@@ -149,7 +149,7 @@ def render_once(
     watch_mode: bool = False,
     config: Config | None = None,
     cycle_index: int = 0,
-) -> bool:
+) -> bool | str:
     """Render graphs once.
 
     Args:
@@ -162,16 +162,30 @@ def render_once(
         cycle_index: Watch mode refresh counter for rotating text
 
     Returns:
-        True if rendering was successful, False if not enough data
+        True if rendering was successful (non-watch mode),
+        buffered string if watch_mode is True,
+        False if not enough data
     """
     entries = state_file.read_history()
 
     if len(entries) < 2:
-        print(f"\n{colors.yellow}Need at least 2 data points to generate graphs.{colors.reset}")
-        print(
+        msg = (
+            f"\n{colors.yellow}Need at least 2 data points to generate graphs.{colors.reset}\n"
             f"{colors.dim}Found: {len(entries)} entry. Use Claude Code to accumulate more data.{colors.reset}"
         )
+        if watch_mode:
+            return msg
+        print(msg)
         return False
+
+    # In watch mode, buffer all output
+    lines: list[str] = []
+
+    def emit(line: str = "") -> None:
+        if watch_mode:
+            lines.append(line)
+        else:
+            print(line)
 
     # Extract data for graphs
     timestamps = [e.timestamp for e in entries]
@@ -197,14 +211,14 @@ def render_once(
 
     # Header
     if not watch_mode:
-        print()
+        emit()
     if project_name:
-        print(
+        emit(
             f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
             f"{colors.dim}({colors.cyan}{project_name}{colors.dim} • {session_name}){colors.reset}"
         )
     else:
-        print(
+        emit(
             f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
             f"{colors.dim}(Session: {session_name}){colors.reset}"
         )
@@ -220,9 +234,13 @@ def render_once(
 
         if active:
             text = get_waiting_text(cycle_index, reduced_motion)
-            print(f"  {icon} {colors.dim}{text} [{label}]{colors.reset}")
+            emit(f"  {icon} {colors.dim}{text} [{label}]{colors.reset}")
         else:
-            print(f"  {icon} {colors.dim}{label}{colors.reset}")
+            emit(f"  {icon} {colors.dim}{label}{colors.reset}")
+
+    # In watch mode, enable renderer buffering
+    if watch_mode:
+        renderer.begin_buffering()
 
     # Render requested graphs
     if graph_type in ("cumulative", "both", "all"):
@@ -246,6 +264,12 @@ def render_once(
     # Summary and footer
     renderer.render_summary(entries, deltas, icon_mode=icon_mode)
     renderer.render_footer(__version__)
+
+    if watch_mode:
+        # Collect renderer buffer and combine with header lines
+        renderer_output = renderer.get_buffer()
+        lines.append(renderer_output)
+        return "\n".join(lines)
 
     return True
 
@@ -287,16 +311,15 @@ def run_watch_mode(
 
     try:
         while True:
-            # Move cursor to home and clear previous output to avoid stale characters
-            sys.stdout.write(f"{CURSOR_HOME}{CLEAR_TO_END}")
-            sys.stdout.flush()
-
             # Update dimensions in case of terminal resize
             renderer.dimensions = GraphDimensions.detect()
 
+            # Build all output into a buffer
+            buf_lines: list[str] = []
+
             # Watch mode indicator
             current_time = time.strftime("%H:%M:%S")
-            print(
+            buf_lines.append(
                 f"{colors.dim}[LIVE {current_time}] Refresh: {interval}s | Ctrl+C to exit{colors.reset}"
             )
 
@@ -306,20 +329,23 @@ def run_watch_mode(
                 # Show waiting message for new session
                 reduced_motion = config.reduced_motion if config else False
                 text = get_waiting_text(cycle_counter, reduced_motion)
-                show_waiting_message(
+                buf_lines.append(_format_waiting_message(
                     colors,
                     state_file.session_id,
                     text,
-                )
+                ))
             else:
-                # Render graphs
-                render_once(
+                # Render graphs (returns buffered string in watch mode)
+                result = render_once(
                     state_file, graph_type, renderer, colors,
                     watch_mode=True, config=config, cycle_index=cycle_counter,
                 )
+                if isinstance(result, str):
+                    buf_lines.append(result)
 
-            # Clear any remaining content
-            sys.stdout.write(CLEAR_TO_END)
+            # Atomic write: CURSOR_HOME + content + CLEAR_TO_END (clean up stale trailing lines)
+            buffered_content = "\n".join(buf_lines)
+            sys.stdout.write(f"{CURSOR_HOME}{buffered_content}\n{CLEAR_TO_END}")
             sys.stdout.flush()
 
             cycle_counter += 1
@@ -327,6 +353,40 @@ def run_watch_mode(
     finally:
         sys.stdout.write(SHOW_CURSOR)
         sys.stdout.flush()
+
+
+def _format_waiting_message(
+    colors: ColorManager,
+    session_id: str | None,
+    message: str = "Waiting for session data...",
+) -> str:
+    """Format a waiting message as a string.
+
+    Args:
+        colors: ColorManager instance
+        session_id: Session ID if specified
+        message: Message to display
+
+    Returns:
+        Formatted waiting message string
+    """
+    lines = [""]
+    if session_id:
+        lines.append(
+            f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
+            f"{colors.dim}(Session: {session_id}){colors.reset}"
+        )
+    else:
+        lines.append(f"{colors.bold}{colors.magenta}Context Stats{colors.reset}")
+    lines.append("")
+    lines.append(f"  {colors.cyan}⏳ {message}{colors.reset}")
+    lines.append("")
+    lines.append(
+        f"  {colors.dim}The session has just started and no data has been recorded yet.{colors.reset}"
+    )
+    lines.append(f"  {colors.dim}Data will appear after the first Claude interaction.{colors.reset}")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def show_waiting_message(
@@ -341,23 +401,7 @@ def show_waiting_message(
         session_id: Session ID if specified
         message: Message to display
     """
-    print()
-    if session_id:
-        print(
-            f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
-            f"{colors.dim}(Session: {session_id}){colors.reset}"
-        )
-    else:
-        print(f"{colors.bold}{colors.magenta}Context Stats{colors.reset}")
-
-    print()
-    print(f"  {colors.cyan}⏳ {message}{colors.reset}")
-    print()
-    print(
-        f"  {colors.dim}The session has just started and no data has been recorded yet.{colors.reset}"
-    )
-    print(f"  {colors.dim}Data will appear after the first Claude interaction.{colors.reset}")
-    print()
+    print(_format_waiting_message(colors, session_id, message))
 
 
 def main() -> None:
