@@ -116,13 +116,21 @@ visible_width() {
 }
 
 get_terminal_width() {
-    # Return terminal width, fallback to 80
+    # Return terminal width for fit_to_width truncation.
+    # When running inside Claude Code's statusline subprocess, neither $COLUMNS
+    # nor tput can detect the real terminal width (they always return 80).
+    # If COLUMNS is explicitly set, trust it. Otherwise use 200 as default
+    # so no parts are unnecessarily dropped; Claude Code handles overflow.
     if [[ -n "$COLUMNS" ]]; then
         echo "$COLUMNS"
     else
         local cols
         cols=$(tput cols 2>/dev/null || echo 80)
-        echo "$cols"
+        if [[ "$cols" -eq 80 ]]; then
+            echo 200
+        else
+            echo "$cols"
+        fi
     fi
 }
 

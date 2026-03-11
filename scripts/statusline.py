@@ -51,8 +51,21 @@ def visible_width(s):
 
 
 def get_terminal_width():
-    """Return the terminal width in columns, defaulting to 80."""
-    return shutil.get_terminal_size().columns
+    """Return the terminal width in columns.
+
+    When running inside Claude Code's statusline subprocess, neither $COLUMNS
+    nor tput/shutil can detect the real terminal width (they always return 80).
+    If COLUMNS is not explicitly set and shutil falls back to 80, we use a
+    generous default of 200 so that no parts are unnecessarily dropped;
+    Claude Code's own UI handles any overflow/truncation.
+    """
+    # If COLUMNS is explicitly set, trust it (real terminal or test override)
+    if os.environ.get("COLUMNS"):
+        return shutil.get_terminal_size().columns
+    # No COLUMNS env var — likely a Claude Code subprocess with no real TTY.
+    # shutil will fall back to 80, which is too narrow. Use 200 instead.
+    cols = shutil.get_terminal_size(fallback=(200, 24)).columns
+    return 200 if cols == 80 else cols
 
 
 def fit_to_width(parts, max_width):

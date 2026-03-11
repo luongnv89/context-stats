@@ -22,12 +22,19 @@ visible_width() {
 }
 
 get_terminal_width() {
+    # When running inside Claude Code's statusline subprocess, $COLUMNS is not set
+    # and tput falls back to 80. If COLUMNS is set, trust it. Otherwise use 200
+    # so no parts are dropped; Claude Code handles overflow.
     if [[ -n "$COLUMNS" ]]; then
         echo "$COLUMNS"
     else
         local cols
         cols=$(tput cols 2>/dev/null || echo 80)
-        echo "$cols"
+        if [[ "$cols" -eq 80 ]]; then
+            echo 200
+        else
+            echo "$cols"
+        fi
     fi
 }
 
