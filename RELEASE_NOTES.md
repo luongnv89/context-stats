@@ -1,9 +1,10 @@
-## What's Changed
-
-### Refactoring
-- **Remove icon and pacman display options from statusline** — Simplify the statusline by removing `icon_mode` config option (`standard`/`pacman`/`off`), activity icons, and pacman meter visualization. Activity tier detection and text labels are preserved for context-stats. Net removal of ~413 lines across 10 files (#13) @luongnv89
+## v1.5.1 — 2026-03-11
 
 ### Bug Fixes
-- **Eliminate watch mode flickering via double-buffered rendering** — Replace cursor-home + line-by-line overwrites with full-frame buffering that writes the entire screen in a single `sys.stdout.write()` call, eliminating visible flicker during watch mode refreshes
+- **Fix session ID disappearing from statusline** — Claude Code runs statusline scripts as piped subprocesses with no real TTY, causing terminal width detection to always return 80 columns. This made `fit_to_width()` drop lower-priority parts like session ID even when the real terminal had plenty of space. Now uses 200 columns as default when no TTY is detected; Claude Code's own UI handles overflow.
+- **Fix CI failures** — Resolve ESLint, Python 3.9 compatibility, and release workflow issues
 
-**Full Changelog**: https://github.com/luongnv89/cc-context-stats/compare/v1.4.0...v1.5.0
+### Other Changes
+- Update logo SVG assets
+
+**Full Changelog**: https://github.com/luongnv89/cc-context-stats/compare/v1.5.0...v1.5.1
