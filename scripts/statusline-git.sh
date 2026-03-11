@@ -14,6 +14,53 @@ MODEL_DISPLAY=$(echo "$input" | jq -r '.model.display_name // "Claude"')
 CURRENT_DIR=$(echo "$input" | jq -r '.workspace.current_dir // "~"')
 DIR_NAME="${CURRENT_DIR##*/}"
 
+# Width-fitting helpers
+visible_width() {
+    local stripped
+    stripped=$(printf '%s' "$1" | sed -e $'s/\033\[[0-9;]*m//g' -e 's/\\033\[[0-9;]*m//g')
+    printf '%s' "$stripped" | wc -m | tr -d ' '
+}
+
+get_terminal_width() {
+    if [[ -n "$COLUMNS" ]]; then
+        echo "$COLUMNS"
+    else
+        local cols
+        cols=$(tput cols 2>/dev/null || echo 80)
+        echo "$cols"
+    fi
+}
+
+fit_to_width() {
+    local max_width=$1
+    shift
+    local parts=("$@")
+
+    if [[ ${#parts[@]} -eq 0 ]]; then
+        echo ""
+        return
+    fi
+
+    local result="${parts[0]}"
+    local current_width
+    current_width=$(visible_width "$result")
+
+    for ((i = 1; i < ${#parts[@]}; i++)); do
+        local part="${parts[$i]}"
+        if [[ -z "$part" ]]; then
+            continue
+        fi
+        local part_width
+        part_width=$(visible_width "$part")
+        if (( current_width + part_width <= max_width )); then
+            result+="$part"
+            (( current_width += part_width ))
+        fi
+    done
+
+    echo -e "$result"
+}
+
 # Git branch detection
 GIT_INFO=""
 if git -C "$CURRENT_DIR" rev-parse --git-dir > /dev/null 2>&1; then
@@ -29,4 +76,6 @@ if git -C "$CURRENT_DIR" rev-parse --git-dir > /dev/null 2>&1; then
     fi
 fi
 
-echo -e "[${MODEL_DISPLAY}] ${BLUE}${DIR_NAME}${RESET}${GIT_INFO}"
+base="[${MODEL_DISPLAY}] ${BLUE}${DIR_NAME}${RESET}"
+max_width=$(get_terminal_width)
+fit_to_width "$max_width" "$base" "$GIT_INFO"

@@ -107,3 +107,33 @@ teardown() {
     run bash "$SCRIPT" <<< "$input"
     [ "$status" -eq 0 ]
 }
+
+# Width truncation tests
+
+strip_ansi() {
+    printf '%s' "$1" | sed -e $'s/\033\[[0-9;]*m//g' -e 's/\\033\[[0-9;]*m//g'
+}
+
+@test "output fits within 80 columns" {
+    input='{"model":{"display_name":"Claude"},"workspace":{"current_dir":"/tmp/proj","project_dir":"/tmp/proj"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":10000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}},"session_id":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}'
+    result=$(COLUMNS=80 bash "$SCRIPT" <<< "$input")
+    visible=$(strip_ansi "$result")
+    len=$(printf '%s' "$visible" | wc -m | tr -d ' ')
+    [ "$len" -le 80 ]
+}
+
+@test "narrow terminal still shows model and directory" {
+    input='{"model":{"display_name":"Claude"},"workspace":{"current_dir":"/tmp/proj","project_dir":"/tmp/proj"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":10000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+    result=$(COLUMNS=40 bash "$SCRIPT" <<< "$input")
+    visible=$(strip_ansi "$result")
+    len=$(printf '%s' "$visible" | wc -m | tr -d ' ')
+    [ "$len" -le 40 ]
+    [[ "$visible" == *"Claude"* ]]
+    [[ "$visible" == *"proj"* ]]
+}
+
+@test "wide terminal shows session_id" {
+    input='{"model":{"display_name":"Claude"},"workspace":{"current_dir":"/tmp/proj","project_dir":"/tmp/proj"},"session_id":"test-wide-session-uuid"}'
+    result=$(COLUMNS=200 bash "$SCRIPT" <<< "$input")
+    [[ "$result" == *"test-wide-session-uuid"* ]]
+}

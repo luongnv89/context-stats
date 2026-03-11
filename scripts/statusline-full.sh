@@ -114,6 +114,59 @@ if [[ -f ~/.claude/statusline.conf ]]; then
     esac
 fi
 
+# Width-fitting helpers
+visible_width() {
+    # Strip ANSI escape sequences (both literal \033 and actual ESC byte) and return string length
+    local stripped
+    stripped=$(printf '%s' "$1" | sed -e $'s/\033\[[0-9;]*m//g' -e 's/\\033\[[0-9;]*m//g')
+    printf '%s' "$stripped" | wc -m | tr -d ' '
+}
+
+get_terminal_width() {
+    # Return terminal width, fallback to 80
+    if [[ -n "$COLUMNS" ]]; then
+        echo "$COLUMNS"
+    else
+        local cols
+        cols=$(tput cols 2>/dev/null || echo 80)
+        echo "$cols"
+    fi
+}
+
+fit_to_width() {
+    # Assemble parts into a single line that fits within max_width.
+    # Usage: fit_to_width max_width part1 part2 part3 ...
+    # First part (base) is always included. Subsequent parts are
+    # included only if adding them does not exceed max_width.
+    local max_width=$1
+    shift
+    local parts=("$@")
+
+    if [[ ${#parts[@]} -eq 0 ]]; then
+        echo ""
+        return
+    fi
+
+    local result="${parts[0]}"
+    local current_width
+    current_width=$(visible_width "$result")
+
+    for ((i = 1; i < ${#parts[@]}; i++)); do
+        local part="${parts[$i]}"
+        if [[ -z "$part" ]]; then
+            continue
+        fi
+        local part_width
+        part_width=$(visible_width "$part")
+        if (( current_width + part_width <= max_width )); then
+            result+="$part"
+            (( current_width += part_width ))
+        fi
+    done
+
+    echo -e "$result"
+}
+
 # Activity icon helper
 get_sl_activity_icon() {
     local delta_val=$1
@@ -287,4 +340,6 @@ if [[ "$icon_mode" != "off" && "$total_size" -gt 0 ]]; then
 fi
 
 # Output: [Model] directory | branch [changes] | XXk free (XX%) icon [+delta] [AC] [S:session_id]
-echo -e "${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}${git_info}${context_info}${icon_info}${delta_info}${ac_info}${session_info}"
+base="${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}"
+max_width=$(get_terminal_width)
+fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$icon_info" "$delta_info" "$ac_info" "$session_info"
