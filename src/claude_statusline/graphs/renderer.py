@@ -9,7 +9,6 @@ from claude_statusline.core.colors import ColorManager
 from claude_statusline.formatters.time import format_duration, format_timestamp
 from claude_statusline.formatters.tokens import format_tokens
 from claude_statusline.graphs.statistics import calculate_deltas, calculate_stats
-from claude_statusline.ui.icons import ActivityTier, get_activity_tier, render_pacman_meter
 
 
 @dataclass
@@ -260,14 +259,12 @@ class GraphRenderer:
         self,
         entries: list,  # list[StateEntry]
         deltas: list[int],
-        icon_mode: str = "standard",
     ) -> None:
         """Render summary statistics.
 
         Args:
             entries: List of StateEntry objects
             deltas: List of token deltas
-            icon_mode: Icon mode - "standard", "pacman", or "off"
         """
         if not entries:
             return
@@ -312,13 +309,6 @@ class GraphRenderer:
                 f"  {status_color}{'Context Remaining:':<20}{self.colors.reset} "
                 f"{format_tokens(remaining_context, self.token_detail)}/{format_tokens(last.context_window_size, self.token_detail)} ({remaining_percentage}%)"
             )
-
-        # Pacman meter (when in pacman mode)
-        if icon_mode == "pacman" and last.context_window_size > 0:
-            tier = get_activity_tier(entries, last.context_window_size)
-            meter_width = min(40, self.dimensions.graph_width - 10)
-            meter = render_pacman_meter(usage_percentage, tier, meter_width)
-            self._emit(f"  {status_color}{meter}{self.colors.reset}")
 
         # Status indicator - highlighted
         if last.context_window_size > 0:

@@ -1,4 +1,4 @@
-"""Tests for activity icons and Pacman meter."""
+"""Tests for activity tier detection."""
 
 import time
 
@@ -6,10 +6,8 @@ from claude_statusline.core.state import StateEntry
 from claude_statusline.graphs.statistics import detect_spike
 from claude_statusline.ui.icons import (
     ActivityTier,
-    get_activity_icon,
     get_activity_tier,
     get_tier_label,
-    render_pacman_meter,
 )
 
 
@@ -139,33 +137,6 @@ class TestActivityTier:
         assert get_activity_tier(entries, 200_000) == ActivityTier.IDLE
 
 
-class TestGetActivityIcon:
-    """Tests for icon selection."""
-
-    def test_standard_mode_returns_icons(self):
-        for tier in ActivityTier:
-            icon = get_activity_icon(tier, "standard")
-            assert len(icon) > 0
-
-    def test_pacman_mode_returns_icons(self):
-        for tier in ActivityTier:
-            icon = get_activity_icon(tier, "pacman")
-            assert len(icon) > 0
-
-    def test_off_mode_returns_empty(self):
-        for tier in ActivityTier:
-            icon = get_activity_icon(tier, "off")
-            assert icon == ""
-
-    def test_standard_icons_are_different_per_tier(self):
-        icons = {get_activity_icon(tier, "standard") for tier in ActivityTier}
-        assert len(icons) == len(ActivityTier)
-
-    def test_pacman_icons_are_different_per_tier(self):
-        icons = {get_activity_icon(tier, "pacman") for tier in ActivityTier}
-        assert len(icons) == len(ActivityTier)
-
-
 class TestGetTierLabel:
     """Tests for tier labels."""
 
@@ -179,49 +150,3 @@ class TestGetTierLabel:
 
     def test_spike_label(self):
         assert get_tier_label(ActivityTier.SPIKE) == "Spike!"
-
-
-class TestPacmanMeter:
-    """Tests for Pacman meter rendering."""
-
-    def test_zero_usage(self):
-        meter = render_pacman_meter(0, ActivityTier.LOW, width=20)
-        assert "0% used" in meter
-
-    def test_full_usage(self):
-        meter = render_pacman_meter(100, ActivityTier.HIGH, width=20)
-        assert "100% used" in meter
-
-    def test_clamped_over_100(self):
-        meter = render_pacman_meter(150, ActivityTier.HIGH, width=20)
-        assert "100% used" in meter
-
-    def test_clamped_under_0(self):
-        meter = render_pacman_meter(-10, ActivityTier.IDLE, width=20)
-        assert "0% used" in meter
-
-    def test_fat_pacman_over_80(self):
-        """Usage >80% should use fat pacman character."""
-        meter = render_pacman_meter(85, ActivityTier.HIGH, width=20)
-        assert "\u15e4" in meter  # ᗤ fat pacman
-
-    def test_normal_pacman_under_80(self):
-        """Usage <=80% should use normal pacman character."""
-        meter = render_pacman_meter(50, ActivityTier.MEDIUM, width=20)
-        assert "\u15e7" in meter  # ᗧ normal pacman
-
-    def test_ghost_on_spike(self):
-        """Spike tier should include a ghost."""
-        meter = render_pacman_meter(60, ActivityTier.SPIKE, width=20)
-        assert "\U0001f47b" in meter  # 👻 ghost
-
-    def test_no_ghost_without_spike(self):
-        """Non-spike tiers should not include a ghost."""
-        meter = render_pacman_meter(60, ActivityTier.MEDIUM, width=20)
-        assert "\U0001f47b" not in meter
-
-    def test_minimum_width(self):
-        """Meter should enforce minimum width."""
-        meter = render_pacman_meter(50, ActivityTier.LOW, width=5)
-        # Should still render (min width enforced internally)
-        assert "50% used" in meter

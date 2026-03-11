@@ -63,7 +63,6 @@ autocompact_enabled=true
 token_detail_enabled=true
 show_delta_enabled=true
 show_session_enabled=true
-icon_mode="standard"
 autocompact=""    # Will be set by sourced config
 token_detail=""   # Will be set by sourced config
 show_delta=""     # Will be set by sourced config
@@ -71,8 +70,6 @@ show_session=""   # Will be set by sourced config
 ac_info=""
 delta_info=""
 session_info=""
-icon_info=""
-last_delta=0
 
 # Create config file with defaults if it doesn't exist
 if [[ ! -f ~/.claude/statusline.conf ]]; then
@@ -108,10 +105,6 @@ if [[ -f ~/.claude/statusline.conf ]]; then
     if [[ "$show_session" == "false" ]]; then
         show_session_enabled=false
     fi
-    case "$icon_mode" in
-        standard|pacman|off) ;; # already set by sourced config
-        *) icon_mode="standard" ;; # reset invalid values
-    esac
 fi
 
 # Width-fitting helpers
@@ -165,38 +158,6 @@ fit_to_width() {
     done
 
     echo -e "$result"
-}
-
-# Activity icon helper
-get_sl_activity_icon() {
-    local delta_val=$1
-    local ctx_size=$2
-    local mode=$3
-
-    if [[ "$mode" == "off" ]]; then echo ""; return; fi
-
-    if [[ "$delta_val" -le 0 ]]; then
-        [[ "$mode" == "pacman" ]] && echo "·" || echo "○"
-        return
-    fi
-
-    if [[ "$ctx_size" -le 0 ]]; then
-        [[ "$mode" == "pacman" ]] && echo "ᗧ···" || echo "◐"
-        return
-    fi
-
-    # delta as pct x100 for integer math
-    local pct_x100=$((delta_val * 10000 / ctx_size))
-
-    if [[ "$pct_x100" -gt 1500 ]]; then
-        [[ "$mode" == "pacman" ]] && echo "👻ᗧ●●●" || echo "💥"
-    elif [[ "$pct_x100" -gt 500 ]]; then
-        [[ "$mode" == "pacman" ]] && echo "ᗧ●●●" || echo "⚡"
-    elif [[ "$pct_x100" -gt 200 ]]; then
-        [[ "$mode" == "pacman" ]] && echo "ᗧ○·●" || echo "◉"
-    else
-        [[ "$mode" == "pacman" ]] && echo "ᗧ···" || echo "◐"
-    fi
 }
 
 # Calculate context window - show remaining free space
@@ -303,7 +264,7 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
         fi
         # Calculate delta
         delta=$((used_tokens - prev_tokens))
-        last_delta=$delta
+        # delta calculated for display
         # Only show positive delta (and skip first run when no previous state)
         if [[ "$has_prev" == "true" && "$delta" -gt 0 ]]; then
             if [[ "$token_detail_enabled" == "true" ]]; then
@@ -329,17 +290,7 @@ if [[ "$show_session_enabled" == "true" && -n "$session_id" ]]; then
     session_info=" ${DIM}${session_id}${RESET}"
 fi
 
-# Activity icon
-if [[ "$icon_mode" != "off" && "$total_size" -gt 0 ]]; then
-    icon_delta=$last_delta
-    [[ "$icon_delta" -lt 0 ]] && icon_delta=0
-    sl_icon=$(get_sl_activity_icon "$icon_delta" "$total_size" "$icon_mode")
-    if [[ -n "$sl_icon" ]]; then
-        icon_info=" ${sl_icon}"
-    fi
-fi
-
-# Output: [Model] directory | branch [changes] | XXk free (XX%) icon [+delta] [AC] [S:session_id]
+# Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
 base="${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}"
 max_width=$(get_terminal_width)
-fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$icon_info" "$delta_info" "$ac_info" "$session_info"
+fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$delta_info" "$ac_info" "$session_info"

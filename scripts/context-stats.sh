@@ -57,7 +57,6 @@ COLOR_ENABLED=true
 TOKEN_DETAIL_ENABLED=true
 WATCH_MODE=true
 WATCH_INTERVAL=2
-ICON_MODE="standard"
 REDUCED_MOTION=false
 CYCLE_COUNTER=0
 
@@ -346,38 +345,6 @@ get_activity_tier() {
     fi
 }
 
-# Get icon for activity tier
-get_activity_icon() {
-    local tier=$1
-    local mode=$2
-
-    if [ "$mode" = "off" ]; then
-        echo ""
-        return
-    fi
-
-    if [ "$mode" = "pacman" ]; then
-        case "$tier" in
-            idle)   echo "·" ;;
-            low)    echo "ᗧ···" ;;
-            medium) echo "ᗧ○·●" ;;
-            high)   echo "ᗧ●●●" ;;
-            spike)  echo "👻ᗧ●●●" ;;
-            *)      echo "·" ;;
-        esac
-    else
-        # Standard mode
-        case "$tier" in
-            idle)   echo "○" ;;
-            low)    echo "◐" ;;
-            medium) echo "◉" ;;
-            high)   echo "⚡" ;;
-            spike)  echo "💥" ;;
-            *)      echo "○" ;;
-        esac
-    fi
-}
-
 # Get text label for tier
 get_tier_label() {
     local tier=$1
@@ -389,52 +356,6 @@ get_tier_label() {
         spike)  echo "Spike!" ;;
         *)      echo "Idle" ;;
     esac
-}
-
-# Render Pacman meter bar
-render_pacman_meter() {
-    local usage_pct=$1
-    local tier=$2
-    local width=${3:-30}
-
-    # Clamp
-    [ "$usage_pct" -lt 0 ] && usage_pct=0
-    [ "$usage_pct" -gt 100 ] && usage_pct=100
-    [ "$width" -lt 10 ] && width=10
-
-    # Pacman position
-    local pacman_pos=$((usage_pct * (width - 1) / 100))
-    [ "$pacman_pos" -lt 0 ] && pacman_pos=0
-    [ "$pacman_pos" -ge "$width" ] && pacman_pos=$((width - 1))
-
-    # Choose pacman character
-    local pacman
-    if [ "$usage_pct" -gt 80 ]; then
-        pacman="ᗤ"
-    else
-        pacman="ᗧ"
-    fi
-
-    # Ghost on spike
-    local ghost=" "
-    [ "$tier" = "spike" ] && ghost="👻"
-
-    # Build bar
-    local eaten=""
-    local remaining=""
-    local i=0
-    while [ "$i" -lt "$pacman_pos" ]; do
-        eaten="${eaten}░"
-        i=$((i + 1))
-    done
-    i=0
-    local rem_count=$((width - pacman_pos - 1))
-    while [ "$i" -lt "$rem_count" ]; do
-        remaining="${remaining}█"
-        i=$((i + 1))
-    done
-
-    echo "${eaten}${pacman}${remaining}${ghost} ${usage_pct}% used"
 }
 
 # === DATA FUNCTIONS ===
@@ -923,16 +844,6 @@ render_summary() {
         fi
         # Context remaining (before status)
         printf '  %b%-20s%b %s/%s (%s%%)\n' "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$(format_number "$current_context")" "$context_percentage"
-        # Pacman meter (when in pacman mode)
-        if [ "$ICON_MODE" = "pacman" ] && [ "$current_context" -gt 0 ]; then
-            local pm_tier
-            pm_tier=$(get_activity_tier "$last_ts" "$current_context" "$DELTAS")
-            local meter_width=$((GRAPH_WIDTH - 10))
-            [ "$meter_width" -gt 40 ] && meter_width=40
-            local meter
-            meter=$(render_pacman_meter "$usage_percentage" "$pm_tier" "$meter_width")
-            printf '  %b%s%b\n' "${status_color}" "$meter" "${RESET}"
-        fi
         # Status indicator
         printf '  %b%b>>> %s <<<%b %b(%s)%b\n' "${status_color}" "${BOLD}" "$status_text" "${RESET}" "${DIM}" "$status_hint" "${RESET}"
         echo ""
@@ -1043,11 +954,6 @@ load_config() {
                     TOKEN_DETAIL_ENABLED=false
                 fi
                 ;;
-            icon_mode)
-                case "$value" in
-                    standard|pacman|off) ICON_MODE="$value" ;;
-                esac
-                ;;
             reduced_motion)
                 if [ "$value" = "true" ]; then
                     REDUCED_MOTION=true
@@ -1080,28 +986,24 @@ render_once() {
         echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(Session: $session_name)${RESET}"
     fi
 
-    # Activity indicator (icon + waiting text)
-    if [ "$ICON_MODE" != "off" ]; then
-        local last_ts
-        last_ts=$(get_element "$TIMESTAMPS" "$DATA_COUNT")
-        local last_context
-        last_context=$(get_element "$CONTEXT_SIZES" "$DATA_COUNT")
-        [ -z "$last_context" ] && last_context=0
+    # Activity indicator (waiting text + label)
+    local last_ts
+    last_ts=$(get_element "$TIMESTAMPS" "$DATA_COUNT")
+    local last_context
+    last_context=$(get_element "$CONTEXT_SIZES" "$DATA_COUNT")
+    [ -z "$last_context" ] && last_context=0
 
-        local tier
-        tier=$(get_activity_tier "$last_ts" "$last_context" "$DELTAS")
-        local icon
-        icon=$(get_activity_icon "$tier" "$ICON_MODE")
-        local label
-        label=$(get_tier_label "$tier")
+    local tier
+    tier=$(get_activity_tier "$last_ts" "$last_context" "$DELTAS")
+    local label
+    label=$(get_tier_label "$tier")
 
-        if is_session_active "$last_ts"; then
-            local wait_text
-            wait_text=$(get_waiting_text "$CYCLE_COUNTER")
-            echo -e "  ${icon} ${DIM}${wait_text} [${label}]${RESET}"
-        else
-            echo -e "  ${icon} ${DIM}${label}${RESET}"
-        fi
+    if is_session_active "$last_ts"; then
+        local wait_text
+        wait_text=$(get_waiting_text "$CYCLE_COUNTER")
+        echo -e "  ${DIM}${wait_text} [${label}]${RESET}"
+    else
+        echo -e "  ${DIM}${label}${RESET}"
     fi
 
     # Render graphs (use CURRENT_USED_TOKENS for actual context window usage)

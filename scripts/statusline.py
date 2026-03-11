@@ -115,31 +115,6 @@ def get_git_info(project_dir):
         return ""
 
 
-def get_activity_icon(delta: int, total_size: int, icon_mode: str) -> str:
-    """Get activity icon based on token delta."""
-    if icon_mode == "off":
-        return ""
-
-    pacman = icon_mode == "pacman"
-
-    if delta <= 0:
-        return "\u00b7" if pacman else "\u25cb"  # · or ○
-
-    if total_size <= 0:
-        return "\u15e7\u00b7\u00b7\u00b7" if pacman else "\u25d0"  # ᗧ··· or ◐
-
-    pct = (delta / total_size) * 100
-
-    if pct > 15:
-        return "\U0001f47b\u15e7\u25cf\u25cf\u25cf" if pacman else "\U0001f4a5"  # 👻ᗧ●●● or 💥
-    elif pct > 5:
-        return "\u15e7\u25cf\u25cf\u25cf" if pacman else "\u26a1"  # ᗧ●●● or ⚡
-    elif pct > 2:
-        return "\u15e7\u25cb\u00b7\u25cf" if pacman else "\u25c9"  # ᗧ○·● or ◉
-    else:
-        return "\u15e7\u00b7\u00b7\u00b7" if pacman else "\u25d0"  # ᗧ··· or ◐
-
-
 def read_config():
     """Read settings from config file"""
     config = {
@@ -148,7 +123,6 @@ def read_config():
         "show_delta": True,
         "show_session": True,
         "show_io_tokens": True,
-        "icon_mode": "standard",
     }
     config_path = os.path.expanduser("~/.claude/statusline.conf")
 
@@ -195,9 +169,6 @@ show_session=true
                     config["show_session"] = value != "false"
                 elif key == "show_io_tokens":
                     config["show_io_tokens"] = value != "false"
-                elif key == "icon_mode":
-                    if value in ("standard", "pacman", "off"):
-                        config["icon_mode"] = value
     except Exception:
         pass
     return config
@@ -235,8 +206,6 @@ def main():
     ac_info = ""
     delta_info = ""
     session_info = ""
-    icon_info = ""
-    last_delta = 0
     total_size = data.get("context_window", {}).get("context_window_size", 0)
     current_usage = data.get("context_window", {}).get("current_usage")
     total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
@@ -333,7 +302,6 @@ def main():
                 prev_tokens = 0
             # Calculate delta
             delta = used_tokens - prev_tokens
-            last_delta = delta
             # Only show positive delta (and skip first run when no previous state)
             if has_prev and delta > 0:
                 if token_detail:
@@ -374,17 +342,10 @@ def main():
     if show_session and session_id:
         session_info = f" {DIM}{session_id}{RESET}"
 
-    # Activity icon
-    icon_mode = config.get("icon_mode", "standard")
-    if icon_mode != "off" and total_size > 0:
-        icon = get_activity_icon(max(0, last_delta), total_size, icon_mode)
-        if icon:
-            icon_info = f" {icon}"
-
-    # Output: [Model] directory | branch [changes] | XXk free (XX%) icon [+delta] [AC] [S:session_id]
+    # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
     base = f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, icon_info, delta_info, ac_info, session_info]
+    parts = [base, git_info, context_info, delta_info, ac_info, session_info]
     print(fit_to_width(parts, max_width))
 
 

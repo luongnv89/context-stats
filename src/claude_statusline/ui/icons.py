@@ -1,4 +1,4 @@
-"""Activity icons and Pacman meter for token usage visualization."""
+"""Activity tier detection for token usage visualization."""
 
 from __future__ import annotations
 
@@ -17,24 +17,6 @@ class ActivityTier(Enum):
     HIGH = "high"
     SPIKE = "spike"
 
-
-# Standard mode icons (meaningful without color)
-STANDARD_ICONS: dict[ActivityTier, str] = {
-    ActivityTier.IDLE: "\u25cb",     # ○ empty circle
-    ActivityTier.LOW: "\u25d0",      # ◐ half circle
-    ActivityTier.MEDIUM: "\u25c9",   # ◉ bullseye
-    ActivityTier.HIGH: "\u26a1",     # ⚡ lightning
-    ActivityTier.SPIKE: "\U0001f4a5",  # 💥 burst
-}
-
-# Pacman mode icons
-PACMAN_ICONS: dict[ActivityTier, str] = {
-    ActivityTier.IDLE: "\u00b7",            # · dot
-    ActivityTier.LOW: "\u15e7\u00b7\u00b7\u00b7",      # ᗧ···
-    ActivityTier.MEDIUM: "\u15e7\u25cb\u00b7\u25cf",    # ᗧ○·●
-    ActivityTier.HIGH: "\u15e7\u25cf\u25cf\u25cf",      # ᗧ●●●
-    ActivityTier.SPIKE: "\U0001f47b\u15e7\u25cf\u25cf\u25cf",  # 👻ᗧ●●●
-}
 
 # Tier labels for accessibility (understandable without color)
 TIER_LABELS: dict[ActivityTier, str] = {
@@ -99,24 +81,6 @@ def get_activity_tier(
         return ActivityTier.IDLE
 
 
-def get_activity_icon(tier: ActivityTier, mode: str = "standard") -> str:
-    """Get the icon for an activity tier.
-
-    Args:
-        tier: The activity tier
-        mode: Icon mode - "standard", "pacman", or "off"
-
-    Returns:
-        Icon string, or empty string if mode is "off"
-    """
-    if mode == "off":
-        return ""
-    elif mode == "pacman":
-        return PACMAN_ICONS.get(tier, "")
-    else:
-        return STANDARD_ICONS.get(tier, "")
-
-
 def get_tier_label(tier: ActivityTier) -> str:
     """Get an accessible text label for a tier.
 
@@ -127,49 +91,3 @@ def get_tier_label(tier: ActivityTier) -> str:
         Human-readable label string
     """
     return TIER_LABELS.get(tier, "")
-
-
-def render_pacman_meter(
-    usage_pct: int,
-    tier: ActivityTier,
-    width: int = 30,
-) -> str:
-    """Render a Pacman-style context usage meter.
-
-    The meter shows Pacman eating through a bar representing context usage.
-    Pacman's position corresponds to the usage percentage.
-
-    Args:
-        usage_pct: Context usage percentage (0-100)
-        tier: Current activity tier (affects Pacman appearance)
-        width: Total width of the meter bar in characters
-
-    Returns:
-        Formatted meter string (no color codes - caller adds color)
-    """
-    usage_pct = max(0, min(100, usage_pct))
-    bar_width = max(10, width)
-
-    # Pacman position along the bar
-    pacman_pos = int((usage_pct / 100) * (bar_width - 1))
-    pacman_pos = max(0, min(bar_width - 1, pacman_pos))
-
-    # Choose Pacman character
-    if usage_pct > 80:
-        pacman = "\u15e4"  # ᗤ fat pacman
-    else:
-        pacman = "\u15e7"  # ᗧ normal pacman
-
-    # Ghost at the end during spikes
-    ghost = "\U0001f47b" if tier == ActivityTier.SPIKE else " "
-
-    # Build the bar
-    # Left of pacman: empty (already eaten) = ░
-    # Right of pacman: filled (yet to eat) = █
-    eaten = "\u2591" * pacman_pos          # ░ light shade
-    remaining = "\u2588" * (bar_width - pacman_pos - 1)  # █ full block
-
-    meter = f"{eaten}{pacman}{remaining}{ghost}"
-    label = f" {usage_pct}% used"
-
-    return f"{meter}{label}"

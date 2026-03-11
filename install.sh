@@ -225,10 +225,7 @@ show_delta=true
 # Show session_id in status line
 show_session=true
 
-# Activity icon mode: standard, pacman, or off
-icon_mode=standard
-
-# Disable rotating text and icon animations
+# Disable rotating text animations
 reduced_motion=false
 EOF
     echo -e "${GREEN}✓${RESET} Created config file: $CONFIG_FILE"

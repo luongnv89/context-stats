@@ -27,7 +27,7 @@ from claude_statusline.core.config import Config
 from claude_statusline.core.state import StateFile
 from claude_statusline.graphs.renderer import GraphDimensions, GraphRenderer
 from claude_statusline.graphs.statistics import calculate_deltas
-from claude_statusline.ui.icons import get_activity_icon, get_activity_tier, get_tier_label
+from claude_statusline.ui.icons import get_activity_tier, get_tier_label
 from claude_statusline.ui.waiting import get_waiting_text, is_active
 
 # Cursor control sequences
@@ -158,7 +158,7 @@ def render_once(
         renderer: GraphRenderer instance
         colors: ColorManager instance
         watch_mode: Whether running in watch mode
-        config: Config instance for icon/motion settings
+        config: Config instance for motion settings
         cycle_index: Watch mode refresh counter for rotating text
 
     Returns:
@@ -223,20 +223,17 @@ def render_once(
             f"{colors.dim}(Session: {session_name}){colors.reset}"
         )
 
-    # Activity indicator (icon + waiting text)
-    icon_mode = config.icon_mode if config else "standard"
+    # Activity indicator (waiting text + label)
     reduced_motion = config.reduced_motion if config else False
-    if icon_mode != "off":
-        tier = get_activity_tier(entries, last_entry.context_window_size)
-        icon = get_activity_icon(tier, icon_mode)
-        label = get_tier_label(tier)
-        active = is_active(entries)
+    tier = get_activity_tier(entries, last_entry.context_window_size)
+    label = get_tier_label(tier)
+    active = is_active(entries)
 
-        if active:
-            text = get_waiting_text(cycle_index, reduced_motion)
-            emit(f"  {icon} {colors.dim}{text} [{label}]{colors.reset}")
-        else:
-            emit(f"  {icon} {colors.dim}{label}{colors.reset}")
+    if active:
+        text = get_waiting_text(cycle_index, reduced_motion)
+        emit(f"  {colors.dim}{text} [{label}]{colors.reset}")
+    else:
+        emit(f"  {colors.dim}{label}{colors.reset}")
 
     # In watch mode, enable renderer buffering
     if watch_mode:
@@ -262,7 +259,7 @@ def render_once(
         )
 
     # Summary and footer
-    renderer.render_summary(entries, deltas, icon_mode=icon_mode)
+    renderer.render_summary(entries, deltas)
     renderer.render_footer(__version__)
 
     if watch_mode:
@@ -290,7 +287,7 @@ def run_watch_mode(
         interval: Refresh interval in seconds
         renderer: GraphRenderer instance
         colors: ColorManager instance
-        config: Config instance for icon/motion settings
+        config: Config instance for motion settings
     """
 
     # Signal handler for clean exit
