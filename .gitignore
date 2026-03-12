@@ -47,3 +47,6 @@ publish.sh
 npm-publish.sh
 PUBLISHING_GUIDE.md
 show_raw_claude_code_api.js
+
+# Ruff
+.ruff_cache/

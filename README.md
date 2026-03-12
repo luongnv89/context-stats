@@ -177,8 +177,17 @@ Context Stats hooks into Claude Code's state files to track token usage across y
 - [Context Stats Guide](docs/context-stats.md) - Detailed usage guide
 - [Configuration Options](docs/configuration.md) - All settings explained
 - [Installation Guide](docs/installation.md) - Platform-specific setup
+- [Architecture](docs/ARCHITECTURE.md) - System design and components
+- [Development](docs/DEVELOPMENT.md) - Dev setup and debugging
+- [Deployment](docs/DEPLOYMENT.md) - Publishing and release process
 - [Troubleshooting](docs/troubleshooting.md) - Common issues
 - [Changelog](CHANGELOG.md) - Version history
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on the development setup, branching strategy, and PR process.
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Migration from cc-statusline
 
