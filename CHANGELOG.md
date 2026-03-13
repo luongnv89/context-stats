@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-03-13
+
+### Fixed
+
+- **Delta calculation parity** - Python statusline now reads correct CSV indices (3+5+6) for context usage delta, matching Node.js behavior
+- **Missing duplicate-entry guard** - Python statusline now skips state file writes when token count is unchanged, preventing file bloat
+- **Missing state file rotation** - Python statusline now calls rotation after writes (10k/5k threshold), matching Node.js
+- **Missing git timeout** - Added 5-second timeout to git subprocess calls in standalone Python statusline script
+- **Broad exception handling** - Narrowed `except Exception` to `(OSError, ValueError)` for state reads and `OSError` for writes
+- **Stale CSV format comments** - Added missing `context_window_size` field to header comments in both Python and Node.js scripts
+
+### Added
+
+- **Delta parity tests** - 4 new bats tests verifying Python/Node.js produce identical deltas, handle first-run/decrease/dedup correctly
+
 ## [1.6.1] - 2026-03-13
 
 ### Fixed
