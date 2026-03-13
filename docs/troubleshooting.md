@@ -24,6 +24,22 @@
    cat ~/.claude/settings.json
    ```
 
+**pip/npm install:**
+
+1. Verify the command is available:
+
+   ```bash
+   which claude-statusline
+   ```
+
+2. Test it:
+
+   ```bash
+   echo '{"model":{"display_name":"Test"}}' | claude-statusline
+   ```
+
+3. Ensure your settings.json uses `"command": "claude-statusline"` (not a file path).
+
 **Windows (Python):**
 
 ```powershell
@@ -32,7 +48,7 @@ echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline
 
 ### jq not found
 
-The bash scripts require `jq` for JSON parsing.
+The bash scripts require `jq` for JSON parsing. Python and Node.js scripts do **not** need `jq`.
 
 **macOS:**
 
@@ -55,6 +71,22 @@ sudo dnf install jq
 Alternatively, use the Python or Node.js version which don't require `jq`.
 
 ### context-stats command not found
+
+**If installed via pip or npm:**
+
+1. Verify installation:
+
+   ```bash
+   which context-stats
+   ```
+
+2. Reinstall if missing:
+
+   ```bash
+   pip install cc-context-stats   # or: npm install -g cc-context-stats
+   ```
+
+**If installed via shell installer:**
 
 1. Verify installation:
 
@@ -80,13 +112,58 @@ Alternatively, use the Python or Node.js version which don't require `jq`.
    source ~/.bashrc
    ```
 
+### pip install fails
+
+1. Ensure Python 3.9+:
+
+   ```bash
+   python3 --version
+   ```
+
+2. Try with `--user` flag:
+
+   ```bash
+   pip install --user cc-context-stats
+   ```
+
+3. Or use `uv`:
+
+   ```bash
+   uv pip install cc-context-stats
+   ```
+
+### npm install fails
+
+1. Ensure Node.js 18+:
+
+   ```bash
+   node --version
+   ```
+
+2. Try with sudo (Linux/macOS):
+
+   ```bash
+   sudo npm install -g cc-context-stats
+   ```
+
+3. Or fix npm permissions:
+
+   ```bash
+   mkdir -p ~/.npm-global
+   npm config set prefix '~/.npm-global'
+   echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
+   source ~/.zshrc
+   npm install -g cc-context-stats
+   ```
+
 ### No token graph data
 
 Token history requires:
 
-1. `show_delta=true` in `~/.claude/statusline.conf` (default)
-2. Active Claude Code session generating state files
-3. State files at `~/.claude/statusline/statusline.<session_id>.state`
+1. Python or Node.js statusline script (bash scripts do **not** write state files)
+2. `show_delta=true` in `~/.claude/statusline.conf` (default)
+3. Active Claude Code session generating state files
+4. State files at `~/.claude/statusline/statusline.<session_id>.state`
 
 Check for state files:
 
@@ -108,6 +185,8 @@ ls -la ~/.claude/statusline/statusline.*.state
    which git
    ```
 
+3. Git commands have a 5-second timeout. If your repo is very large, git operations may time out silently.
+
 ### Wrong token colors
 
 Token colors depend on availability percentage:
@@ -123,6 +202,12 @@ If colors look wrong, check terminal color support.
 ### Delta always shows zero
 
 Token delta requires multiple statusline refreshes. The first refresh establishes a baseline; subsequent refreshes show the delta.
+
+If delta is always zero after multiple refreshes, check that the state file is being written:
+
+```bash
+wc -l ~/.claude/statusline/statusline.*.state
+```
 
 ### Configuration not taking effect
 
@@ -167,6 +252,9 @@ EOF
 cat /tmp/test-input.json | ~/.claude/statusline.sh
 cat /tmp/test-input.json | python3 ~/.claude/statusline.py
 cat /tmp/test-input.json | node ~/.claude/statusline.js
+
+# Test pip/npm installed version
+cat /tmp/test-input.json | claude-statusline
 ```
 
 ### Check state files
@@ -185,5 +273,6 @@ watch -n 1 'tail -5 ~/.claude/statusline/statusline.*.state'
 - Open a new issue with:
   - Operating system
   - Shell type (bash/zsh)
+  - Installation method (pip, npm, shell installer, manual)
   - Script version being used
   - Error messages or unexpected behavior

@@ -22,6 +22,10 @@ show_delta=false   # Disable delta display
 # Show session_id in status line
 show_session=true  # (default) Show session ID
 show_session=false # Hide session ID
+
+# Disable rotating text animations
+reduced_motion=false  # (default) Animations enabled
+reduced_motion=true   # Disable animations for accessibility
 ```
 
 ## Status Line Components
@@ -81,3 +85,12 @@ The session ID at the end helps:
 - Debug session-specific issues
 
 Double-click to select and copy. Set `show_session=false` to hide.
+
+## Config File Format
+
+The config file uses simple `key=value` syntax:
+
+- No spaces around `=`
+- Lines starting with `#` are comments
+- Unrecognized keys are ignored
+- Missing keys use defaults shown above

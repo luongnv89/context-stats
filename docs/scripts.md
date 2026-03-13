@@ -2,18 +2,26 @@
 
 ## Overview
 
-| Script                  | Platform     | Requirements | Features                          |
-| ----------------------- | ------------ | ------------ | --------------------------------- |
-| `statusline-full.sh`    | macOS, Linux | `jq`         | Full-featured with all indicators |
-| `statusline-git.sh`     | macOS, Linux | `jq`         | Git branch and changes            |
-| `statusline-minimal.sh` | macOS, Linux | `jq`         | Model + directory only            |
-| `statusline.py`         | All          | Python 3     | Cross-platform, full-featured     |
-| `statusline.js`         | All          | Node.js      | Cross-platform, full-featured     |
-| `context-stats.sh`      | macOS, Linux | None         | Token usage visualization         |
+| Script                  | Platform     | Requirements | State Writes | Features                          |
+| ----------------------- | ------------ | ------------ | ------------ | --------------------------------- |
+| `statusline-full.sh`    | macOS, Linux | `jq`         | No           | Full-featured with all indicators |
+| `statusline-git.sh`     | macOS, Linux | `jq`         | No           | Git branch and changes            |
+| `statusline-minimal.sh` | macOS, Linux | `jq`         | No           | Model + directory only            |
+| `statusline.py`         | All          | Python 3     | Yes          | Cross-platform, full-featured     |
+| `statusline.js`         | All          | Node.js 18+  | Yes          | Cross-platform, full-featured     |
+| `context-stats.sh`      | macOS, Linux | Bash         | No           | Token usage visualization (CLI)   |
+
+## Installation Methods
+
+| Method | Statusline Command | Context Stats Command |
+| ------ | ------------------ | --------------------- |
+| `pip install cc-context-stats` | `claude-statusline` | `context-stats` |
+| `npm install -g cc-context-stats` | `claude-statusline` | `context-stats` |
+| Shell installer (`install.sh`) | `~/.claude/statusline.sh` | `~/.local/bin/context-stats` |
 
 ## Bash Scripts
 
-### statusline-full.sh (Recommended)
+### statusline-full.sh (Recommended for bash users)
 
 Complete status line with all features:
 
@@ -24,6 +32,8 @@ Complete status line with all features:
 - Token delta tracking
 - Autocompact indicator
 - Session ID
+
+> **Note:** Does not write state files. For context-stats CLI support, use the Python or Node.js script instead.
 
 ### statusline-git.sh
 
@@ -46,15 +56,27 @@ Minimal footprint:
 
 Python implementation matching `statusline-full.sh` functionality. Works on Windows, macOS, and Linux without additional dependencies beyond Python 3.
 
+Features beyond bash scripts:
+- Writes state files for context-stats CLI
+- Duplicate-entry deduplication
+- State file rotation (10k/5k threshold)
+- 5-second git command timeout
+
 ### statusline.js
 
-Node.js implementation matching `statusline-full.sh` functionality. Works on all platforms with Node.js installed.
+Node.js implementation matching `statusline-full.sh` functionality. Works on all platforms with Node.js 18+ installed.
+
+Features beyond bash scripts:
+- Writes state files for context-stats CLI
+- Duplicate-entry deduplication
+- State file rotation (10k/5k threshold)
+- 5-second git command timeout
 
 ## Utility Scripts
 
 ### context-stats.sh
 
-Standalone CLI tool for visualizing token consumption. See [Context Stats](context-stats.md) for details.
+Standalone bash CLI tool for visualizing token consumption. Reads state files written by the Python or Node.js statusline scripts. See [Context Stats](context-stats.md) for details.
 
 ## Output Format
 

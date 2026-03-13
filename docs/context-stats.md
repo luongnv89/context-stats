@@ -68,7 +68,7 @@ Session Summary
   Output Tokens:       43,429
   Session Duration:    2h 29m
 
-Powered by cc-context-stats v1.6.1 - https://github.com/luongnv89/cc-context-stats
+Powered by cc-context-stats v1.6.2 - https://github.com/luongnv89/cc-context-stats
 ```
 
 ## Features

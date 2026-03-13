@@ -70,6 +70,21 @@ uv pip install cc-context-stats
 
 ## Quick Start
 
+### Status Line Integration
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "claude-statusline"
+  }
+}
+```
+
+Restart Claude Code to see real-time token stats in your status bar.
+
 ### Real-Time Monitoring
 
 Get your session ID from the status line (the last part after the pipe `|`), then run:
@@ -93,21 +108,6 @@ This opens a live dashboard that refreshes every 2 seconds, showing:
 
 Press `Ctrl+C` to exit.
 
-### Status Line Integration
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "claude-statusline"
-  }
-}
-```
-
-Restart Claude Code to see real-time token stats in your status bar.
-
 ## Context Stats CLI
 
 ```bash
@@ -118,6 +118,7 @@ context-stats --type cumulative  # Show cumulative context usage
 context-stats --type both        # Show both graphs
 context-stats --type all         # Show all graphs including I/O
 context-stats <session_id>       # View specific session
+context-stats --version          # Show version
 ```
 
 ### Output Example
@@ -162,25 +163,28 @@ The status line shows at-a-glance metrics in your Claude Code interface:
 Create `~/.claude/statusline.conf`:
 
 ```bash
-token_detail=true   # Show exact token counts (vs abbreviated like "12.5k")
-show_delta=true     # Show token delta in status line
-show_session=true   # Show session ID
-autocompact=true    # Show autocompact buffer indicator
+token_detail=true    # Show exact token counts (vs abbreviated like "12.5k")
+show_delta=true      # Show token delta in status line
+show_session=true    # Show session ID
+autocompact=true     # Show autocompact buffer indicator
+reduced_motion=false # Disable animations for accessibility
 ```
 
 ## How It Works
 
-Context Stats hooks into Claude Code's state files to track token usage across your sessions. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
+Context Stats hooks into Claude Code's status line feature to track token usage across your sessions. The Python and Node.js statusline scripts write state data to local CSV files, which the context-stats CLI reads to render live graphs. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
 
 ## Documentation
 
-- [Context Stats Guide](docs/context-stats.md) - Detailed usage guide
+- [Installation Guide](docs/installation.md) - Platform-specific setup (shell, pip, npm)
+- [Context Stats Guide](docs/context-stats.md) - Detailed CLI usage guide
 - [Configuration Options](docs/configuration.md) - All settings explained
-- [Installation Guide](docs/installation.md) - Platform-specific setup
+- [Available Scripts](docs/scripts.md) - Script variants and features
 - [Architecture](docs/ARCHITECTURE.md) - System design and components
-- [Development](docs/DEVELOPMENT.md) - Dev setup and debugging
+- [CSV Format](docs/CSV_FORMAT.md) - State file field specification
+- [Development](docs/DEVELOPMENT.md) - Dev setup, testing, and debugging
 - [Deployment](docs/DEPLOYMENT.md) - Publishing and release process
-- [Troubleshooting](docs/troubleshooting.md) - Common issues
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 - [Changelog](CHANGELOG.md) - Version history
 
 ## Contributing

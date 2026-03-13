@@ -7,6 +7,7 @@
 - **Python 3.9+** - For Python package and testing
 - **Node.js 18+** - For Node.js script and testing
 - **Bats** - Bash Automated Testing System (optional, for bash tests)
+- **pre-commit** - Git hook framework (optional, for automated code quality)
 
 ## Setup
 
@@ -24,7 +25,7 @@ pip install -e ".[dev]"
 # Node.js setup
 npm install
 
-# Install pre-commit hooks
+# Install pre-commit hooks (optional but recommended)
 pre-commit install
 ```
 
@@ -33,30 +34,54 @@ pre-commit install
 ```
 cc-context-stats/
 ├── src/claude_statusline/    # Python package source
+│   ├── cli/                  #   CLI entry points (statusline, context-stats)
+│   ├── core/                 #   Config, state, git, colors
+│   ├── formatters/           #   Token, time, layout formatting
+│   ├── graphs/               #   ASCII graph rendering
+│   └── ui/                   #   Icons, waiting animation
 ├── scripts/                  # Standalone scripts (sh/py/js)
+│   ├── statusline-full.sh    #   Full-featured bash statusline
+│   ├── statusline-git.sh     #   Git-focused bash variant
+│   ├── statusline-minimal.sh #   Minimal bash variant
+│   ├── statusline.py         #   Python standalone statusline
+│   ├── statusline.js         #   Node.js standalone statusline
+│   └── context-stats.sh      #   Bash context-stats CLI
 ├── tests/
 │   ├── bash/                 # Bats tests
 │   ├── python/               # Pytest tests
 │   └── node/                 # Jest tests
 ├── config/                   # Configuration examples
 ├── docs/                     # Documentation
-├── .github/workflows/        # CI/CD
-├── pyproject.toml            # Python build config
+├── .github/workflows/        # CI/CD (ci.yml, release.yml)
+├── pyproject.toml            # Python build config (hatchling)
 └── package.json              # Node.js config
 ```
 
 ## Running Tests
 
 ```bash
-# All tests
-npm test && pytest && bats tests/bash/*.bats
+# Python tests
+source venv/bin/activate
+pytest tests/python/ -v
 
-# Individual suites
-pytest tests/python/ -v                          # Python
-pytest tests/python/ -v --cov=scripts --cov-report=html  # Python + coverage
-npm test                                          # Node.js (Jest)
-npm run test:coverage                             # Node.js + coverage
-bats tests/bash/*.bats                           # Bash
+# Node.js tests (Jest)
+npm test
+
+# Bash integration tests
+bats tests/bash/*.bats
+
+# All tests
+pytest && npm test && bats tests/bash/*.bats
+```
+
+### Coverage Reports
+
+```bash
+# Python coverage
+pytest tests/python/ -v --cov=scripts --cov-report=html
+
+# Node.js coverage
+npm run test:coverage
 ```
 
 ## Linting & Formatting
@@ -92,6 +117,9 @@ python -m build
 
 # Verify package
 twine check dist/*
+
+# npm dry run
+npm pack --dry-run
 ```
 
 ## Cross-Script Consistency
@@ -102,6 +130,8 @@ All three implementations (bash, Python, Node.js) must produce identical output 
 2. Run integration tests to verify parity
 3. Test on multiple platforms if possible
 
+The delta parity tests (`tests/bash/`) verify that Python and Node.js produce identical deltas for the same CSV state data.
+
 ## Debugging
 
 ### State files
@@ -110,8 +140,11 @@ All three implementations (bash, Python, Node.js) must produce identical output 
 # View current state files
 ls -la ~/.claude/statusline/statusline.*.state
 
-# Inspect state content
+# Inspect state content (14 CSV fields per line)
 cat ~/.claude/statusline/statusline.<session_id>.state
+
+# Watch state file updates in real-time
+watch -n 1 'tail -5 ~/.claude/statusline/statusline.*.state'
 ```
 
 ### Verbose testing
@@ -122,4 +155,7 @@ pytest tests/python/ -v -s
 
 # Node.js with verbose output
 npx jest --verbose
+
+# Bats with verbose output
+bats --verbose-run tests/bash/*.bats
 ```

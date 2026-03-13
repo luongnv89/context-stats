@@ -10,6 +10,8 @@ cc-context-stats is distributed through three channels:
 | PyPI         | `cc-context-stats`| `pip install cc-context-stats`       |
 | npm          | `cc-context-stats`| `npm install -g cc-context-stats`    |
 
+Both pip and npm installs provide the `claude-statusline` and `context-stats` CLI commands.
+
 ## Publishing to PyPI
 
 ```bash
@@ -40,21 +42,30 @@ npm publish
 
 The project uses GitHub Actions for automated releases (`.github/workflows/release.yml`):
 
-1. Create and push a version tag: `git tag v1.x.x && git push --tags`
-2. The release workflow automatically:
-   - Runs the full test suite
+1. Update versions in all locations (see Version Management below)
+2. Update `CHANGELOG.md` with the new version entry
+3. Create and push a version tag: `git tag v1.x.x && git push --tags`
+4. The release workflow automatically:
+   - Runs the full test suite (Python, Node.js, Bash)
    - Builds Python and npm packages
    - Creates a GitHub Release with release notes
 
+CI is also run on every push and PR via `.github/workflows/ci.yml`.
+
 ## Version Management
 
-Versions must be updated in sync across:
+Versions must be updated in sync across these files:
 
-- `pyproject.toml` - `[project] version`
-- `package.json` - `version`
-- `CHANGELOG.md` - New version entry
-- `RELEASE_NOTES.md` - Current release notes
+| File | Field |
+| --- | --- |
+| `pyproject.toml` | `[project] version` |
+| `package.json` | `version` |
+| `src/claude_statusline/__init__.py` | `__version__` |
+| `CHANGELOG.md` | New version entry |
+| `RELEASE_NOTES.md` | Current release notes |
 
 ## Install Script
 
 The `install.sh` script is fetched directly from the `main` branch on GitHub. Changes to the installer take effect immediately for new users running the curl one-liner.
+
+The installer embeds the version from `package.json` and the current git commit hash into the installed scripts, preventing version drift between the repository and installed copies.
