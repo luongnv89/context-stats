@@ -382,7 +382,9 @@ process.stdin.on('end', () => {
                     }
                 }
             } catch (e) {
-                process.stderr.write(`[statusline] warning: failed to read state file: ${e.message}\n`);
+                process.stderr.write(
+                    `[statusline] warning: failed to read state file: ${e.message}\n`
+                );
                 prevTokens = 0;
             }
             // Calculate delta (difference in context window usage)
@@ -422,7 +424,9 @@ process.stdin.on('end', () => {
                     fs.appendFileSync(stateFile, `${stateData}\n`);
                     maybeRotateStateFile(stateFile);
                 } catch (e) {
-                    process.stderr.write(`[statusline] warning: failed to write state file: ${e.message}\n`);
+                    process.stderr.write(
+                        `[statusline] warning: failed to write state file: ${e.message}\n`
+                    );
                 }
             }
         }
