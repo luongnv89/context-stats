@@ -7,22 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-03-13
+
 ### Added
 
+- **CLI `--version` flag** - `context-stats --version` / `-V` now prints the current version
+- **State file rotation** - Automatic rotation at 10,000 lines (keeps most recent 5,000) to prevent unbounded file growth
+- **Session ID validation** - Rejects path-traversal characters (`/`, `\`, `..`, null bytes) for security
+- **Git command timeout** - 5-second timeout on git operations in both Python and Node.js implementations
+- **Core data pipeline unit tests** - 51 tests across 6 classes covering config, state, formatters, graph, and CLI
+- **Cross-implementation parity test** - Ensures Python and Node.js statusline scripts produce consistent output
+- **Stderr warnings** - Critical error paths now emit warnings to stderr for debugging
+- **CSV format documentation** - Formal specification of the 14-field state file format
+- **Comma guard for workspace paths** - Commas in `workspace_project_dir` are replaced with underscores before CSV write
+- **Open-source standard files** - Added CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, and GitHub issue/PR templates
 - **NPM Package** - `cc-context-stats` now available on npm for JavaScript/Node.js environments
-  - Install via `npm install -g cc-context-stats` or `yarn global add cc-context-stats`
-  - Provides same functionality as Python package for Node.js users
-- **Enhanced Documentation** - Updated README with npm installation instructions and badges
 
 ### Changed
 
 - **Package Metadata** - Synchronized package descriptions across npm and PyPI for consistency
-- **Keywords** - Aligned keywords across npm and Python packages for better discoverability
 - **Installation Section** - Moved shell script installation to the top of README as the recommended method
-- **Install Script Documentation** - Enhanced `install.sh` with comprehensive header documentation including:
-  - Features overview (real-time monitoring, live dashboard, zone detection)
-  - Requirements (curl, jq)
-  - Installation destinations and file descriptions
+
+### Dependencies
+
+- Bumped prettier from 3.7.4 to 3.8.0
 
 ## [1.2.0] - 2025-01-08
 

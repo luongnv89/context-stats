@@ -32,7 +32,7 @@ If applicable, add screenshots to help explain your problem.
 
 - OS: [e.g., macOS 14.0, Ubuntu 22.04, Windows 11]
 - Shell: [e.g., zsh, bash, PowerShell]
-- cc-context-stats version: [e.g., 1.5.1]
+- cc-context-stats version: [e.g., 1.6.0]
 - Installation method: [npm, pip, shell script]
 - Node.js version: [if applicable]
 - Python version: [if applicable]
