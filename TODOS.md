@@ -18,17 +18,19 @@ Items identified from the HOLD SCOPE mega review (2026-03-12).
 **Depends on:** None
 **Status:** Created `docs/CSV_FORMAT.md`, fixed ARCHITECTURE.md JSON→CSV, added comma→underscore guard in Python (`state.py`, `statusline.py`), Node.js (`statusline.js`), and bash (`statusline-full.sh`). Parity test with comma fixture passes. Archived as `openspec/changes/archive/2026-03-12-csv-format-doc-comma-guard/`.
 
-### 3. Stderr logging for critical error paths
+### ~~3. Stderr logging for critical error paths~~ ✅ Done
 **What:** Replace `except OSError: pass` with `sys.stderr.write()` warnings in: `StateFile.append_entry()`, `Config._create_default()`, `Config._read_config()`. Add `UnicodeDecodeError` to config read exception handling. Apply equivalent changes in `statusline.js`.
 **Why:** State write failures cause silent data loss — users see stale dashboards with no indication of why. Statusline output goes to stdout (consumed by Claude Code), so stderr is safe for diagnostics.
 **Effort:** S
 **Depends on:** None
+**Status:** Added `[statusline] warning:` stderr messages to all critical data pipeline error handlers in `config.py`, `state.py`, `statusline.py`, and `statusline.js`. Added `UnicodeDecodeError` to config read exception handling in both Python files. Non-critical handlers (git info, file migration) left silent.
 
-### 4. Core data pipeline unit tests
+### ~~4. Core data pipeline unit tests~~ ✅ Done
 **What:** Add test files covering: (1) `StateEntry.from_csv_line` ↔ `to_csv_line` round-trip, (2) `calculate_deltas` and `detect_spike`, (3) zone threshold logic in `render_summary`. Cover edge cases: empty data, single entry, negative deltas, boundary percentages (39%/40%/79%/80%).
 **Why:** The primary user-facing feature (`context-stats` CLI) has zero unit tests on its core logic — CSV parsing, statistics, and zone detection are all untested.
 **Effort:** M
 **Depends on:** None
+**Status:** Implemented in `tests/python/test_data_pipeline.py` with 51 tests across 6 classes: TestStateEntryRoundTrip (14), TestStateEntryProperties (3), TestCalculateDeltas (8), TestCalculateStats (6), TestDetectSpike (10), TestZoneThresholds (10). Covers CSV round-trip with old/new formats, comma sanitization, boundary spike detection (exact 15%/3x thresholds), and zone boundaries at 39/40% and 79/80%.
 
 ## P2 — Medium Priority
 
