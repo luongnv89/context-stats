@@ -84,13 +84,22 @@ const RESET = '\x1b[0m';
 
 // Named colors for config parsing
 const COLOR_NAMES = {
-    black: '\x1b[0;30m', red: '\x1b[0;31m', green: '\x1b[0;32m',
-    yellow: '\x1b[0;33m', blue: '\x1b[0;34m', magenta: '\x1b[0;35m',
-    cyan: '\x1b[0;36m', white: '\x1b[0;37m',
-    bright_black: '\x1b[0;90m', bright_red: '\x1b[0;91m',
-    bright_green: '\x1b[0;92m', bright_yellow: '\x1b[0;93m',
-    bright_blue: '\x1b[0;94m', bright_magenta: '\x1b[0;95m',
-    bright_cyan: '\x1b[0;96m', bright_white: '\x1b[0;97m',
+    black: '\x1b[0;30m',
+    red: '\x1b[0;31m',
+    green: '\x1b[0;32m',
+    yellow: '\x1b[0;33m',
+    blue: '\x1b[0;34m',
+    magenta: '\x1b[0;35m',
+    cyan: '\x1b[0;36m',
+    white: '\x1b[0;37m',
+    bright_black: '\x1b[0;90m',
+    bright_red: '\x1b[0;91m',
+    bright_green: '\x1b[0;92m',
+    bright_yellow: '\x1b[0;93m',
+    bright_blue: '\x1b[0;94m',
+    bright_magenta: '\x1b[0;95m',
+    bright_cyan: '\x1b[0;96m',
+    bright_white: '\x1b[0;97m',
 };
 
 /**
@@ -113,8 +122,12 @@ function parseColor(value) {
 }
 
 const COLOR_CONFIG_KEYS = {
-    color_green: 'green', color_yellow: 'yellow', color_red: 'red',
-    color_blue: 'blue', color_magenta: 'magenta', color_cyan: 'cyan',
+    color_green: 'green',
+    color_yellow: 'yellow',
+    color_red: 'red',
+    color_blue: 'blue',
+    color_magenta: 'magenta',
+    color_cyan: 'cyan',
 };
 
 /**
