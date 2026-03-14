@@ -436,8 +436,18 @@ def show_waiting_message(
     print(_format_waiting_message(colors, session_id, message))
 
 
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default."""
+    if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") != "utf8":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    if sys.stderr.encoding and sys.stderr.encoding.lower().replace("-", "") != "utf8":
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+
+
 def main() -> None:
     """Main entry point for context-stats CLI."""
+    _ensure_utf8_stdout()
+
     # Handle 'explain' subcommand before argparse (it expects stdin JSON, not flags)
     if len(sys.argv) > 1 and sys.argv[1] == "explain":
         import json
