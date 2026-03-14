@@ -47,6 +47,18 @@ pytest && npm test && bats tests/bash/*.bats
 - **5-second git command timeout** in both Python and Node.js implementations
 - **Config via `~/.claude/statusline.conf`** — simple key=value pairs
 
+## Cross-Implementation Sync Points
+
+The following logic is duplicated across three implementations and **must be kept in sync** when modified:
+
+| Logic | Package (`src/`) | Standalone Python (`scripts/statusline.py`) | Node.js (`scripts/statusline.js`) |
+|---|---|---|---|
+| Config parsing | `core/config.py` | `read_config()` | `readConfig()` |
+| Color name map | `core/colors.py:COLOR_NAMES` | `_COLOR_NAMES` | `COLOR_NAMES` |
+| Color parser | `core/colors.py:parse_color()` | `_parse_color()` | `parseColor()` |
+| Git info | `core/git.py:get_git_info()` | `get_git_info()` | `getGitInfo()` |
+| State rotation | `core/state.py` | `maybe_rotate_state_file()` | `maybeRotateStateFile()` |
+
 ## Cross-References
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture and data flow

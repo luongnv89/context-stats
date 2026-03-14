@@ -26,14 +26,7 @@ from __future__ import annotations
 import json
 import sys
 
-from claude_statusline.core.colors import (
-    BLUE,
-    DIM,
-    GREEN,
-    RED,
-    RESET,
-    YELLOW,
-)
+from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.git import get_git_info
 from claude_statusline.core.state import StateEntry, StateFile
@@ -56,11 +49,14 @@ def main() -> None:
     model = data.get("model", {}).get("display_name", "Claude")
     dir_name = cwd.rsplit("/", 1)[-1] if "/" in cwd else cwd or "~"
 
-    # Git info
-    git_info = get_git_info(project_dir)
-
     # Read settings from config file
     config = Config.load()
+
+    # Build color manager with any user overrides
+    colors = ColorManager(enabled=True, overrides=config.color_overrides)
+
+    # Git info (pass color manager for configurable branch/change colors)
+    git_info = get_git_info(project_dir, color_manager=colors)
 
     # Extract session_id once for reuse
     session_id = data.get("session_id")
@@ -99,9 +95,9 @@ def main() -> None:
 
         if config.autocompact:
             buffer_k = autocompact_buffer // 1000
-            ac_info = f" {DIM}[AC:{buffer_k}k]{RESET}"
+            ac_info = f" {colors.dim}[AC:{buffer_k}k]{colors.reset}"
         else:
-            ac_info = f" {DIM}[AC:off]{RESET}"
+            ac_info = f" {colors.dim}[AC:off]{colors.reset}"
 
         # Format tokens based on token_detail setting
         free_display = format_tokens(free_tokens, config.token_detail)
@@ -109,13 +105,13 @@ def main() -> None:
         # Color based on free percentage
         free_pct_int = int(free_pct)
         if free_pct_int > 50:
-            ctx_color = GREEN
+            ctx_color = colors.green
         elif free_pct_int > 25:
-            ctx_color = YELLOW
+            ctx_color = colors.yellow
         else:
-            ctx_color = RED
+            ctx_color = colors.red
 
-        context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){RESET}"
+        context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){colors.reset}"
 
         # Calculate and display token delta if enabled
         if config.show_delta:
@@ -131,7 +127,7 @@ def main() -> None:
             # Only show positive delta (and skip first run when no previous state)
             if has_prev and delta > 0:
                 delta_display = format_tokens(delta, config.token_detail)
-                delta_info = f" {DIM}[+{delta_display}]{RESET}"
+                delta_info = f" {colors.dim}[+{delta_display}]{colors.reset}"
 
             # Build current entry
             cur_input_tokens = current_usage.get("input_tokens", 0)
@@ -160,10 +156,10 @@ def main() -> None:
 
     # Display session_id if enabled
     if config.show_session and session_id:
-        session_info = f" {DIM}{session_id}{RESET}"
+        session_info = f" {colors.dim}{session_id}{colors.reset}"
 
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [session_id]
-    base = f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}"
+    base = f"{colors.dim}[{model}]{colors.reset} {colors.blue}{dir_name}{colors.reset}"
     max_width = get_terminal_width()
     parts = [base, git_info, context_info, delta_info, ac_info, session_info]
     print(fit_to_width(parts, max_width))

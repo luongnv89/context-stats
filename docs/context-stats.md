@@ -40,6 +40,17 @@ context-stats --type io          # Input/output token breakdown
 context-stats --type all         # Show all graphs
 ```
 
+### Diagnostic Dump
+
+The `explain` command shows how cc-context-stats interprets Claude Code's JSON context. Pipe any session JSON to stdin:
+
+```bash
+echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
+echo '{"model":{"display_name":"Opus"},...}' | context-stats explain --no-color
+```
+
+Output includes model info, workspace, context window breakdown with derived values (free tokens, autocompact buffer), cost, session metadata, vim/agent extensions, active config, and raw JSON.
+
 ## Output
 
 ```
@@ -68,7 +79,7 @@ Session Summary
   Output Tokens:       43,429
   Session Duration:    2h 29m
 
-Powered by cc-context-stats v1.6.2 - https://github.com/luongnv89/cc-context-stats
+Powered by cc-context-stats v1.7.0 - https://github.com/luongnv89/cc-context-stats
 ```
 
 ## Features

@@ -46,9 +46,13 @@ def show_help() -> None:
 
 USAGE:
     context-stats [session_id] [options]
+    context-stats explain
 
 ARGUMENTS:
     session_id    Optional session ID. If not provided, uses the latest session.
+
+COMMANDS:
+    explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
 
 OPTIONS:
     --type <type>  Graph type to display:
@@ -88,6 +92,9 @@ EXAMPLES:
 
     # Output to file (no colors, single run)
     context-stats --no-watch --no-color > output.txt
+
+    # Diagnostic dump (pipe Claude Code JSON context)
+    echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
@@ -345,16 +352,23 @@ def run_watch_mode(
                 # Show waiting message for new session
                 reduced_motion = config.reduced_motion if config else False
                 text = get_waiting_text(cycle_counter, reduced_motion)
-                buf_lines.append(_format_waiting_message(
-                    colors,
-                    state_file.session_id,
-                    text,
-                ))
+                buf_lines.append(
+                    _format_waiting_message(
+                        colors,
+                        state_file.session_id,
+                        text,
+                    )
+                )
             else:
                 # Render graphs (returns buffered string in watch mode)
                 result = render_once(
-                    state_file, graph_type, renderer, colors,
-                    watch_mode=True, config=config, cycle_index=cycle_counter,
+                    state_file,
+                    graph_type,
+                    renderer,
+                    colors,
+                    watch_mode=True,
+                    config=config,
+                    cycle_index=cycle_counter,
                 )
                 if isinstance(result, str):
                     buf_lines.append(result)
@@ -400,7 +414,9 @@ def _format_waiting_message(
     lines.append(
         f"  {colors.dim}The session has just started and no data has been recorded yet.{colors.reset}"
     )
-    lines.append(f"  {colors.dim}Data will appear after the first Claude interaction.{colors.reset}")
+    lines.append(
+        f"  {colors.dim}Data will appear after the first Claude interaction.{colors.reset}"
+    )
     lines.append("")
     return "\n".join(lines)
 
@@ -422,14 +438,30 @@ def show_waiting_message(
 
 def main() -> None:
     """Main entry point for context-stats CLI."""
+    # Handle 'explain' subcommand before argparse (it expects stdin JSON, not flags)
+    if len(sys.argv) > 1 and sys.argv[1] == "explain":
+        import json
+
+        from claude_statusline.cli.explain import run_explain
+
+        no_color = "--no-color" in sys.argv
+        try:
+            data = json.load(sys.stdin)
+        except json.JSONDecodeError as e:
+            sys.stderr.write(f"Error: invalid JSON on stdin: {e}\n")
+            sys.stderr.write("Usage: echo '{...}' | context-stats explain\n")
+            sys.exit(1)
+        run_explain(data, no_color=no_color)
+        return
+
     args = parse_args()
 
     # Load config for token_detail setting
     config = Config.load()
 
-    # Setup colors
+    # Setup colors with any user overrides from config
     color_enabled = not args.no_color and sys.stdout.isatty()
-    colors = ColorManager(enabled=color_enabled)
+    colors = ColorManager(enabled=color_enabled, overrides=config.color_overrides)
 
     # Setup state file
     state_file = StateFile(args.session_id)

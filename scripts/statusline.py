@@ -67,7 +67,7 @@ def maybe_rotate_state_file(state_file):
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
 
 
-# ANSI Colors
+# ANSI Colors (defaults, overridable via config)
 BLUE = "\033[0;34m"
 MAGENTA = "\033[0;35m"
 CYAN = "\033[0;36m"
@@ -76,6 +76,34 @@ YELLOW = "\033[0;33m"
 RED = "\033[0;31m"
 DIM = "\033[2m"
 RESET = "\033[0m"
+
+# Named colors for config parsing
+_COLOR_NAMES = {
+    "black": "\033[0;30m", "red": "\033[0;31m", "green": "\033[0;32m",
+    "yellow": "\033[0;33m", "blue": "\033[0;34m", "magenta": "\033[0;35m",
+    "cyan": "\033[0;36m", "white": "\033[0;37m",
+    "bright_black": "\033[0;90m", "bright_red": "\033[0;91m",
+    "bright_green": "\033[0;92m", "bright_yellow": "\033[0;93m",
+    "bright_blue": "\033[0;94m", "bright_magenta": "\033[0;95m",
+    "bright_cyan": "\033[0;96m", "bright_white": "\033[0;97m",
+}
+
+
+def _parse_color(value):
+    """Parse a color name or #rrggbb hex into an ANSI escape code."""
+    value = value.strip().lower()
+    if value in _COLOR_NAMES:
+        return _COLOR_NAMES[value]
+    if re.match(r"^#[0-9a-f]{6}$", value):
+        r, g, b = int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16)
+        return f"\033[38;2;{r};{g};{b}m"
+    return None
+
+# Color config keys and which color slot they map to
+_COLOR_KEYS = {
+    "color_green": "green", "color_yellow": "yellow", "color_red": "red",
+    "color_blue": "blue", "color_magenta": "magenta", "color_cyan": "cyan",
+}
 
 # Pattern to strip ANSI escape sequences
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
@@ -129,8 +157,12 @@ def fit_to_width(parts, max_width):
     return result
 
 
-def get_git_info(project_dir):
+def get_git_info(project_dir, magenta=None, cyan=None):
     """Get git branch and change count"""
+    if magenta is None:
+        magenta = MAGENTA
+    if cyan is None:
+        cyan = CYAN
     git_dir = os.path.join(project_dir, ".git")
     if not os.path.isdir(git_dir):
         return ""
@@ -160,8 +192,8 @@ def get_git_info(project_dir):
         changes = len([line for line in result.stdout.split("\n") if line.strip()])
 
         if changes > 0:
-            return f" | {MAGENTA}{branch}{RESET} {CYAN}[{changes}]{RESET}"
-        return f" | {MAGENTA}{branch}{RESET}"
+            return f" | {magenta}{branch}{RESET} {cyan}[{changes}]{RESET}"
+        return f" | {magenta}{branch}{RESET}"
     except (subprocess.TimeoutExpired, OSError):
         return ""
 
@@ -174,6 +206,7 @@ def read_config():
         "show_delta": True,
         "show_session": True,
         "show_io_tokens": True,
+        "colors": {},
     }
     config_path = os.path.expanduser("~/.claude/statusline.conf")
 
@@ -195,6 +228,12 @@ show_delta=true
 
 # Show session_id in status line
 show_session=true
+
+# Custom colors - use named colors or hex (#rrggbb)
+# Available: color_green, color_yellow, color_red, color_blue, color_magenta, color_cyan
+# Examples:
+#   color_green=#7dcfff
+#   color_red=#f7768e
 """
                 )
         except Exception as e:
@@ -209,17 +248,22 @@ show_session=true
                     continue
                 key, value = line.split("=", 1)
                 key = key.strip()
-                value = value.strip().lower()
+                raw_value = value.strip()
+                value_lower = raw_value.lower()
                 if key == "autocompact":
-                    config["autocompact"] = value != "false"
+                    config["autocompact"] = value_lower != "false"
                 elif key == "token_detail":
-                    config["token_detail"] = value != "false"
+                    config["token_detail"] = value_lower != "false"
                 elif key == "show_delta":
-                    config["show_delta"] = value != "false"
+                    config["show_delta"] = value_lower != "false"
                 elif key == "show_session":
-                    config["show_session"] = value != "false"
+                    config["show_session"] = value_lower != "false"
                 elif key == "show_io_tokens":
-                    config["show_io_tokens"] = value != "false"
+                    config["show_io_tokens"] = value_lower != "false"
+                elif key in _COLOR_KEYS:
+                    ansi = _parse_color(raw_value)
+                    if ansi:
+                        config["colors"][_COLOR_KEYS[key]] = ansi
     except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
     return config
@@ -238,9 +282,6 @@ def main():
     model = data.get("model", {}).get("display_name", "Claude")
     dir_name = os.path.basename(cwd) or "~"
 
-    # Git info
-    git_info = get_git_info(project_dir)
-
     # Read settings from config file
     config = read_config()
     autocompact_enabled = config["autocompact"]
@@ -248,6 +289,18 @@ def main():
     show_delta = config["show_delta"]
     show_session = config["show_session"]
     # Note: show_io_tokens setting is read but not yet implemented
+
+    # Apply color overrides from config
+    c = config.get("colors", {})
+    c_green = c.get("green", GREEN)
+    c_yellow = c.get("yellow", YELLOW)
+    c_red = c.get("red", RED)
+    c_blue = c.get("blue", BLUE)
+    c_magenta = c.get("magenta", MAGENTA)
+    c_cyan = c.get("cyan", CYAN)
+
+    # Git info (pass configurable colors)
+    git_info = get_git_info(project_dir, magenta=c_magenta, cyan=c_cyan)
 
     # Extract session_id once for reuse
     session_id = data.get("session_id")
@@ -305,11 +358,11 @@ def main():
 
         # Color based on free percentage
         if free_pct_int > 50:
-            ctx_color = GREEN
+            ctx_color = c_green
         elif free_pct_int > 25:
-            ctx_color = YELLOW
+            ctx_color = c_yellow
         else:
-            ctx_color = RED
+            ctx_color = c_red
 
         context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){RESET}"
 
@@ -408,7 +461,7 @@ def main():
         session_info = f" {DIM}{session_id}{RESET}"
 
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-    base = f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}"
+    base = f"{DIM}[{model}]{RESET} {c_blue}{dir_name}{RESET}"
     max_width = get_terminal_width()
     parts = [base, git_info, context_info, delta_info, ac_info, session_info]
     print(fit_to_width(parts, max_width))

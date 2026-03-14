@@ -86,6 +86,28 @@ The session ID at the end helps:
 
 Double-click to select and copy. Set `show_session=false` to hide.
 
+## Custom Colors
+
+Override any status line color with named colors or hex codes:
+
+```bash
+# Available slots
+color_green=#7dcfff       # Context >50% free
+color_yellow=bright_yellow # Context 25-50% free
+color_red=#f7768e         # Context <25% free
+color_blue=bright_blue    # Directory name
+color_magenta=#bb9af7     # Git branch
+color_cyan=bright_cyan    # Git change count
+```
+
+### Supported color values
+
+**Named colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `bright_black`, `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`
+
+**Hex colors**: Any `#rrggbb` value (requires terminal with 24-bit color support)
+
+Unrecognized color values are ignored with a warning to stderr. Omitted slots use defaults.
+
 ## Config File Format
 
 The config file uses simple `key=value` syntax:

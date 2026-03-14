@@ -72,7 +72,7 @@ function maybeRotateStateFile(stateFile) {
     }
 }
 
-// ANSI Colors
+// ANSI Colors (defaults, overridable via config)
 const BLUE = '\x1b[0;34m';
 const MAGENTA = '\x1b[0;35m';
 const CYAN = '\x1b[0;36m';
@@ -81,6 +81,41 @@ const YELLOW = '\x1b[0;33m';
 const RED = '\x1b[0;31m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
+
+// Named colors for config parsing
+const COLOR_NAMES = {
+    black: '\x1b[0;30m', red: '\x1b[0;31m', green: '\x1b[0;32m',
+    yellow: '\x1b[0;33m', blue: '\x1b[0;34m', magenta: '\x1b[0;35m',
+    cyan: '\x1b[0;36m', white: '\x1b[0;37m',
+    bright_black: '\x1b[0;90m', bright_red: '\x1b[0;91m',
+    bright_green: '\x1b[0;92m', bright_yellow: '\x1b[0;93m',
+    bright_blue: '\x1b[0;94m', bright_magenta: '\x1b[0;95m',
+    bright_cyan: '\x1b[0;96m', bright_white: '\x1b[0;97m',
+};
+
+/**
+ * Parse a color name or #rrggbb hex into an ANSI escape code.
+ * Returns null if unrecognized.
+ */
+function parseColor(value) {
+    value = value.trim().toLowerCase();
+    if (COLOR_NAMES[value]) {
+        return COLOR_NAMES[value];
+    }
+    const m = value.match(/^#([0-9a-f]{6})$/);
+    if (m) {
+        const r = parseInt(m[1].slice(0, 2), 16);
+        const g = parseInt(m[1].slice(2, 4), 16);
+        const b = parseInt(m[1].slice(4, 6), 16);
+        return `\x1b[38;2;${r};${g};${b}m`;
+    }
+    return null;
+}
+
+const COLOR_CONFIG_KEYS = {
+    color_green: 'green', color_yellow: 'yellow', color_red: 'red',
+    color_blue: 'blue', color_magenta: 'magenta', color_cyan: 'cyan',
+};
 
 /**
  * Return the visible width of a string after stripping ANSI escape sequences.
@@ -125,7 +160,9 @@ function fitToWidth(parts, maxWidth) {
     return result;
 }
 
-function getGitInfo(projectDir) {
+function getGitInfo(projectDir, magentaColor, cyanColor) {
+    const mg = magentaColor || MAGENTA;
+    const cy = cyanColor || CYAN;
     const gitDir = path.join(projectDir, '.git');
     if (!fs.existsSync(gitDir) || !fs.statSync(gitDir).isDirectory()) {
         return '';
@@ -154,9 +191,9 @@ function getGitInfo(projectDir) {
         const changes = status.split('\n').filter(l => l.trim()).length;
 
         if (changes > 0) {
-            return ` | ${MAGENTA}${branch}${RESET} ${CYAN}[${changes}]${RESET}`;
+            return ` | ${mg}${branch}${RESET} ${cy}[${changes}]${RESET}`;
         }
-        return ` | ${MAGENTA}${branch}${RESET}`;
+        return ` | ${mg}${branch}${RESET}`;
     } catch {
         return '';
     }
@@ -170,6 +207,7 @@ function readConfig() {
         showSession: true,
         showIoTokens: true,
         reducedMotion: false,
+        colors: {},
     };
     const configPath = path.join(os.homedir(), '.claude', 'statusline.conf');
 
@@ -192,6 +230,12 @@ show_delta=true
 
 # Show session_id in status line
 show_session=true
+
+# Custom colors - use named colors or hex (#rrggbb)
+# Available: color_green, color_yellow, color_red, color_blue, color_magenta, color_cyan
+# Examples:
+#   color_green=#7dcfff
+#   color_red=#f7768e
 `;
             fs.writeFileSync(configPath, defaultConfig);
         } catch (e) {
@@ -207,9 +251,10 @@ show_session=true
             if (trimmed.startsWith('#') || !trimmed.includes('=')) {
                 continue;
             }
-            const [key, value] = trimmed.split('=', 2);
-            const keyTrimmed = key.trim();
-            const valueTrimmed = value.trim().toLowerCase();
+            const eqIdx = trimmed.indexOf('=');
+            const keyTrimmed = trimmed.slice(0, eqIdx).trim();
+            const rawValue = trimmed.slice(eqIdx + 1).trim();
+            const valueTrimmed = rawValue.toLowerCase();
             if (keyTrimmed === 'autocompact') {
                 config.autocompact = valueTrimmed !== 'false';
             } else if (keyTrimmed === 'token_detail') {
@@ -222,6 +267,11 @@ show_session=true
                 config.showIoTokens = valueTrimmed !== 'false';
             } else if (keyTrimmed === 'reduced_motion') {
                 config.reducedMotion = valueTrimmed !== 'false';
+            } else if (COLOR_CONFIG_KEYS[keyTrimmed]) {
+                const ansi = parseColor(rawValue);
+                if (ansi) {
+                    config.colors[COLOR_CONFIG_KEYS[keyTrimmed]] = ansi;
+                }
             }
         }
     } catch (e) {
@@ -250,9 +300,6 @@ process.stdin.on('end', () => {
     const model = data.model?.display_name || 'Claude';
     const dirName = path.basename(cwd) || '~';
 
-    // Git info
-    const gitInfo = getGitInfo(projectDir);
-
     // Read settings from config file
     const config = readConfig();
     const autocompactEnabled = config.autocompact;
@@ -260,6 +307,18 @@ process.stdin.on('end', () => {
     const showDelta = config.showDelta;
     const showSession = config.showSession;
     // Note: showIoTokens setting is read but not yet implemented
+
+    // Apply color overrides from config
+    const c = config.colors || {};
+    const cGreen = c.green || GREEN;
+    const cYellow = c.yellow || YELLOW;
+    const cRed = c.red || RED;
+    const cBlue = c.blue || BLUE;
+    const cMagenta = c.magenta || MAGENTA;
+    const cCyan = c.cyan || CYAN;
+
+    // Git info (pass configurable colors)
+    const gitInfo = getGitInfo(projectDir, cMagenta, cCyan);
 
     // Extract session_id once for reuse
     const sessionId = data.session_id;
@@ -320,11 +379,11 @@ process.stdin.on('end', () => {
         // Color based on free percentage
         let ctxColor;
         if (freePctInt > 50) {
-            ctxColor = GREEN;
+            ctxColor = cGreen;
         } else if (freePctInt > 25) {
-            ctxColor = YELLOW;
+            ctxColor = cYellow;
         } else {
-            ctxColor = RED;
+            ctxColor = cRed;
         }
 
         contextInfo = ` | ${ctxColor}${freeDisplay} free (${freePct.toFixed(1)}%)${RESET}`;
@@ -438,7 +497,7 @@ process.stdin.on('end', () => {
     }
 
     // Output: [Model] dir | branch [n] | free (%) [+delta] [AC] session
-    const base = `${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}`;
+    const base = `${DIM}[${model}]${RESET} ${cBlue}${dirName}${RESET}`;
     const maxWidth = getTerminalWidth();
     const parts = [base, gitInfo, contextInfo, deltaInfo, acInfo, sessionInfo];
     console.log(fitToWidth(parts, maxWidth));

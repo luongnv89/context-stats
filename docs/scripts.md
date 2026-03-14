@@ -124,15 +124,17 @@ Scripts receive JSON via stdin from Claude Code:
 
 ## Color Codes
 
-All scripts use consistent ANSI colors:
+All scripts use consistent ANSI colors (defaults, overridable via `~/.claude/statusline.conf`):
 
-| Color   | Code         | Usage                      |
-| ------- | ------------ | -------------------------- |
-| Blue    | `\033[0;34m` | Directory                  |
-| Magenta | `\033[0;35m` | Git branch                 |
-| Cyan    | `\033[0;36m` | Changes count              |
-| Green   | `\033[0;32m` | High availability (>50%)   |
-| Yellow  | `\033[0;33m` | Medium availability (>25%) |
-| Red     | `\033[0;31m` | Low availability (<=25%)   |
-| Dim     | `\033[2m`    | Model, AC indicator        |
-| Reset   | `\033[0m`    | Reset formatting           |
+| Color   | Code         | Usage                      | Config Key      |
+| ------- | ------------ | -------------------------- | --------------- |
+| Blue    | `\033[0;34m` | Directory                  | `color_blue`    |
+| Magenta | `\033[0;35m` | Git branch                 | `color_magenta` |
+| Cyan    | `\033[0;36m` | Changes count              | `color_cyan`    |
+| Green   | `\033[0;32m` | High availability (>50%)   | `color_green`   |
+| Yellow  | `\033[0;33m` | Medium availability (>25%) | `color_yellow`  |
+| Red     | `\033[0;31m` | Low availability (<=25%)   | `color_red`     |
+| Dim     | `\033[2m`    | Model, AC indicator        | —               |
+| Reset   | `\033[0m`    | Reset formatting           | —               |
+
+See [Configuration](configuration.md#custom-colors) for details on overriding colors with named colors or hex codes.

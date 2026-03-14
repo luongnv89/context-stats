@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-03-14
+
+### Added
+
+- **Configurable colors** - Custom color themes via `~/.claude/statusline.conf` using named colors (`bright_cyan`) or hex codes (`#7dcfff`). Six configurable slots: `color_green`, `color_yellow`, `color_red`, `color_blue`, `color_magenta`, `color_cyan`
+- **`context-stats explain` command** - Diagnostic dump that pretty-prints Claude Code's JSON context with derived values (free tokens, autocompact buffer, effective free), active config, vim/agent/output_style extensions, and raw JSON. Supports `--no-color` flag
+- **24-bit true color support** - Hex color codes (`#rrggbb`) are converted to ANSI 24-bit escape sequences for full RGB color customization
+- **Cross-implementation sync documentation** - Added sync points table to CLAUDE.md documenting triplicated logic across Python, Node.js, and Bash implementations
+
+### Changed
+
+- **ColorManager accepts overrides** - `ColorManager` now takes an optional `overrides` dict, allowing config-driven color customization throughout the package
+- **Git info uses configurable colors** - Branch and change count colors now respect user color overrides in all three implementations
+- **Config parsing preserves raw values** - Config reader now preserves case for color values while lowercasing only for boolean comparison
+
 ## [1.6.2] - 2026-03-13
 
 ### Fixed

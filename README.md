@@ -118,6 +118,7 @@ context-stats --type cumulative  # Show cumulative context usage
 context-stats --type both        # Show both graphs
 context-stats --type all         # Show all graphs including I/O
 context-stats <session_id>       # View specific session
+context-stats explain            # Diagnostic dump (pipe JSON to stdin)
 context-stats --version          # Show version
 ```
 
@@ -168,6 +169,11 @@ show_delta=true      # Show token delta in status line
 show_session=true    # Show session ID
 autocompact=true     # Show autocompact buffer indicator
 reduced_motion=false # Disable animations for accessibility
+
+# Custom colors - named colors or hex (#rrggbb)
+color_green=#7dcfff
+color_red=#f7768e
+color_yellow=bright_yellow
 ```
 
 ## How It Works

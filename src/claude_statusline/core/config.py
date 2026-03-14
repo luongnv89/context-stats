@@ -7,6 +7,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from claude_statusline.core.colors import parse_color
+
+# Color config keys and which ColorManager slot they map to
+_COLOR_KEYS: dict[str, str] = {
+    "color_green": "green",
+    "color_yellow": "yellow",
+    "color_red": "red",
+    "color_blue": "blue",
+    "color_magenta": "magenta",
+    "color_cyan": "cyan",
+}
+
 
 @dataclass
 class Config:
@@ -18,6 +30,9 @@ class Config:
     show_session: bool = True
     show_io_tokens: bool = True
     reduced_motion: bool = False
+
+    # Custom color overrides (slot_name -> ANSI code)
+    color_overrides: dict[str, str] = field(default_factory=dict)
 
     _config_path: Path = field(default_factory=lambda: Path.home() / ".claude" / "statusline.conf")
 
@@ -62,10 +77,23 @@ show_session=true
 
 # Disable rotating text animations
 reduced_motion=false
+
+# Custom colors - use named colors or hex (#rrggbb)
+# Available color slots: color_green, color_yellow, color_red,
+#   color_blue, color_magenta, color_cyan
+# Named colors: black, red, green, yellow, blue, magenta, cyan, white,
+#   bright_black, bright_red, bright_green, bright_yellow,
+#   bright_blue, bright_magenta, bright_cyan, bright_white
+# Examples:
+#   color_green=#7dcfff
+#   color_yellow=bright_yellow
+#   color_red=#f7768e
 """
             )
         except OSError as e:
-            sys.stderr.write(f"[statusline] warning: failed to create config {self._config_path}: {e}\n")
+            sys.stderr.write(
+                f"[statusline] warning: failed to create config {self._config_path}: {e}\n"
+            )
 
     def _read_config(self) -> None:
         """Read settings from config file."""
@@ -77,22 +105,35 @@ reduced_motion=false
                     continue
                 key, value = line.split("=", 1)
                 key = key.strip()
-                value = value.strip().lower()
+                raw_value = value.strip()
+                value_lower = raw_value.lower()
 
                 if key == "autocompact":
-                    self.autocompact = value != "false"
+                    self.autocompact = value_lower != "false"
                 elif key == "token_detail":
-                    self.token_detail = value != "false"
+                    self.token_detail = value_lower != "false"
                 elif key == "show_delta":
-                    self.show_delta = value != "false"
+                    self.show_delta = value_lower != "false"
                 elif key == "show_session":
-                    self.show_session = value != "false"
+                    self.show_session = value_lower != "false"
                 elif key == "show_io_tokens":
-                    self.show_io_tokens = value != "false"
+                    self.show_io_tokens = value_lower != "false"
                 elif key == "reduced_motion":
-                    self.reduced_motion = value != "false"
+                    self.reduced_motion = value_lower != "false"
+                elif key in _COLOR_KEYS:
+                    slot = _COLOR_KEYS[key]
+                    ansi = parse_color(raw_value)
+                    if ansi:
+                        self.color_overrides[slot] = ansi
+                    else:
+                        sys.stderr.write(
+                            f"[statusline] warning: unrecognized color value "
+                            f"'{raw_value}' for {key}\n"
+                        )
         except (OSError, UnicodeDecodeError) as e:
-            sys.stderr.write(f"[statusline] warning: failed to read config {self._config_path}: {e}\n")
+            sys.stderr.write(
+                f"[statusline] warning: failed to read config {self._config_path}: {e}\n"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary."""
@@ -103,4 +144,5 @@ reduced_motion=false
             "show_session": self.show_session,
             "show_io_tokens": self.show_io_tokens,
             "reduced_motion": self.reduced_motion,
+            "color_overrides": dict(self.color_overrides),
         }
