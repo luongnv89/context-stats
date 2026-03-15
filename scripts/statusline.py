@@ -42,14 +42,14 @@ ROTATION_KEEP = 5_000
 MI_GREEN_THRESHOLD = 0.90
 MI_YELLOW_THRESHOLD = 0.80
 MI_CONTEXT_YELLOW = 0.40  # 40% context used
-MI_CONTEXT_RED = 0.80     # 80% context used
+MI_CONTEXT_RED = 0.80  # 80% context used
 
 # Per-model degradation profiles: beta controls curve shape
 # Higher beta = quality retained longer (degradation happens later)
 MODEL_PROFILES = {
-    "opus":    1.8,
-    "sonnet":  1.5,
-    "haiku":   1.2,
+    "opus": 1.8,
+    "sonnet": 1.5,
+    "haiku": 1.2,
     "default": 1.5,
 }
 
@@ -78,7 +78,7 @@ def compute_mi(used_tokens, context_window_size, model_id="", beta_override=0.0)
     u = used_tokens / context_window_size
     if u <= 0:
         return 1.0
-    return max(0.0, 1.0 - u ** beta)
+    return max(0.0, 1.0 - u**beta)
 
 
 def get_mi_color(mi, utilization=0.0):
