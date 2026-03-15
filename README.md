@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/logo/logo-full.svg" alt="cc-context-stats" width="320"/>
 
-  <h3>Know your zone. Ship with confidence.</h3>
+  <h3>Keep your model sharp. Ship with confidence.</h3>
 
-  <p>Real-time context monitoring for Claude Code — so you always know when you're sharp and when to wrap up.</p>
+  <p>Real-time model intelligence monitoring for Claude Code — know exactly when your model is at peak quality and when it's time for a fresh session.</p>
 
 [![PyPI version](https://badge.fury.io/py/cc-context-stats.svg)](https://pypi.org/project/cc-context-stats/)
 [![npm version](https://badge.fury.io/js/cc-context-stats.svg)](https://www.npmjs.com/package/cc-context-stats)
@@ -13,19 +13,19 @@
 
 </div>
 
-**Never run out of context unexpectedly** - monitor your session context in real-time.
+**Always use Claude at its best** — monitor model intelligence in real-time so you know exactly when quality starts to drop.
 
 ![Context Stats - Model Intelligence](images/1.10/1.10.0-model-intelligence.png)
 
 ## Why Context Stats?
 
-When working with Claude Code on complex tasks, you can easily burn through your context window without realizing it. As your context fills up, Claude's performance degrades - this is what Dex Horthy calls the "dumb zone". Context Stats helps you:
+Research shows that LLM quality degrades as the context window fills up — even the best models lose retrieval accuracy at longer contexts. But you can't see this happening. Context Stats makes it visible:
 
+- **Model Intelligence (MI)** - A benchmark-calibrated score (1.000 → 0.000) that tracks how much quality has degraded, with per-model profiles for Opus, Sonnet, and Haiku
 - **Know your zone** - See if you're in the Smart Zone, Dumb Zone, or Wrap Up Zone
-- **Model Intelligence (MI)** - Benchmark-calibrated score showing how much the model has degraded at current context fill level, with per-model profiles (Opus/Sonnet/Haiku)
-- **Track context usage** - Real-time monitoring with live-updating graphs
-- **Get early warnings** - Color-coded status alerts you before performance degrades
-- **Make informed decisions** - Know when to start a fresh session
+- **Track context usage** - Real-time monitoring with live-updating ASCII graphs
+- **Get early warnings** - Color-coded alerts tell you when to start a fresh session
+- **Per-model awareness** - Opus retains quality longer than Sonnet, which degrades faster than Haiku. MI reflects this automatically
 
 ## Context Zones
 
