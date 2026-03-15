@@ -82,6 +82,7 @@ OPTIONS:
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
     --no-color     Disable color output
+    --version, -V  Show version and exit
     --help         Show this help message
 
 NOTE:
@@ -884,6 +885,10 @@ parse_args() {
         case "$1" in
         --help | -h)
             show_help
+            exit 0
+            ;;
+        --version | -V)
+            echo "cc-context-stats v${VERSION} (${COMMIT_HASH})"
             exit 0
             ;;
         --no-color)
