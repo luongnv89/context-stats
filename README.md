@@ -183,7 +183,7 @@ Session Summary
 
 ## Status Line
 
-![Status Line](images/1.10/1.10-statusline.png)
+![Status Line](images/1.10/statusline-green.png)
 
 The status line shows at-a-glance metrics in your Claude Code interface:
 
