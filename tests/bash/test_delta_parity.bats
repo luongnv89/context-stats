@@ -80,14 +80,14 @@ EOF
     local py_clean=$(strip_ansi "$py_output")
     local node_clean=$(strip_ansi "$node_output")
 
-    # Both should contain [+50,000] delta
-    if [[ "$py_clean" != *"[+50,000]"* ]]; then
-        echo "Python output missing expected delta [+50,000]"
+    # Both should contain +50,000 delta (pipe-separated, no brackets)
+    if [[ "$py_clean" != *"+50,000"* ]]; then
+        echo "Python output missing expected delta +50,000"
         echo "Python output: $py_clean"
         return 1
     fi
-    if [[ "$node_clean" != *"[+50,000]"* ]]; then
-        echo "Node.js output missing expected delta [+50,000]"
+    if [[ "$node_clean" != *"+50,000"* ]]; then
+        echo "Node.js output missing expected delta +50,000"
         echo "Node.js output: $node_clean"
         return 1
     fi

@@ -600,7 +600,7 @@ process.stdin.on('end', () => {
     }
 
     // Output: [Model] dir | branch [n] | free (%) [+delta] [AC] session
-    const base = `${DIM}[${model}]${RESET} ${cBlue}${dirName}${RESET}`;
+    const base = `${DIM}${model}${RESET} | ${cBlue}${dirName}${RESET}`;
     const maxWidth = getTerminalWidth();
     const parts = [base, gitInfo, contextInfo, miInfo, deltaInfo, sessionInfo];
     console.log(fitToWidth(parts, maxWidth));

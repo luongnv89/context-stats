@@ -414,6 +414,6 @@ if [[ "$show_session_enabled" == "true" && -n "$session_id" ]]; then
 fi
 
 # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-base="${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}"
+base="${DIM}${model}${RESET} | ${BLUE}${dir_name}${RESET}"
 max_width=$(get_terminal_width)
 fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$mi_info" "$delta_info" "$session_info"

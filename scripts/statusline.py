@@ -543,7 +543,7 @@ def main():
         session_info = f" | {DIM}{session_id}{RESET}"
 
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-    base = f"{DIM}[{model}]{RESET} {c_blue}{dir_name}{RESET}"
+    base = f"{DIM}{model}{RESET} | {c_blue}{dir_name}{RESET}"
     max_width = get_terminal_width()
     parts = [base, git_info, context_info, mi_info, delta_info, session_info]
     print(fit_to_width(parts, max_width))
