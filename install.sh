@@ -153,13 +153,32 @@ ensure_claude_dir() {
 install_script() {
     DEST="$CLAUDE_DIR/$SCRIPT_NAME"
 
+    # Detect existing version for upgrade reporting
+    local old_version=""
+    if [ -f "$DEST" ]; then
+        old_version=$(grep -o 'VERSION="[^"]*"' "$DEST" 2>/dev/null | head -1 | cut -d'"' -f2)
+    fi
+
     if [ "$INSTALL_MODE" = "local" ]; then
         cp "$SCRIPT_SRC" "$DEST"
         chmod +x "$DEST"
     else
         download_file "$SCRIPT_REMOTE" "$DEST"
     fi
-    echo -e "${GREEN}✓${RESET} Installed: $DEST"
+
+    # Get new version for reporting
+    local new_version
+    if [ "$INSTALL_MODE" = "local" ]; then
+        new_version=$(grep -o '"version": *"[^"]*"' "$SCRIPT_DIR/package.json" | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+    else
+        new_version=$(curl -fsSL "${GITHUB_RAW_URL}/package.json" 2>/dev/null | grep -o '"version": *"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+    fi
+
+    if [ -n "$old_version" ] && [ "$old_version" != "$new_version" ]; then
+        echo -e "${GREEN}✓${RESET} Upgraded: $DEST (${old_version} → ${new_version})"
+    else
+        echo -e "${GREEN}✓${RESET} Installed: $DEST (v${new_version:-unknown})"
+    fi
 }
 
 # Install context-stats CLI tool
@@ -170,6 +189,12 @@ install_context_stats() {
     fi
 
     DEST="$LOCAL_BIN/context-stats"
+
+    # Detect existing version for upgrade reporting
+    local old_version=""
+    if [ -f "$DEST" ]; then
+        old_version=$(grep -o 'VERSION="[^"]*"' "$DEST" 2>/dev/null | head -1 | cut -d'"' -f2)
+    fi
 
     # Get commit hash for version embedding
     local commit_hash
@@ -191,7 +216,13 @@ install_context_stats() {
     [ -n "$pkg_version" ] && sed -i.bak "s/VERSION=\"[^\"]*\"/VERSION=\"$pkg_version\"/" "$DEST" && rm -f "$DEST.bak"
     sed -i.bak "s/COMMIT_HASH=\"dev\"/COMMIT_HASH=\"$commit_hash\"/" "$DEST" && rm -f "$DEST.bak"
     chmod +x "$DEST"
-    echo -e "${GREEN}✓${RESET} Installed: $DEST"
+
+    # Report install or upgrade
+    if [ -n "$old_version" ] && [ "$old_version" != "$pkg_version" ]; then
+        echo -e "${GREEN}✓${RESET} Upgraded: $DEST (${old_version} → ${pkg_version})"
+    else
+        echo -e "${GREEN}✓${RESET} Installed: $DEST (v${pkg_version:-unknown})"
+    fi
 
     # Check if ~/.local/bin is in PATH
     if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
