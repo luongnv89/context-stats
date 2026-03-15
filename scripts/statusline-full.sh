@@ -194,8 +194,7 @@ if [[ -f ~/.claude/statusline.conf ]]; then
             mi_curve_beta)  mi_curve_beta="$raw_value" ;;
             color_*)
                 if [[ -n "${COLOR_KEYS[$key]+x}" ]]; then
-                    local slot="${COLOR_KEYS[$key]}"
-                    local ansi
+                    slot="${COLOR_KEYS[$key]}"
                     ansi=$(parse_color "$raw_value")
                     if [[ -n "$ansi" ]]; then
                         eval "$slot='$ansi'"
@@ -306,7 +305,6 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
 
     # Calculate percentage with one decimal (relative to total size)
     free_pct=$(awk "BEGIN {printf \"%.1f\", ($free_tokens * 100.0 / $total_size)}")
-    free_pct_int=${free_pct%.*}
 
     # Format tokens based on token_detail setting
     if [[ "$token_detail_enabled" == "true" ]]; then

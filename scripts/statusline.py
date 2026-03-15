@@ -371,9 +371,12 @@ def main():
 
     # Apply color overrides from config
     c = config.get("colors", {})
-    c_green = c.get("green", GREEN)
-    c_yellow = c.get("yellow", YELLOW)
-    c_red = c.get("red", RED)
+    # Color overrides applied via module globals for MI/context coloring
+    # pylint: disable=global-statement
+    global GREEN, YELLOW, RED  # noqa: PLW0603
+    GREEN = c.get("green", GREEN)
+    YELLOW = c.get("yellow", YELLOW)
+    RED = c.get("red", RED)
     c_blue = c.get("blue", BLUE)
     c_magenta = c.get("magenta", MAGENTA)
     c_cyan = c.get("cyan", CYAN)
@@ -422,7 +425,6 @@ def main():
 
         # Calculate percentage with one decimal (relative to total size)
         free_pct = (free_tokens * 100.0) / total_size
-        free_pct_int = int(free_pct)
 
         # Format tokens based on token_detail setting
         if token_detail:

@@ -37,17 +37,17 @@ const ROTATION_THRESHOLD = 10000;
 const ROTATION_KEEP = 5000;
 
 // Model Intelligence color thresholds
-const MI_GREEN_THRESHOLD = 0.90;
-const MI_YELLOW_THRESHOLD = 0.80;
-const MI_CONTEXT_YELLOW = 0.40;  // 40% context used
-const MI_CONTEXT_RED = 0.80;     // 80% context used
+const MI_GREEN_THRESHOLD = 0.9;
+const MI_YELLOW_THRESHOLD = 0.8;
+const MI_CONTEXT_YELLOW = 0.4; // 40% context used
+const MI_CONTEXT_RED = 0.8; // 80% context used
 
 // Per-model degradation profiles: beta controls curve shape
 // Higher beta = quality retained longer (degradation happens later)
 const MODEL_PROFILES = {
-    opus:    1.8,
-    sonnet:  1.5,
-    haiku:   1.2,
+    opus: 1.8,
+    sonnet: 1.5,
+    haiku: 1.2,
     default: 1.5,
 };
 
@@ -76,7 +76,7 @@ function computeMI(usedTokens, contextWindowSize, modelId, betaOverride) {
     }
 
     const betaFromProfile = getModelProfile(modelId || '');
-    const beta = (betaOverride && betaOverride > 0) ? betaOverride : betaFromProfile;
+    const beta = betaOverride && betaOverride > 0 ? betaOverride : betaFromProfile;
 
     const u = usedTokens / contextWindowSize;
     if (u <= 0) {
