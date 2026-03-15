@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-03-15
+
+### Fixed
+
+- **Version reporting** — `context-stats --version` now correctly reports the installed version. Previously, `__init__.py` and `context-stats.sh` were not bumped during release, causing stale version output
+
 ## [1.9.0] - 2026-03-15
 
 ### Added
