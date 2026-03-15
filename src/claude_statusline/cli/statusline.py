@@ -63,7 +63,6 @@ def main() -> None:
 
     # Context window calculation
     context_info = ""
-    ac_info = ""
     delta_info = ""
     mi_info = ""
     session_info = ""
@@ -93,12 +92,6 @@ def main() -> None:
             total_size,
             config.autocompact,
         )
-
-        if config.autocompact:
-            buffer_k = autocompact_buffer // 1000
-            ac_info = f" {colors.dim}[AC:{buffer_k}k]{colors.reset}"
-        else:
-            ac_info = f" {colors.dim}[AC:off]{colors.reset}"
 
         # Format tokens based on token_detail setting
         free_display = format_tokens(free_tokens, config.token_detail)

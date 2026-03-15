@@ -146,7 +146,6 @@ show_delta_enabled=true
 show_session_enabled=true
 show_mi_enabled=true
 mi_curve_beta=0
-ac_info=""
 delta_info=""
 mi_info=""
 session_info=""
@@ -296,12 +295,9 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
     if [[ "$autocompact_enabled" == "true" ]]; then
         # When AC enabled: subtract buffer to show actual usable space
         free_tokens=$((total_size - used_tokens - autocompact_buffer))
-        buffer_k=$(awk "BEGIN {printf \"%.0f\", $autocompact_buffer / 1000}")
-        ac_info=" ${DIM}[AC:${buffer_k}k]${RESET}"
     else
         # When AC disabled: show full free space
         free_tokens=$((total_size - used_tokens))
-        ac_info=" ${DIM}[AC:off]${RESET}"
     fi
 
     if [[ "$free_tokens" -lt 0 ]]; then

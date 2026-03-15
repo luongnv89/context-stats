@@ -57,7 +57,9 @@ const MODEL_PROFILES = {
 function getModelProfile(modelId) {
     const lower = (modelId || '').toLowerCase();
     for (const family of ['opus', 'sonnet', 'haiku']) {
-        if (lower.includes(family)) return MODEL_PROFILES[family];
+        if (lower.includes(family)) {
+            return MODEL_PROFILES[family];
+        }
     }
     return MODEL_PROFILES.default;
 }
@@ -77,7 +79,9 @@ function computeMI(usedTokens, contextWindowSize, modelId, betaOverride) {
     const beta = (betaOverride && betaOverride > 0) ? betaOverride : betaFromProfile;
 
     const u = usedTokens / contextWindowSize;
-    if (u <= 0) return { mi: 1.0 };
+    if (u <= 0) {
+        return { mi: 1.0 };
+    }
 
     const mi = Math.max(0, 1 - Math.pow(u, beta));
     return { mi };
@@ -87,10 +91,12 @@ function computeMI(usedTokens, contextWindowSize, modelId, betaOverride) {
  * Return ANSI color code for MI score considering both MI and context utilization.
  */
 function getMIColor(mi, utilization, greenColor, yellowColor, redColor) {
-    if (mi <= MI_YELLOW_THRESHOLD || utilization >= MI_CONTEXT_RED)
+    if (mi <= MI_YELLOW_THRESHOLD || utilization >= MI_CONTEXT_RED) {
         return redColor || RED;
-    if (mi < MI_GREEN_THRESHOLD || utilization >= MI_CONTEXT_YELLOW)
+    }
+    if (mi < MI_GREEN_THRESHOLD || utilization >= MI_CONTEXT_YELLOW) {
         return yellowColor || YELLOW;
+    }
     return greenColor || GREEN;
 }
 
@@ -421,7 +427,6 @@ process.stdin.on('end', () => {
 
     // Context window calculation
     let contextInfo = '';
-    let acInfo = '';
     let deltaInfo = '';
     let miInfo = '';
     let sessionInfo = '';
@@ -452,14 +457,9 @@ process.stdin.on('end', () => {
         // Free tokens calculation depends on autocompact setting
         let freeTokens;
         if (autocompactEnabled) {
-            // When AC enabled: subtract buffer to show actual usable space
             freeTokens = totalSize - usedTokens - autocompactBuffer;
-            const bufferK = Math.floor(autocompactBuffer / 1000);
-            acInfo = ` ${DIM}[AC:${bufferK}k]${RESET}`;
         } else {
-            // When AC disabled: show full free space
             freeTokens = totalSize - usedTokens;
-            acInfo = ` ${DIM}[AC:off]${RESET}`;
         }
 
         if (freeTokens < 0) {
@@ -468,7 +468,6 @@ process.stdin.on('end', () => {
 
         // Calculate percentage with one decimal (relative to total size)
         const freePct = (freeTokens * 100.0) / totalSize;
-        const freePctInt = Math.floor(freePct);
 
         // Format tokens based on token_detail setting
         const freeDisplay = tokenDetail

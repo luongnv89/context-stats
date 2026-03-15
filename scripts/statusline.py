@@ -386,7 +386,6 @@ def main():
 
     # Context window calculation
     context_info = ""
-    ac_info = ""
     delta_info = ""
     mi_info = ""
     session_info = ""
@@ -414,14 +413,9 @@ def main():
 
         # Free tokens calculation depends on autocompact setting
         if autocompact_enabled:
-            # When AC enabled: subtract buffer to show actual usable space
             free_tokens = total_size - used_tokens - autocompact_buffer
-            buffer_k = autocompact_buffer // 1000
-            ac_info = f" {DIM}[AC:{buffer_k}k]{RESET}"
         else:
-            # When AC disabled: show full free space
             free_tokens = total_size - used_tokens
-            ac_info = f" {DIM}[AC:off]{RESET}"
 
         if free_tokens < 0:
             free_tokens = 0
