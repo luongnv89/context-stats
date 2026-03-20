@@ -89,8 +89,8 @@ Zone indicators provide an at-a-glance signal for session state, displayed along
 | **P** | Green | Planning mode — safe to plan and code | < 70k tokens used | < (40% - 30k tokens) |
 | **C** | Yellow | Code-only — avoid starting new plans | 70k–100k tokens | (40% - 30k) to 40% |
 | **D** | Orange | Dump zone — quality declining, finish up | 100k–250k tokens | 40%–70% utilization |
-| **X** | Dark red | Hard limit — start a new session | at 250k tokens | at 70% utilization |
-| **Z** | Light gray | Dead zone — nothing productive here | > 250k tokens | > 70% utilization |
+| **X** | Dark red | Hard limit — start a new session | 250k–275k tokens | 70%–75% utilization |
+| **Z** | Light gray | Dead zone — nothing productive here | >= 275k tokens | >= 75% utilization |
 
 ### Design Rationale
 

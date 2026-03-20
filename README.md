@@ -38,13 +38,15 @@ cc-context-stats gives you a **Model Intelligence (MI) score** — a single numb
 - **Per-model awareness** — Opus (beta=1.8) retains quality longest. Sonnet (beta=1.5) is moderate. Haiku (beta=1.2) degrades earliest. MI reflects your actual model automatically.
 - **Live dashboard** — ASCII graphs track context growth, MI degradation, and token I/O over time. Watch quality erode in real-time so you can make informed decisions.
 - **Zero config, zero dependencies** — Install in one command. Works with pip, npm, or a shell script. No API keys, no network calls. All data stays local.
-- **Context zones** — Clear labels tell you where you stand:
+- **Context zones (P/C/D/X/Z)** — Five-state indicators tell you where you stand:
 
-| Zone | Context Used | MI Score | What It Means |
+| Zone | Letter | Color | What It Means |
 | --- | --- | --- | --- |
-| **Smart Zone** | < 40% | > 0.70 | Claude is performing at its best |
-| **Dumb Zone** | 40-80% | 0.40-0.70 | Quality degrading — Claude may miss details |
-| **Wrap Up Zone** | > 80% | < 0.40 | Start a new session now |
+| **Planning** | P | Green | Safe to plan and code |
+| **Code-only** | C | Yellow | Avoid starting new plans |
+| **Dump zone** | D | Orange | Quality declining — finish up |
+| **Hard limit** | X | Dark red | Start a new session now |
+| **Dead zone** | Z | Gray | Nothing productive here |
 
 [**Install and See Your MI Score →**](#installation)
 

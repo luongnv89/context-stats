@@ -147,6 +147,7 @@ def main() -> None:
                 from claude_statusline.graphs.intelligence import (
                     calculate_intelligence,
                     format_mi_score,
+                    get_context_zone,
                     get_mi_color,
                 )
 
@@ -155,7 +156,16 @@ def main() -> None:
                 )
                 mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)
                 mi_color = getattr(colors, mi_color_name)
-                mi_info = f" | {mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
+                zone_info = get_context_zone(used_tokens, total_size)
+                zone_color_map = {
+                    "green": colors.green,
+                    "yellow": colors.yellow,
+                    "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
+                    "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
+                    "gray": "\033[0;90m" if colors.enabled else "",
+                }
+                zone_color = zone_color_map.get(zone_info.color, colors.reset)
+                mi_info = f" | {mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset} {zone_color}{zone_info.zone}{colors.reset}"
 
             # Only append if context usage changed (avoid duplicates)
             if not has_prev or used_tokens != prev_tokens:

@@ -332,9 +332,14 @@ class TestContextZone:
         assert zone_below.zone == "D"
 
     def test_1m_x_z_boundary(self):
-        """Boundary: 250001 → Z (past X)."""
-        zone = get_context_zone(250_001, 1_000_000)
+        """Boundary: 275k → Z (past X). X is 250k–275k range."""
+        zone = get_context_zone(275_000, 1_000_000)
         assert zone.zone == "Z"
+        zone_below = get_context_zone(274_999, 1_000_000)
+        assert zone_below.zone == "X"
+        # 250001 is now within the X range (not Z)
+        zone_just_past_d = get_context_zone(250_001, 1_000_000)
+        assert zone_just_past_d.zone == "X"
 
     # --- Standard model tests (< 500k context) ---
 

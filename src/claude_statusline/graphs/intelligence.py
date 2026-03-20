@@ -37,12 +37,13 @@ LARGE_MODEL_THRESHOLD = 500_000
 ZONE_1M_P_MAX = 70_000    # P zone: < 70k used
 ZONE_1M_C_MAX = 100_000   # C zone: 70k–100k used
 ZONE_1M_D_MAX = 250_000   # D zone: 100k–250k used
-# X zone: at 250k; Z zone: > 250k
+ZONE_1M_X_MAX = 275_000   # X zone: 250k–275k used; Z zone: >= 275k
 
 # Zone thresholds for standard models (< 1M) — expressed as utilization ratios
 ZONE_STD_DUMP_ZONE = 0.40    # dump zone starts at 40%
 ZONE_STD_WARN_BUFFER = 30_000  # warn 30k tokens before dump zone
 ZONE_STD_HARD_LIMIT = 0.70   # hard limit at 70%
+ZONE_STD_DEAD_ZONE = 0.75    # dead zone starts at 75%
 
 # Per-model degradation profiles calibrated from MRCR v2 8-needle benchmark
 # beta controls curve shape: higher = quality retained longer
@@ -145,15 +146,15 @@ def get_context_zone(
       P: < 70k used
       C: 70k–100k used
       D: 100k–250k used
-      X: at 250k used
-      Z: > 250k used
+      X: 250k–275k used
+      Z: >= 275k used
 
     For standard models (< 500k context):
       P: < (dump_zone - 30k)
       C: (dump_zone - 30k) to dump_zone (40%)
       D: 40%–70% utilization
-      X: at 70% utilization
-      Z: > 70% utilization
+      X: 70%–75% utilization
+      Z: >= 75% utilization
 
     Args:
         used_tokens: Number of tokens currently used
@@ -174,7 +175,7 @@ def get_context_zone(
             return ZoneInfo(zone="C", color="yellow", label="Code-only")
         if used_tokens < ZONE_1M_D_MAX:
             return ZoneInfo(zone="D", color="orange", label="Dump zone")
-        if used_tokens == ZONE_1M_D_MAX:
+        if used_tokens < ZONE_1M_X_MAX:
             return ZoneInfo(zone="X", color="dark_red", label="Hard limit")
         return ZoneInfo(zone="Z", color="gray", label="Dead zone")
 
@@ -182,6 +183,7 @@ def get_context_zone(
     dump_zone_tokens = int(context_window_size * ZONE_STD_DUMP_ZONE)
     warn_start = max(0, dump_zone_tokens - ZONE_STD_WARN_BUFFER)
     hard_limit_tokens = int(context_window_size * ZONE_STD_HARD_LIMIT)
+    dead_zone_tokens = int(context_window_size * ZONE_STD_DEAD_ZONE)
 
     if used_tokens < warn_start:
         return ZoneInfo(zone="P", color="green", label="Planning")
@@ -189,7 +191,7 @@ def get_context_zone(
         return ZoneInfo(zone="C", color="yellow", label="Code-only")
     if used_tokens < hard_limit_tokens:
         return ZoneInfo(zone="D", color="orange", label="Dump zone")
-    if used_tokens == hard_limit_tokens:
+    if used_tokens < dead_zone_tokens:
         return ZoneInfo(zone="X", color="dark_red", label="Hard limit")
     return ZoneInfo(zone="Z", color="gray", label="Dead zone")
 

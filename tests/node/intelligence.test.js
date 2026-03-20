@@ -102,8 +102,11 @@ describe('getContextZone', () => {
         expect(getContextZone(99999, 1000000).zone).toBe('C');
     });
 
-    test('boundary: 250001 → Z (past X)', () => {
-        expect(getContextZone(250001, 1000000).zone).toBe('Z');
+    test('boundary: 275k → Z (past X), X is 250k–275k range', () => {
+        expect(getContextZone(275000, 1000000).zone).toBe('Z');
+        expect(getContextZone(274999, 1000000).zone).toBe('X');
+        // 250001 is now within X range (not Z)
+        expect(getContextZone(250001, 1000000).zone).toBe('X');
     });
 
     // Standard model tests

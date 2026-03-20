@@ -58,9 +58,11 @@ LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
 ZONE_1M_P_MAX = 70_000    # P zone: < 70k used
 ZONE_1M_C_MAX = 100_000   # C zone: 70k–100k used
 ZONE_1M_D_MAX = 250_000   # D zone: 100k–250k used
+ZONE_1M_X_MAX = 275_000   # X zone: 250k–275k used; Z zone: >= 275k
 ZONE_STD_DUMP_ZONE = 0.40
 ZONE_STD_WARN_BUFFER = 30_000
 ZONE_STD_HARD_LIMIT = 0.70
+ZONE_STD_DEAD_ZONE = 0.75
 
 
 def get_model_profile(model_id):
@@ -116,13 +118,14 @@ def get_context_zone(used_tokens, context_window_size):
             return ("C", "yellow")
         if used_tokens < ZONE_1M_D_MAX:
             return ("D", "orange")
-        if used_tokens == ZONE_1M_D_MAX:
+        if used_tokens < ZONE_1M_X_MAX:
             return ("X", "dark_red")
         return ("Z", "gray")
 
     dump_zone_tokens = int(context_window_size * ZONE_STD_DUMP_ZONE)
     warn_start = max(0, dump_zone_tokens - ZONE_STD_WARN_BUFFER)
     hard_limit_tokens = int(context_window_size * ZONE_STD_HARD_LIMIT)
+    dead_zone_tokens = int(context_window_size * ZONE_STD_DEAD_ZONE)
 
     if used_tokens < warn_start:
         return ("P", "green")
@@ -130,7 +133,7 @@ def get_context_zone(used_tokens, context_window_size):
         return ("C", "yellow")
     if used_tokens < hard_limit_tokens:
         return ("D", "orange")
-    if used_tokens == hard_limit_tokens:
+    if used_tokens < dead_zone_tokens:
         return ("X", "dark_red")
     return ("Z", "gray")
 

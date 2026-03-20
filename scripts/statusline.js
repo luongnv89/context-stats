@@ -56,9 +56,11 @@ const LARGE_MODEL_THRESHOLD = 500000; // >= 500k context = 1M-class model
 const ZONE_1M_P_MAX = 70000;    // P zone: < 70k used
 const ZONE_1M_C_MAX = 100000;   // C zone: 70k–100k used
 const ZONE_1M_D_MAX = 250000;   // D zone: 100k–250k used
+const ZONE_1M_X_MAX = 275000;   // X zone: 250k–275k used; Z zone: >= 275k
 const ZONE_STD_DUMP_ZONE = 0.40;
 const ZONE_STD_WARN_BUFFER = 30000;
 const ZONE_STD_HARD_LIMIT = 0.70;
+const ZONE_STD_DEAD_ZONE = 0.75;
 
 /**
  * Match model_id to degradation beta.
@@ -124,7 +126,7 @@ function getContextZone(usedTokens, contextWindowSize) {
         if (usedTokens < ZONE_1M_P_MAX) return { zone: 'P', colorName: 'green' };
         if (usedTokens < ZONE_1M_C_MAX) return { zone: 'C', colorName: 'yellow' };
         if (usedTokens < ZONE_1M_D_MAX) return { zone: 'D', colorName: 'orange' };
-        if (usedTokens === ZONE_1M_D_MAX) return { zone: 'X', colorName: 'dark_red' };
+        if (usedTokens < ZONE_1M_X_MAX) return { zone: 'X', colorName: 'dark_red' };
         return { zone: 'Z', colorName: 'gray' };
     }
 
@@ -132,11 +134,12 @@ function getContextZone(usedTokens, contextWindowSize) {
     const dumpZoneTokens = Math.floor(contextWindowSize * ZONE_STD_DUMP_ZONE);
     const warnStart = Math.max(0, dumpZoneTokens - ZONE_STD_WARN_BUFFER);
     const hardLimitTokens = Math.floor(contextWindowSize * ZONE_STD_HARD_LIMIT);
+    const deadZoneTokens = Math.floor(contextWindowSize * ZONE_STD_DEAD_ZONE);
 
     if (usedTokens < warnStart) return { zone: 'P', colorName: 'green' };
     if (usedTokens < dumpZoneTokens) return { zone: 'C', colorName: 'yellow' };
     if (usedTokens < hardLimitTokens) return { zone: 'D', colorName: 'orange' };
-    if (usedTokens === hardLimitTokens) return { zone: 'X', colorName: 'dark_red' };
+    if (usedTokens < deadZoneTokens) return { zone: 'X', colorName: 'dark_red' };
     return { zone: 'Z', colorName: 'gray' };
 }
 
