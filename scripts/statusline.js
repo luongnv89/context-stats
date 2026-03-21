@@ -355,7 +355,7 @@ function readConfig() {
         showSession: true,
         showIoTokens: true,
         reducedMotion: false,
-        showMI: true,
+        showMI: false,
         miCurveBeta: 0,
         colors: {},
     };

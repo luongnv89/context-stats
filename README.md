@@ -247,7 +247,7 @@ show_delta=true      # Show token delta in status line
 show_session=true    # Show session ID
 autocompact=true     # Show autocompact buffer indicator
 reduced_motion=false # Disable animations for accessibility
-show_mi=true         # Show Model Intelligence score
+show_mi=false        # Show Model Intelligence score (disabled by default)
 mi_curve_beta=0      # Use model-specific profile (0=auto, or set custom beta)
 
 # Custom colors - named colors or hex (#rrggbb)

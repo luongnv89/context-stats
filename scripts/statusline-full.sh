@@ -144,7 +144,7 @@ autocompact_enabled=true
 token_detail_enabled=true
 show_delta_enabled=true
 show_session_enabled=true
-show_mi_enabled=true
+show_mi_enabled=false
 mi_curve_beta=0
 delta_info=""
 mi_info=""
@@ -168,7 +168,7 @@ show_delta=true
 show_session=true
 
 # Model Intelligence (MI) score display
-show_mi=true
+show_mi=false
 
 # MI curve beta override (0 = use model-specific profile)
 # mi_curve_beta=0

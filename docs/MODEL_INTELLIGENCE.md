@@ -134,7 +134,7 @@ These components measured **model activity**, not **model intelligence**. The ne
 
 ```ini
 # Model Intelligence (MI) score display
-show_mi=true
+show_mi=false
 
 # Override model-specific beta with a custom value
 # Set to 0 (default) to use the model's built-in profile

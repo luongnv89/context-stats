@@ -30,7 +30,7 @@ class Config:
     show_session: bool = True
     show_io_tokens: bool = True
     reduced_motion: bool = False
-    show_mi: bool = True
+    show_mi: bool = False
     mi_curve_beta: float = 0.0  # 0 = use model-specific profile default
 
     # Custom color overrides (slot_name -> ANSI code)
@@ -81,7 +81,7 @@ show_session=true
 reduced_motion=false
 
 # Model Intelligence (MI) score display
-show_mi=true
+show_mi=false
 
 # MI curve beta override (0 = use model-specific profile)
 # Set to override the per-model default (e.g., 1.5 for moderate decay)

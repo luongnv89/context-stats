@@ -28,8 +28,8 @@ reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
 
 # Model Intelligence (MI) score display
-show_mi=true   # (default) Show MI score in status line and summary
-show_mi=false  # Disable MI display
+show_mi=false  # (default) MI score hidden
+show_mi=true   # Enable MI display in status line and summary
 
 # MI curve beta override
 mi_curve_beta=0    # (default) Use model-specific profile (opus=1.8, sonnet=1.5, haiku=1.2)

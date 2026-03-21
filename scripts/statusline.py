@@ -335,7 +335,7 @@ def read_config():
         "show_session": True,
         "show_io_tokens": True,
         "reduced_motion": False,
-        "show_mi": True,
+        "show_mi": False,
         "mi_curve_beta": 0.0,
         "colors": {},
     }
