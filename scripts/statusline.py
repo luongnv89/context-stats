@@ -454,6 +454,7 @@ def main():
     context_info = ""
     delta_info = ""
     mi_info = ""
+    zone_info = ""
     session_info = ""
     total_size = data.get("context_window", {}).get("context_window_size", 0)
     current_usage = data.get("context_window", {}).get("current_usage")
@@ -501,6 +502,11 @@ def main():
         ctx_color = get_mi_color(ctx_mi, ctx_util)
 
         context_info = f" | {ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
+
+        # Always show zone indicator
+        zone_word, zone_color_name = get_context_zone(used_tokens, total_size)
+        zone_ansi = _zone_ansi_color(zone_color_name)
+        zone_info = f" | {zone_ansi}{zone_word}{RESET}"
 
         # Read previous entry if needed for delta OR MI
         if show_delta or show_mi:
@@ -565,9 +571,7 @@ def main():
                 mi_val = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
                 mi_util = used_tokens / total_size if total_size > 0 else 0.0
                 mi_color = get_mi_color(mi_val, mi_util)
-                zone_letter, zone_color_name = get_context_zone(used_tokens, total_size)
-                zone_ansi = _zone_ansi_color(zone_color_name)
-                mi_info = f" | {mi_color}MI:{mi_val:.3f}{RESET} {zone_ansi}{zone_letter}{RESET}"
+                mi_info = f" | {mi_color}MI:{mi_val:.3f}{RESET}"
 
             # Only append if context usage changed (avoid duplicates from multiple refreshes)
             if not has_prev or used_tokens != prev_tokens:
@@ -606,7 +610,7 @@ def main():
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
     base = f"{DIM}{model}{RESET} | {c_blue}{dir_name}{RESET}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, mi_info, delta_info, session_info]
+    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, session_info]
     print(fit_to_width(parts, max_width))
 
 

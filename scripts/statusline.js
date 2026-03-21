@@ -484,6 +484,7 @@ process.stdin.on('end', () => {
     let contextInfo = '';
     let deltaInfo = '';
     let miInfo = '';
+    let zoneInfo = '';
     let sessionInfo = '';
     const showMI = config.showMI;
     const miCurveBeta = config.miCurveBeta;
@@ -535,6 +536,11 @@ process.stdin.on('end', () => {
         const ctxColor = getMIColor(ctxMI.mi, ctxUtil, cGreen, cYellow, cRed);
 
         contextInfo = ` | ${ctxColor}${freeDisplay} (${freePct.toFixed(1)}%)${RESET}`;
+
+        // Always show zone indicator
+        const zoneResult = getContextZone(usedTokens, totalSize);
+        const zoneAnsi = zoneAnsiColor(zoneResult.colorName);
+        zoneInfo = ` | ${zoneAnsi}${zoneResult.zone}${RESET}`;
 
         // Read previous entry if needed for delta OR MI
         if (showDelta || showMI) {
@@ -612,9 +618,7 @@ process.stdin.on('end', () => {
                 const miResult = computeMI(usedTokens, totalSize, modelId, miCurveBeta);
                 const miUtil = totalSize > 0 ? usedTokens / totalSize : 0;
                 const miColor = getMIColor(miResult.mi, miUtil, cGreen, cYellow, cRed);
-                const zoneResult = getContextZone(usedTokens, totalSize);
-                const zoneAnsi = zoneAnsiColor(zoneResult.colorName);
-                miInfo = ` | ${miColor}MI:${miResult.mi.toFixed(3)}${RESET} ${zoneAnsi}${zoneResult.zone}${RESET}`;
+                miInfo = ` | ${miColor}MI:${miResult.mi.toFixed(3)}${RESET}`;
             }
 
             // Only append if context usage changed (avoid duplicates from multiple refreshes)
@@ -658,7 +662,7 @@ process.stdin.on('end', () => {
     // Output: [Model] dir | branch [n] | free (%) [+delta] [AC] session
     const base = `${DIM}${model}${RESET} | ${cBlue}${dirName}${RESET}`;
     const maxWidth = getTerminalWidth();
-    const parts = [base, gitInfo, contextInfo, miInfo, deltaInfo, sessionInfo];
+    const parts = [base, gitInfo, contextInfo, zoneInfo, miInfo, deltaInfo, sessionInfo];
     console.log(fitToWidth(parts, maxWidth));
 });
 

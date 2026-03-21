@@ -113,6 +113,48 @@ get_mi_color() {
     }'
 }
 
+# Context zone indicator — always shown
+# Returns "zone_word color_name" (e.g., "Plan green")
+get_context_zone() {
+    local used_tokens=$1 context_window=$2
+    awk -v used="$used_tokens" -v cw="$context_window" '
+    BEGIN {
+        if (cw == 0) { print "Plan green"; exit }
+        if (cw >= 500000) {
+            # 1M model thresholds
+            if (used < 70000)       print "Plan green"
+            else if (used < 100000) print "Code yellow"
+            else if (used < 250000) print "Dump orange"
+            else if (used < 275000) print "ExDump dark_red"
+            else                    print "Dead gray"
+        } else {
+            # Standard model thresholds
+            dump_zone = int(cw * 0.40)
+            warn_start = dump_zone - 30000
+            if (warn_start < 0) warn_start = 0
+            hard_limit = int(cw * 0.70)
+            dead_zone = int(cw * 0.75)
+            if (used < warn_start)       print "Plan green"
+            else if (used < dump_zone)   print "Code yellow"
+            else if (used < hard_limit)  print "Dump orange"
+            else if (used < dead_zone)   print "ExDump dark_red"
+            else                         print "Dead gray"
+        }
+    }'
+}
+
+zone_ansi_color() {
+    local color_name="$1"
+    case "$color_name" in
+        green)    echo "$GREEN" ;;
+        yellow)   echo "$YELLOW" ;;
+        orange)   echo "\033[38;2;255;165;0m" ;;
+        dark_red) echo "\033[38;2;139;0;0m" ;;
+        gray)     echo "\033[0;90m" ;;
+        *)        echo "$RESET" ;;
+    esac
+}
+
 # Read JSON input from stdin
 input=$(cat)
 
@@ -148,6 +190,7 @@ show_mi_enabled=false
 mi_curve_beta=0
 delta_info=""
 mi_info=""
+zone_info=""
 session_info=""
 
 # Create config file with defaults if it doesn't exist
@@ -326,6 +369,13 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
 
     context_info=" | ${ctx_color}${free_display} (${free_pct}%)${RESET}"
 
+    # Always show zone indicator
+    zone_result=$(get_context_zone "$used_tokens" "$total_size")
+    zone_word=$(echo "$zone_result" | awk '{print $1}')
+    zone_color_name=$(echo "$zone_result" | awk '{print $2}')
+    zone_ansi=$(zone_ansi_color "$zone_color_name")
+    zone_info=" | ${zone_ansi}${zone_word}${RESET}"
+
     # Read previous entry if needed for delta OR MI
     if [[ "$show_delta_enabled" == "true" || "$show_mi_enabled" == "true" ]]; then
         # Use session_id for per-session state (avoids conflicts with parallel sessions)
@@ -410,4 +460,4 @@ fi
 # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
 base="${DIM}${model}${RESET} | ${BLUE}${dir_name}${RESET}"
 max_width=$(get_terminal_width)
-fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$mi_info" "$delta_info" "$session_info"
+fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$zone_info" "$mi_info" "$delta_info" "$session_info"

@@ -65,6 +65,7 @@ def main() -> None:
     context_info = ""
     delta_info = ""
     mi_info = ""
+    zone_info = ""
     session_info = ""
 
     total_size = data.get("context_window", {}).get("context_window_size", 0)
@@ -107,6 +108,20 @@ def main() -> None:
 
         context_info = f" | {ctx_color}{free_display} ({free_pct:.1f}%){colors.reset}"
 
+        # Always show zone indicator
+        from claude_statusline.graphs.intelligence import get_context_zone
+
+        zone_result = get_context_zone(used_tokens, total_size)
+        zone_color_map = {
+            "green": colors.green,
+            "yellow": colors.yellow,
+            "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
+            "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
+            "gray": "\033[0;90m" if colors.enabled else "",
+        }
+        zone_color = zone_color_map.get(zone_result.color, colors.reset)
+        zone_info = f" | {zone_color}{zone_result.zone}{colors.reset}"
+
         # State file management for delta display and history recording
         if config.show_delta or config.show_mi:
             state_file = StateFile(session_id)
@@ -147,7 +162,6 @@ def main() -> None:
                 from claude_statusline.graphs.intelligence import (
                     calculate_intelligence,
                     format_mi_score,
-                    get_context_zone,
                     get_mi_color,
                 )
 
@@ -156,16 +170,7 @@ def main() -> None:
                 )
                 mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)
                 mi_color = getattr(colors, mi_color_name)
-                zone_info = get_context_zone(used_tokens, total_size)
-                zone_color_map = {
-                    "green": colors.green,
-                    "yellow": colors.yellow,
-                    "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
-                    "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
-                    "gray": "\033[0;90m" if colors.enabled else "",
-                }
-                zone_color = zone_color_map.get(zone_info.color, colors.reset)
-                mi_info = f" | {mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset} {zone_color}{zone_info.zone}{colors.reset}"
+                mi_info = f" | {mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
 
             # Only append if context usage changed (avoid duplicates)
             if not has_prev or used_tokens != prev_tokens:
@@ -178,7 +183,7 @@ def main() -> None:
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [session_id]
     base = f"{colors.dim}{model}{colors.reset} | {colors.blue}{dir_name}{colors.reset}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, mi_info, delta_info, session_info]
+    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, session_info]
     print(fit_to_width(parts, max_width))
 
 
