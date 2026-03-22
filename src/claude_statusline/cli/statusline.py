@@ -100,39 +100,31 @@ def main() -> None:
         # Format tokens based on token_detail setting
         free_display = format_tokens(free_tokens, config.token_detail)
 
-        # Color based on MI thresholds (consistent with MI display)
-        from claude_statusline.graphs.intelligence import get_mi_color as _get_ctx_color, calculate_context_pressure, get_model_profile
-
-        _utilization = used_tokens / total_size if total_size > 0 else 0.0
-        _beta = get_model_profile(model_id)
-        _mi = calculate_context_pressure(_utilization, _beta)
-        ctx_color_name = _get_ctx_color(_mi, _utilization)
-        ctx_color = getattr(colors, ctx_color_name)
-
-        # Use per-property context_length color if configured, else MI-based color
-        prop_ctx_color = config.color_overrides.get("context_length")
-        effective_ctx_color = prop_ctx_color if prop_ctx_color else ctx_color
-
-        context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){colors.reset}"
-
-        # Always show zone indicator
+        # Zone indicator — determines color for both context info and zone label
         from claude_statusline.graphs.intelligence import get_context_zone
 
         zone_result = get_context_zone(used_tokens, total_size)
-        # Use per-property zone color if configured, else dynamic zone color
+
+        # Traffic-light color map: green/yellow/orange/red/gray
+        zone_color_map = {
+            "green": colors.green,
+            "yellow": colors.yellow,
+            "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
+            "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
+            "gray": "\033[0;90m" if colors.enabled else "",
+        }
+        zone_color = zone_color_map.get(zone_result.color, colors.reset)
+
+        # Context info uses zone color (traffic-light), with per-property override
+        prop_ctx_color = config.color_overrides.get("context_length")
+        effective_ctx_color = prop_ctx_color if prop_ctx_color else zone_color
+
+        context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){colors.reset}"
+
+        # Zone label uses same color, with per-property override
         prop_zone_color = config.color_overrides.get("zone")
-        if prop_zone_color:
-            zone_color = prop_zone_color
-        else:
-            zone_color_map = {
-                "green": colors.green,
-                "yellow": colors.yellow,
-                "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
-                "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
-                "gray": "\033[0;90m" if colors.enabled else "",
-            }
-            zone_color = zone_color_map.get(zone_result.color, colors.reset)
-        zone_info = f" | {zone_color}{zone_result.zone}{colors.reset}"
+        effective_zone_color = prop_zone_color if prop_zone_color else zone_color
+        zone_info = f" | {effective_zone_color}{zone_result.zone}{colors.reset}"
 
         # State file management for delta display and history recording
         if config.show_delta or config.show_mi:

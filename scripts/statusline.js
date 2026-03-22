@@ -571,21 +571,18 @@ process.stdin.on('end', () => {
             ? freeTokens.toLocaleString('en-US')
             : `${(freeTokens / 1000).toFixed(1)}k`;
 
-        // Color based on MI thresholds (consistent with MI display)
-        const ctxUtil = totalSize > 0 ? usedTokens / totalSize : 0;
-        const ctxMI = computeMI(usedTokens, totalSize, modelId, miCurveBeta);
-        const ctxColor = getMIColor(ctxMI.mi, ctxUtil, cGreen, cYellow, cRed);
+        // Zone indicator — determines color for both context info and zone label
+        const zoneResult = getContextZone(usedTokens, totalSize);
+        const zoneAnsi = zoneAnsiColor(zoneResult.colorName);
 
-        // Use per-property context_length color if configured, else MI-based color
-        const effectiveCtxColor = c.context_length || ctxColor;
+        // Context info uses zone color (traffic-light), with per-property override
+        const effectiveCtxColor = c.context_length || zoneAnsi;
 
         contextInfo = ` | ${effectiveCtxColor}${freeDisplay} (${freePct.toFixed(1)}%)${RESET}`;
 
-        // Always show zone indicator
-        const zoneResult = getContextZone(usedTokens, totalSize);
-        // Use per-property zone color if configured, else dynamic zone color
-        const zoneAnsi = c.zone || zoneAnsiColor(zoneResult.colorName);
-        zoneInfo = ` | ${zoneAnsi}${zoneResult.zone}${RESET}`;
+        // Zone label uses same color, with per-property override
+        const effectiveZoneColor = c.zone || zoneAnsi;
+        zoneInfo = ` | ${effectiveZoneColor}${zoneResult.zone}${RESET}`;
 
         // Read previous entry if needed for delta OR MI
         if (showDelta || showMI) {
