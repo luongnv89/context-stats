@@ -123,10 +123,18 @@ function getContextZone(usedTokens, contextWindowSize) {
     const isLarge = contextWindowSize >= LARGE_MODEL_THRESHOLD;
 
     if (isLarge) {
-        if (usedTokens < ZONE_1M_P_MAX) return { zone: 'Plan', colorName: 'green' };
-        if (usedTokens < ZONE_1M_C_MAX) return { zone: 'Code', colorName: 'yellow' };
-        if (usedTokens < ZONE_1M_D_MAX) return { zone: 'Dump', colorName: 'orange' };
-        if (usedTokens < ZONE_1M_X_MAX) return { zone: 'ExDump', colorName: 'dark_red' };
+        if (usedTokens < ZONE_1M_P_MAX) {
+            return { zone: 'Plan', colorName: 'green' };
+        }
+        if (usedTokens < ZONE_1M_C_MAX) {
+            return { zone: 'Code', colorName: 'yellow' };
+        }
+        if (usedTokens < ZONE_1M_D_MAX) {
+            return { zone: 'Dump', colorName: 'orange' };
+        }
+        if (usedTokens < ZONE_1M_X_MAX) {
+            return { zone: 'ExDump', colorName: 'dark_red' };
+        }
         return { zone: 'Dead', colorName: 'gray' };
     }
 
@@ -136,10 +144,18 @@ function getContextZone(usedTokens, contextWindowSize) {
     const hardLimitTokens = Math.floor(contextWindowSize * ZONE_STD_HARD_LIMIT);
     const deadZoneTokens = Math.floor(contextWindowSize * ZONE_STD_DEAD_ZONE);
 
-    if (usedTokens < warnStart) return { zone: 'Plan', colorName: 'green' };
-    if (usedTokens < dumpZoneTokens) return { zone: 'Code', colorName: 'yellow' };
-    if (usedTokens < hardLimitTokens) return { zone: 'Dump', colorName: 'orange' };
-    if (usedTokens < deadZoneTokens) return { zone: 'ExDump', colorName: 'dark_red' };
+    if (usedTokens < warnStart) {
+        return { zone: 'Plan', colorName: 'green' };
+    }
+    if (usedTokens < dumpZoneTokens) {
+        return { zone: 'Code', colorName: 'yellow' };
+    }
+    if (usedTokens < hardLimitTokens) {
+        return { zone: 'Dump', colorName: 'orange' };
+    }
+    if (usedTokens < deadZoneTokens) {
+        return { zone: 'ExDump', colorName: 'dark_red' };
+    }
     return { zone: 'Dead', colorName: 'gray' };
 }
 
@@ -147,11 +163,21 @@ function getContextZone(usedTokens, contextWindowSize) {
  * Map zone color name to ANSI escape code.
  */
 function zoneAnsiColor(colorName) {
-    if (colorName === 'green') return GREEN;
-    if (colorName === 'yellow') return YELLOW;
-    if (colorName === 'orange') return '\x1b[38;2;255;165;0m';
-    if (colorName === 'dark_red') return '\x1b[38;2;139;0;0m';
-    if (colorName === 'gray') return '\x1b[0;90m';
+    if (colorName === 'green') {
+        return GREEN;
+    }
+    if (colorName === 'yellow') {
+        return YELLOW;
+    }
+    if (colorName === 'orange') {
+        return '\x1b[38;2;255;165;0m';
+    }
+    if (colorName === 'dark_red') {
+        return '\x1b[38;2;139;0;0m';
+    }
+    if (colorName === 'gray') {
+        return '\x1b[0;90m';
+    }
     return RESET;
 }
 
@@ -484,10 +510,9 @@ process.stdin.on('end', () => {
     const cCyan = c.cyan || CYAN;
 
     // Per-property color defaults (highlighted key info)
-    const cContextLength = c.context_length || '\x1b[1;97m'; // bold_white
-    const cProjectName = c.project_name || CYAN;
-    const cBranchName = c.branch_name || GREEN;
-    const cMIScore = c.mi_score || YELLOW;
+    // Falls back to old color keys for backward compatibility, then to new defaults
+    const cProjectName = c.project_name || (c.blue ? cBlue : CYAN);
+    const cBranchName = c.branch_name || (c.magenta ? cMagenta : GREEN);
     const cSeparator = c.separator || DIM;
 
     // Git info (use per-property branch color, fallback to green)
@@ -690,5 +715,8 @@ process.stdin.on('end', () => {
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { maybeRotateStateFile, ROTATION_THRESHOLD, ROTATION_KEEP, computeMI, getContextZone };
+    module.exports = {
+        maybeRotateStateFile, ROTATION_THRESHOLD, ROTATION_KEEP,
+        computeMI, getContextZone,
+    };
 }

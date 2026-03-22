@@ -454,13 +454,12 @@ def main():
     c_cyan = c.get("cyan", CYAN)
 
     # Per-property color defaults (highlighted key info)
-    c_context_length = c.get("context_length", "\033[1;97m")  # bold_white
-    c_project_name = c.get("project_name", CYAN)
-    c_branch_name = c.get("branch_name", "\033[0;32m")  # green
-    c_mi_score = c.get("mi_score", YELLOW)
+    # Falls back to old color keys for backward compatibility, then to new defaults
+    c_project_name = c.get("project_name", c_blue if "blue" in c else CYAN)
+    c_branch_name = c.get("branch_name", c_magenta if "magenta" in c else GREEN)
     c_separator = c.get("separator", DIM)
 
-    # Git info (use per-property branch color, fallback to magenta)
+    # Git info (use per-property branch color, fallback to green)
     git_info = get_git_info(project_dir, magenta=c_branch_name, cyan=c_cyan)
 
     # Extract session_id once for reuse

@@ -23,7 +23,9 @@
 #   timestamp,total_input_tokens,total_output_tokens,current_usage_input_tokens,current_usage_output_tokens,current_usage_cache_creation,current_usage_cache_read,total_cost_usd,total_lines_added,total_lines_removed,session_id,model_id,workspace_project_dir
 
 # Colors (defaults, overridable via config)
+# shellcheck disable=SC2034  # Used dynamically via COLOR_KEYS eval
 BLUE='\033[0;34m'
+# shellcheck disable=SC2034  # Used dynamically via COLOR_KEYS eval
 MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -245,6 +247,7 @@ if [[ -f ~/.claude/statusline.conf ]]; then
                     ansi=$(parse_color "$raw_value")
                     if [[ -n "$ansi" ]]; then
                         eval "$slot='$ansi'"
+                        eval "${slot}_CONFIG_SET=yes"
                     fi
                 fi
                 ;;
@@ -254,12 +257,25 @@ fi
 
 # Per-property color defaults (highlighted key info)
 # Track which per-property colors were explicitly set via config
-C_CONTEXT_LENGTH_SET="${C_CONTEXT_LENGTH:+yes}"
-C_MI_SCORE_SET="${C_MI_SCORE:+yes}"
-C_ZONE_SET="${C_ZONE:+yes}"
+C_CONTEXT_LENGTH_SET="${C_CONTEXT_LENGTH_CONFIG_SET:-}"
+C_MI_SCORE_SET="${C_MI_SCORE_CONFIG_SET:-}"
+C_ZONE_SET="${C_ZONE_CONFIG_SET:-}"
 : "${C_CONTEXT_LENGTH:=\033[1;97m}"  # bold_white
-: "${C_PROJECT_NAME:=$CYAN}"
-: "${C_BRANCH_NAME:=$GREEN}"
+# Cascade: per-property key -> old color key -> new highlighted default
+if [[ -z "$C_PROJECT_NAME" ]]; then
+    if [[ "${BLUE_CONFIG_SET:-}" == "yes" ]]; then
+        C_PROJECT_NAME="$BLUE"
+    else
+        C_PROJECT_NAME="$CYAN"
+    fi
+fi
+if [[ -z "$C_BRANCH_NAME" ]]; then
+    if [[ "${MAGENTA_CONFIG_SET:-}" == "yes" ]]; then
+        C_BRANCH_NAME="$MAGENTA"
+    else
+        C_BRANCH_NAME="$GREEN"
+    fi
+fi
 : "${C_MI_SCORE:=$YELLOW}"
 : "${C_SEPARATOR:=$DIM}"
 

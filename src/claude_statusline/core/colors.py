@@ -113,18 +113,29 @@ class ColorManager:
     def red(self) -> str:
         return self._get("red", RED)
 
-    # Per-property color slots (fallback to base color if not overridden)
+    def _get_prop(self, slot: str, fallback_slot: str, default: str) -> str:
+        """Get per-property color with fallback to old color key, then default."""
+        if not self.enabled:
+            return ""
+        if slot in self._overrides:
+            return self._overrides[slot]
+        if fallback_slot in self._overrides:
+            return self._overrides[fallback_slot]
+        return default
+
+    # Per-property color slots
+    # Cascade: per-property key -> old color key -> highlighted default
     @property
     def context_length(self) -> str:
         return self._get("context_length", "\033[1;97m" if self.enabled else "")
 
     @property
     def project_name(self) -> str:
-        return self._get("project_name", CYAN if self.enabled else "")
+        return self._get_prop("project_name", "blue", CYAN)
 
     @property
     def branch_name(self) -> str:
-        return self._get("branch_name", GREEN if self.enabled else "")
+        return self._get_prop("branch_name", "magenta", GREEN)
 
     @property
     def mi_score(self) -> str:
