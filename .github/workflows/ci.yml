@@ -270,11 +270,248 @@ jobs:
           echo "All integration tests passed!"
 
   # ============================================
+  # END-TO-END TESTS
+  # ============================================
+  e2e-install-bash:
+    name: E2E Install Bash (${{ matrix.os }})
+    needs: [bash-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update && sudo apt-get install -y jq
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install jq
+          fi
+
+      - name: Run install.sh
+        run: ./install.sh
+
+      - name: Verify statusline script installed
+        run: |
+          test -f "$HOME/.claude/statusline.sh"
+          echo "✓ statusline.sh exists"
+          test -x "$HOME/.claude/statusline.sh"
+          echo "✓ statusline.sh is executable"
+
+      - name: Verify context-stats CLI installed
+        run: |
+          test -f "$HOME/.local/bin/context-stats"
+          echo "✓ context-stats exists"
+          test -x "$HOME/.local/bin/context-stats"
+          echo "✓ context-stats is executable"
+
+      - name: Verify config file created
+        run: |
+          test -f "$HOME/.claude/statusline.conf"
+          echo "✓ statusline.conf exists"
+
+      - name: Verify settings.json updated
+        run: |
+          test -f "$HOME/.claude/settings.json"
+          grep -q "statusLine" "$HOME/.claude/settings.json"
+          echo "✓ settings.json contains statusLine config"
+
+      - name: Verify installed script produces output
+        run: |
+          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+          OUTPUT=$(echo "$SAMPLE_INPUT" | "$HOME/.claude/statusline.sh")
+          test -n "$OUTPUT"
+          echo "✓ Installed statusline.sh produces non-empty output"
+          echo "  Output: $OUTPUT"
+
+  e2e-install-npm:
+    name: E2E Install npm (${{ matrix.os }}, Node ${{ matrix.node-version }})
+    needs: [node-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: ['18', '20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install globally via npm
+        run: npm install -g .
+
+      - name: Verify context-stats command is available
+        run: |
+          which context-stats
+          echo "✓ context-stats is on PATH"
+
+      - name: Verify statusline.js produces output via npm global
+        run: |
+          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+          # The npm global install makes statusline.js available as the package main
+          OUTPUT=$(echo "$SAMPLE_INPUT" | node "$(npm root -g)/cc-context-stats/scripts/statusline.js")
+          test -n "$OUTPUT"
+          echo "✓ statusline.js produces non-empty output via npm global install"
+          echo "  Output: $OUTPUT"
+
+  e2e-install-pip:
+    name: E2E Install pip (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    needs: [python-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install via pip
+        run: pip install .
+
+      - name: Verify claude-statusline command is available
+        run: |
+          which claude-statusline
+          echo "✓ claude-statusline is on PATH"
+
+      - name: Verify context-stats command is available
+        run: |
+          which context-stats
+          echo "✓ context-stats is on PATH"
+
+      - name: Verify claude-statusline produces output
+        run: |
+          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+          OUTPUT=$(echo "$SAMPLE_INPUT" | claude-statusline)
+          test -n "$OUTPUT"
+          echo "✓ claude-statusline produces non-empty output via pip install"
+          echo "  Output: $OUTPUT"
+
+  e2e-exec:
+    name: E2E Exec (${{ matrix.os }})
+    needs: [bash-lint, python-lint, node-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update && sudo apt-get install -y jq
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install jq
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test all scripts produce non-empty output
+        run: |
+          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+
+          echo "=== Bash scripts ==="
+          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
+            OUTPUT=$(echo "$SAMPLE_INPUT" | ./scripts/"$script")
+            test -n "$OUTPUT" || { echo "✗ $script produced empty output"; exit 1; }
+            echo "✓ $script: $OUTPUT"
+          done
+
+          echo "=== Python script ==="
+          OUTPUT=$(echo "$SAMPLE_INPUT" | python3 ./scripts/statusline.py)
+          test -n "$OUTPUT" || { echo "✗ statusline.py produced empty output"; exit 1; }
+          echo "✓ statusline.py: $OUTPUT"
+
+          echo "=== Node.js script ==="
+          OUTPUT=$(echo "$SAMPLE_INPUT" | node ./scripts/statusline.js)
+          test -n "$OUTPUT" || { echo "✗ statusline.js produced empty output"; exit 1; }
+          echo "✓ statusline.js: $OUTPUT"
+
+          echo ""
+          echo "All E2E execution tests passed!"
+
+      - name: Test with 1M model input
+        run: |
+          SAMPLE_1M='{"model":{"display_name":"Claude Opus 4.6"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":1000000,"current_usage":{"input_tokens":50000,"cache_creation_input_tokens":10000,"cache_read_input_tokens":5000}}}'
+
+          echo "=== 1M model context ==="
+          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
+            OUTPUT=$(echo "$SAMPLE_1M" | ./scripts/"$script")
+            test -n "$OUTPUT" || { echo "✗ $script (1M) produced empty output"; exit 1; }
+            echo "✓ $script (1M): $OUTPUT"
+          done
+
+          OUTPUT=$(echo "$SAMPLE_1M" | python3 ./scripts/statusline.py)
+          test -n "$OUTPUT" || { echo "✗ statusline.py (1M) produced empty output"; exit 1; }
+          echo "✓ statusline.py (1M): $OUTPUT"
+
+          OUTPUT=$(echo "$SAMPLE_1M" | node ./scripts/statusline.js)
+          test -n "$OUTPUT" || { echo "✗ statusline.js (1M) produced empty output"; exit 1; }
+          echo "✓ statusline.js (1M): $OUTPUT"
+
+      - name: Test with edge case inputs
+        run: |
+          echo "=== Empty/zero context ==="
+          ZERO_CTX='{"model":{"display_name":"Test"},"workspace":{"current_dir":"/tmp","project_dir":"/tmp"},"context_window":{"context_window_size":0,"current_usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}'
+          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
+            OUTPUT=$(echo "$ZERO_CTX" | ./scripts/"$script")
+            test -n "$OUTPUT" || { echo "✗ $script (zero ctx) produced empty output"; exit 1; }
+            echo "✓ $script handles zero context"
+          done
+          OUTPUT=$(echo "$ZERO_CTX" | python3 ./scripts/statusline.py)
+          test -n "$OUTPUT" || { echo "✗ statusline.py (zero ctx) produced empty output"; exit 1; }
+          echo "✓ statusline.py handles zero context"
+          OUTPUT=$(echo "$ZERO_CTX" | node ./scripts/statusline.js)
+          test -n "$OUTPUT" || { echo "✗ statusline.js (zero ctx) produced empty output"; exit 1; }
+          echo "✓ statusline.js handles zero context"
+
+          echo "=== High utilization ==="
+          HIGH_USE='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp","project_dir":"/tmp"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":180000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}'
+          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
+            OUTPUT=$(echo "$HIGH_USE" | ./scripts/"$script")
+            test -n "$OUTPUT" || { echo "✗ $script (high use) produced empty output"; exit 1; }
+            echo "✓ $script handles high utilization"
+          done
+          OUTPUT=$(echo "$HIGH_USE" | python3 ./scripts/statusline.py)
+          test -n "$OUTPUT" || { echo "✗ statusline.py (high use) produced empty output"; exit 1; }
+          echo "✓ statusline.py handles high utilization"
+          OUTPUT=$(echo "$HIGH_USE" | node ./scripts/statusline.js)
+          test -n "$OUTPUT" || { echo "✗ statusline.js (high use) produced empty output"; exit 1; }
+          echo "✓ statusline.js handles high utilization"
+
+  # ============================================
   # FINAL STATUS CHECK
   # ============================================
   ci-success:
     name: CI Success
-    needs: [bash-lint, bash-test, python-lint, python-test, node-lint, node-test, integration-test, parity-test]
+    needs: [bash-lint, bash-test, python-lint, python-test, node-lint, node-test, integration-test, parity-test, e2e-install-bash, e2e-install-npm, e2e-install-pip, e2e-exec]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -287,7 +524,11 @@ jobs:
              [[ "${{ needs.node-lint.result }}" != "success" ]] || \
              [[ "${{ needs.node-test.result }}" != "success" ]] || \
              [[ "${{ needs.integration-test.result }}" != "success" ]] || \
-             [[ "${{ needs.parity-test.result }}" != "success" ]]; then
+             [[ "${{ needs.parity-test.result }}" != "success" ]] || \
+             [[ "${{ needs.e2e-install-bash.result }}" != "success" ]] || \
+             [[ "${{ needs.e2e-install-npm.result }}" != "success" ]] || \
+             [[ "${{ needs.e2e-install-pip.result }}" != "success" ]] || \
+             [[ "${{ needs.e2e-exec.result }}" != "success" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
