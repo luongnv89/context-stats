@@ -223,8 +223,9 @@ describe('statusline.js', () => {
             expect(result.code).toBe(0);
             const visible = stripAnsi(result.stdout);
             expect(visible.length).toBeLessThanOrEqual(40);
-            expect(visible).toContain('Claude 3.5 Sonnet');
             expect(visible).toContain('myproject');
+            // Model name is lowest priority — truncated first in narrow terminals
+            expect(visible).not.toContain('Claude 3.5 Sonnet');
         });
 
         test('wide terminal shows all', async () => {

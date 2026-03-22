@@ -503,7 +503,9 @@ if [[ "$show_session_enabled" == "true" && -n "$session_id" ]]; then
     session_info=" | ${C_SEPARATOR}${session_id}${RESET}"
 fi
 
-# Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-base="${C_SEPARATOR}${model}${RESET} | ${C_PROJECT_NAME}${dir_name}${RESET}"
+# Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [S:session_id]
+# Model name is lowest priority — truncated first when terminal is narrow
+base="${C_PROJECT_NAME}${dir_name}${RESET}"
+model_info=" | ${C_SEPARATOR}${model}${RESET}"
 max_width=$(get_terminal_width)
-fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$zone_info" "$mi_info" "$delta_info" "$session_info"
+fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$zone_info" "$mi_info" "$delta_info" "$model_info" "$session_info"

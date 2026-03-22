@@ -115,14 +115,15 @@ strip_ansi() {
     [ "$len" -le 80 ]
 }
 
-@test "narrow terminal still shows model and directory" {
-    input='{"model":{"display_name":"Claude"},"workspace":{"current_dir":"/tmp/proj","project_dir":"/tmp/proj"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":10000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
+@test "narrow terminal prioritizes directory and context over model" {
+    input='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/myproject","project_dir":"/tmp/myproject"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":10000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
     result=$(COLUMNS=40 bash "$SCRIPT" <<< "$input")
     visible=$(strip_ansi "$result")
     len=$(printf '%s' "$visible" | wc -m | tr -d ' ')
     [ "$len" -le 40 ]
-    [[ "$visible" == *"Claude"* ]]
-    [[ "$visible" == *"proj"* ]]
+    [[ "$visible" == *"myproject"* ]]
+    # Model name is lowest priority — truncated first in narrow terminals
+    [[ "$visible" != *"Claude 3.5 Sonnet"* ]]
 }
 
 @test "wide terminal shows session_id" {

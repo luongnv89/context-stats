@@ -631,10 +631,12 @@ def main():
     if show_session and session_id:
         session_info = f" | {c_separator}{session_id}{RESET}"
 
-    # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-    base = f"{c_separator}{model}{RESET} | {c_project_name}{dir_name}{RESET}"
+    # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [session_id]
+    # Model name is lowest priority — truncated first when terminal is narrow
+    base = f"{c_project_name}{dir_name}{RESET}"
+    model_info = f" | {c_separator}{model}{RESET}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, session_info]
+    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, model_info, session_info]
     print(fit_to_width(parts, max_width))
 
 

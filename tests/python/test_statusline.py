@@ -192,13 +192,14 @@ class TestWidthTruncation:
         assert len(visible) <= 80
 
     def test_output_fits_narrow_terminal(self, sample_input):
-        """Output should fit within 40 columns and still show model+dir."""
+        """Output should fit within 40 columns, preserving dir and context over model."""
         output, code = run_script(sample_input, {"COLUMNS": "40"})
         assert code == 0
         visible = strip_ansi(output)
         assert len(visible) <= 40
-        assert "Claude 3.5 Sonnet" in visible
         assert "myproject" in visible
+        # Model name is lowest priority — truncated first in narrow terminals
+        assert "Claude 3.5 Sonnet" not in visible
 
     def test_wide_terminal_shows_all(self, sample_input):
         """Wide terminal should show session_id."""

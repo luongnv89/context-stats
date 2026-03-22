@@ -706,10 +706,12 @@ process.stdin.on('end', () => {
         sessionInfo = ` | ${cSeparator}${sessionId}${RESET}`;
     }
 
-    // Output: [Model] dir | branch [n] | free (%) [+delta] [AC] session
-    const base = `${cSeparator}${model}${RESET} | ${cProjectName}${dirName}${RESET}`;
+    // Output: dir | branch [n] | free (%) | zone | MI | +delta | [Model] session
+    // Model name is lowest priority — truncated first when terminal is narrow
+    const base = `${cProjectName}${dirName}${RESET}`;
+    const modelInfo = ` | ${cSeparator}${model}${RESET}`;
     const maxWidth = getTerminalWidth();
-    const parts = [base, gitInfo, contextInfo, zoneInfo, miInfo, deltaInfo, sessionInfo];
+    const parts = [base, gitInfo, contextInfo, zoneInfo, miInfo, deltaInfo, modelInfo, sessionInfo];
     console.log(fitToWidth(parts, maxWidth));
 });
 
