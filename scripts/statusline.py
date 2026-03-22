@@ -511,24 +511,18 @@ def main():
         else:
             free_display = f"{free_tokens / 1000:.1f}k"
 
-        # Color based on MI thresholds (consistent with MI display)
-        ctx_util = used_tokens / total_size if total_size > 0 else 0.0
-        ctx_mi = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
-        ctx_color = get_mi_color(ctx_mi, ctx_util)
+        # Zone indicator — determines color for both context info and zone label
+        zone_word, zone_color_name = get_context_zone(used_tokens, total_size)
+        zone_ansi = _zone_ansi_color(zone_color_name)
 
-        # Use per-property context_length color if configured, else MI-based color
-        effective_ctx_color = c.get("context_length", ctx_color)
+        # Context info uses zone color (traffic-light), with per-property override
+        effective_ctx_color = c.get("context_length", zone_ansi)
 
         context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
 
-        # Always show zone indicator
-        zone_word, zone_color_name = get_context_zone(used_tokens, total_size)
-        # Use per-property zone color if configured, else dynamic zone color
-        if "zone" in c:
-            zone_ansi = c["zone"]
-        else:
-            zone_ansi = _zone_ansi_color(zone_color_name)
-        zone_info = f" | {zone_ansi}{zone_word}{RESET}"
+        # Zone label uses same color, with per-property override
+        effective_zone_color = c.get("zone", zone_ansi)
+        zone_info = f" | {effective_zone_color}{zone_word}{RESET}"
 
         # Read previous entry if needed for delta OR MI
         if show_delta or show_mi:
