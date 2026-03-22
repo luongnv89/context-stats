@@ -23,7 +23,9 @@
 #   timestamp,total_input_tokens,total_output_tokens,current_usage_input_tokens,current_usage_output_tokens,current_usage_cache_creation,current_usage_cache_read,total_cost_usd,total_lines_added,total_lines_removed,session_id,model_id,workspace_project_dir
 
 # Colors (defaults, overridable via config)
+# shellcheck disable=SC2034  # Used dynamically via COLOR_KEYS eval
 BLUE='\033[0;34m'
+# shellcheck disable=SC2034  # Used dynamically via COLOR_KEYS eval
 MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -40,12 +42,16 @@ declare -A COLOR_NAMES=(
     [bright_black]='\033[0;90m' [bright_red]='\033[0;91m' [bright_green]='\033[0;92m'
     [bright_yellow]='\033[0;93m' [bright_blue]='\033[0;94m' [bright_magenta]='\033[0;95m'
     [bright_cyan]='\033[0;96m' [bright_white]='\033[0;97m'
+    [bold_white]='\033[1;97m' [dim]='\033[2m'
 )
 
 # Color config key to slot mapping
 declare -A COLOR_KEYS=(
     [color_green]=GREEN [color_yellow]=YELLOW [color_red]=RED
     [color_blue]=BLUE [color_magenta]=MAGENTA [color_cyan]=CYAN
+    [color_context_length]=C_CONTEXT_LENGTH [color_project_name]=C_PROJECT_NAME
+    [color_branch_name]=C_BRANCH_NAME [color_mi_score]=C_MI_SCORE
+    [color_zone]=C_ZONE [color_separator]=C_SEPARATOR
 )
 
 # Parse a color name or #rrggbb hex into an ANSI escape code
@@ -173,9 +179,9 @@ if [[ -d "$project_dir/.git" ]]; then
 
     if [[ -n "$git_branch" ]]; then
         if [[ "$git_status_count" != "0" ]]; then
-            git_info=" | ${MAGENTA}${git_branch}${RESET} ${CYAN}[${git_status_count}]${RESET}"
+            git_info=" | ${C_BRANCH_NAME}${git_branch}${RESET} ${CYAN}[${git_status_count}]${RESET}"
         else
-            git_info=" | ${MAGENTA}${git_branch}${RESET}"
+            git_info=" | ${C_BRANCH_NAME}${git_branch}${RESET}"
         fi
     fi
 fi
@@ -241,12 +247,37 @@ if [[ -f ~/.claude/statusline.conf ]]; then
                     ansi=$(parse_color "$raw_value")
                     if [[ -n "$ansi" ]]; then
                         eval "$slot='$ansi'"
+                        eval "${slot}_CONFIG_SET=yes"
                     fi
                 fi
                 ;;
         esac
     done < ~/.claude/statusline.conf
 fi
+
+# Per-property color defaults (highlighted key info)
+# Track which per-property colors were explicitly set via config
+C_CONTEXT_LENGTH_SET="${C_CONTEXT_LENGTH_CONFIG_SET:-}"
+C_MI_SCORE_SET="${C_MI_SCORE_CONFIG_SET:-}"
+C_ZONE_SET="${C_ZONE_CONFIG_SET:-}"
+: "${C_CONTEXT_LENGTH:=\033[1;97m}"  # bold_white
+# Cascade: per-property key -> old color key -> new highlighted default
+if [[ -z "$C_PROJECT_NAME" ]]; then
+    if [[ "${BLUE_CONFIG_SET:-}" == "yes" ]]; then
+        C_PROJECT_NAME="$BLUE"
+    else
+        C_PROJECT_NAME="$CYAN"
+    fi
+fi
+if [[ -z "$C_BRANCH_NAME" ]]; then
+    if [[ "${MAGENTA_CONFIG_SET:-}" == "yes" ]]; then
+        C_BRANCH_NAME="$MAGENTA"
+    else
+        C_BRANCH_NAME="$GREEN"
+    fi
+fi
+: "${C_MI_SCORE:=$YELLOW}"
+: "${C_SEPARATOR:=$DIM}"
 
 # Width-fitting helpers
 visible_width() {
@@ -367,13 +398,24 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
         red)    ctx_color="$RED" ;;
     esac
 
-    context_info=" | ${ctx_color}${free_display} (${free_pct}%)${RESET}"
+    # Use per-property context_length color if explicitly configured, else MI-based color
+    if [[ "$C_CONTEXT_LENGTH_SET" == "yes" ]]; then
+        effective_ctx_color="$C_CONTEXT_LENGTH"
+    else
+        effective_ctx_color="$ctx_color"
+    fi
+    context_info=" | ${effective_ctx_color}${free_display} (${free_pct}%)${RESET}"
 
     # Always show zone indicator
     zone_result=$(get_context_zone "$used_tokens" "$total_size")
     zone_word=$(echo "$zone_result" | awk '{print $1}')
     zone_color_name=$(echo "$zone_result" | awk '{print $2}')
-    zone_ansi=$(zone_ansi_color "$zone_color_name")
+    # Use per-property zone color if explicitly configured, else dynamic zone color
+    if [[ "$C_ZONE_SET" == "yes" ]]; then
+        zone_ansi="$C_ZONE"
+    else
+        zone_ansi=$(zone_ansi_color "$zone_color_name")
+    fi
     zone_info=" | ${zone_ansi}${zone_word}${RESET}"
 
     # Read previous entry if needed for delta OR MI
@@ -425,7 +467,7 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
                 else
                     delta_display=$(awk "BEGIN {printf \"%.1fk\", $delta / 1000}")
                 fi
-                delta_info=" | ${DIM}+${delta_display}${RESET}"
+                delta_info=" | ${C_SEPARATOR}+${delta_display}${RESET}"
             fi
         fi
 
@@ -439,6 +481,10 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
                 yellow) mi_color="$YELLOW" ;;
                 red)    mi_color="$RED" ;;
             esac
+            # Use per-property mi_score color if explicitly configured, else MI-based color
+            if [[ "$C_MI_SCORE_SET" == "yes" ]]; then
+                mi_color="$C_MI_SCORE"
+            fi
             mi_info=" | ${mi_color}MI:${mi_val}${RESET}"
         fi
 
@@ -454,10 +500,10 @@ fi
 
 # Display session_id if enabled
 if [[ "$show_session_enabled" == "true" && -n "$session_id" ]]; then
-    session_info=" | ${DIM}${session_id}${RESET}"
+    session_info=" | ${C_SEPARATOR}${session_id}${RESET}"
 fi
 
 # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-base="${DIM}${model}${RESET} | ${BLUE}${dir_name}${RESET}"
+base="${C_SEPARATOR}${model}${RESET} | ${C_PROJECT_NAME}${dir_name}${RESET}"
 max_width=$(get_terminal_width)
 fit_to_width "$max_width" "$base" "$git_info" "$context_info" "$zone_info" "$mi_info" "$delta_info" "$session_info"

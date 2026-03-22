@@ -17,6 +17,13 @@ _COLOR_KEYS: dict[str, str] = {
     "color_blue": "blue",
     "color_magenta": "magenta",
     "color_cyan": "cyan",
+    # Per-property color keys
+    "color_context_length": "context_length",
+    "color_project_name": "project_name",
+    "color_branch_name": "branch_name",
+    "color_mi_score": "mi_score",
+    "color_zone": "zone",
+    "color_separator": "separator",
 }
 
 
@@ -92,11 +99,21 @@ show_mi=false
 #   color_blue, color_magenta, color_cyan
 # Named colors: black, red, green, yellow, blue, magenta, cyan, white,
 #   bright_black, bright_red, bright_green, bright_yellow,
-#   bright_blue, bright_magenta, bright_cyan, bright_white
+#   bright_blue, bright_magenta, bright_cyan, bright_white,
+#   bold_white, dim
 # Examples:
 #   color_green=#7dcfff
 #   color_yellow=bright_yellow
 #   color_red=#f7768e
+
+# Per-property colors (override individual statusline elements)
+# Defaults highlight key info: context=bold_white, project=cyan, branch=green
+# color_context_length=bold_white
+# color_project_name=cyan
+# color_branch_name=green
+# color_mi_score=yellow
+# color_zone=default
+# color_separator=dim
 """
             )
         except OSError as e:

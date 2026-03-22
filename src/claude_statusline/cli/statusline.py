@@ -55,8 +55,11 @@ def main() -> None:
     # Build color manager with any user overrides
     colors = ColorManager(enabled=True, overrides=config.color_overrides)
 
-    # Git info (pass color manager for configurable branch/change colors)
-    git_info = get_git_info(project_dir, color_manager=colors)
+    # Git info (use per-property branch color if set, else fallback to magenta)
+    branch_color = colors.branch_name
+    # Build a color manager with branch_name mapped to magenta slot for git_info
+    git_colors = ColorManager(enabled=True, overrides={**config.color_overrides, "magenta": branch_color})
+    git_info = get_git_info(project_dir, color_manager=git_colors)
 
     # Extract session_id once for reuse
     session_id = data.get("session_id")
@@ -106,20 +109,29 @@ def main() -> None:
         ctx_color_name = _get_ctx_color(_mi, _utilization)
         ctx_color = getattr(colors, ctx_color_name)
 
-        context_info = f" | {ctx_color}{free_display} ({free_pct:.1f}%){colors.reset}"
+        # Use per-property context_length color if configured, else MI-based color
+        prop_ctx_color = config.color_overrides.get("context_length")
+        effective_ctx_color = prop_ctx_color if prop_ctx_color else ctx_color
+
+        context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){colors.reset}"
 
         # Always show zone indicator
         from claude_statusline.graphs.intelligence import get_context_zone
 
         zone_result = get_context_zone(used_tokens, total_size)
-        zone_color_map = {
-            "green": colors.green,
-            "yellow": colors.yellow,
-            "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
-            "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
-            "gray": "\033[0;90m" if colors.enabled else "",
-        }
-        zone_color = zone_color_map.get(zone_result.color, colors.reset)
+        # Use per-property zone color if configured, else dynamic zone color
+        prop_zone_color = config.color_overrides.get("zone")
+        if prop_zone_color:
+            zone_color = prop_zone_color
+        else:
+            zone_color_map = {
+                "green": colors.green,
+                "yellow": colors.yellow,
+                "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
+                "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
+                "gray": "\033[0;90m" if colors.enabled else "",
+            }
+            zone_color = zone_color_map.get(zone_result.color, colors.reset)
         zone_info = f" | {zone_color}{zone_result.zone}{colors.reset}"
 
         # State file management for delta display and history recording
@@ -155,7 +167,7 @@ def main() -> None:
                 delta = used_tokens - prev_tokens
                 if has_prev and delta > 0:
                     delta_display = format_tokens(delta, config.token_detail)
-                    delta_info = f" | {colors.dim}+{delta_display}{colors.reset}"
+                    delta_info = f" | {colors.separator}+{delta_display}{colors.reset}"
 
             # Calculate MI score — pure function of utilization, no prev entry needed
             if config.show_mi:
@@ -170,7 +182,10 @@ def main() -> None:
                 )
                 mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)
                 mi_color = getattr(colors, mi_color_name)
-                mi_info = f" | {mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
+                # Use per-property mi_score color if configured, else MI-based color
+                prop_mi_color = config.color_overrides.get("mi_score")
+                effective_mi_color = prop_mi_color if prop_mi_color else mi_color
+                mi_info = f" | {effective_mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
 
             # Only append if context usage changed (avoid duplicates)
             if not has_prev or used_tokens != prev_tokens:
@@ -178,10 +193,10 @@ def main() -> None:
 
     # Display session_id if enabled
     if config.show_session and session_id:
-        session_info = f" | {colors.dim}{session_id}{colors.reset}"
+        session_info = f" | {colors.separator}{session_id}{colors.reset}"
 
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [session_id]
-    base = f"{colors.dim}{model}{colors.reset} | {colors.blue}{dir_name}{colors.reset}"
+    base = f"{colors.separator}{model}{colors.reset} | {colors.project_name}{dir_name}{colors.reset}"
     max_width = get_terminal_width()
     parts = [base, git_info, context_info, zone_info, mi_info, delta_info, session_info]
     print(fit_to_width(parts, max_width))

@@ -53,13 +53,13 @@ const MODEL_PROFILES = {
 
 // Zone indicator thresholds
 const LARGE_MODEL_THRESHOLD = 500000; // >= 500k context = 1M-class model
-const ZONE_1M_P_MAX = 70000;    // P zone: < 70k used
-const ZONE_1M_C_MAX = 100000;   // C zone: 70k–100k used
-const ZONE_1M_D_MAX = 250000;   // D zone: 100k–250k used
-const ZONE_1M_X_MAX = 275000;   // X zone: 250k–275k used; Z zone: >= 275k
-const ZONE_STD_DUMP_ZONE = 0.40;
+const ZONE_1M_P_MAX = 70000; // P zone: < 70k used
+const ZONE_1M_C_MAX = 100000; // C zone: 70k–100k used
+const ZONE_1M_D_MAX = 250000; // D zone: 100k–250k used
+const ZONE_1M_X_MAX = 275000; // X zone: 250k–275k used; Z zone: >= 275k
+const ZONE_STD_DUMP_ZONE = 0.4;
 const ZONE_STD_WARN_BUFFER = 30000;
-const ZONE_STD_HARD_LIMIT = 0.70;
+const ZONE_STD_HARD_LIMIT = 0.7;
 const ZONE_STD_DEAD_ZONE = 0.75;
 
 /**
@@ -123,10 +123,18 @@ function getContextZone(usedTokens, contextWindowSize) {
     const isLarge = contextWindowSize >= LARGE_MODEL_THRESHOLD;
 
     if (isLarge) {
-        if (usedTokens < ZONE_1M_P_MAX) return { zone: 'Plan', colorName: 'green' };
-        if (usedTokens < ZONE_1M_C_MAX) return { zone: 'Code', colorName: 'yellow' };
-        if (usedTokens < ZONE_1M_D_MAX) return { zone: 'Dump', colorName: 'orange' };
-        if (usedTokens < ZONE_1M_X_MAX) return { zone: 'ExDump', colorName: 'dark_red' };
+        if (usedTokens < ZONE_1M_P_MAX) {
+            return { zone: 'Plan', colorName: 'green' };
+        }
+        if (usedTokens < ZONE_1M_C_MAX) {
+            return { zone: 'Code', colorName: 'yellow' };
+        }
+        if (usedTokens < ZONE_1M_D_MAX) {
+            return { zone: 'Dump', colorName: 'orange' };
+        }
+        if (usedTokens < ZONE_1M_X_MAX) {
+            return { zone: 'ExDump', colorName: 'dark_red' };
+        }
         return { zone: 'Dead', colorName: 'gray' };
     }
 
@@ -136,10 +144,18 @@ function getContextZone(usedTokens, contextWindowSize) {
     const hardLimitTokens = Math.floor(contextWindowSize * ZONE_STD_HARD_LIMIT);
     const deadZoneTokens = Math.floor(contextWindowSize * ZONE_STD_DEAD_ZONE);
 
-    if (usedTokens < warnStart) return { zone: 'Plan', colorName: 'green' };
-    if (usedTokens < dumpZoneTokens) return { zone: 'Code', colorName: 'yellow' };
-    if (usedTokens < hardLimitTokens) return { zone: 'Dump', colorName: 'orange' };
-    if (usedTokens < deadZoneTokens) return { zone: 'ExDump', colorName: 'dark_red' };
+    if (usedTokens < warnStart) {
+        return { zone: 'Plan', colorName: 'green' };
+    }
+    if (usedTokens < dumpZoneTokens) {
+        return { zone: 'Code', colorName: 'yellow' };
+    }
+    if (usedTokens < hardLimitTokens) {
+        return { zone: 'Dump', colorName: 'orange' };
+    }
+    if (usedTokens < deadZoneTokens) {
+        return { zone: 'ExDump', colorName: 'dark_red' };
+    }
     return { zone: 'Dead', colorName: 'gray' };
 }
 
@@ -147,11 +163,21 @@ function getContextZone(usedTokens, contextWindowSize) {
  * Map zone color name to ANSI escape code.
  */
 function zoneAnsiColor(colorName) {
-    if (colorName === 'green') return GREEN;
-    if (colorName === 'yellow') return YELLOW;
-    if (colorName === 'orange') return '\x1b[38;2;255;165;0m';
-    if (colorName === 'dark_red') return '\x1b[38;2;139;0;0m';
-    if (colorName === 'gray') return '\x1b[0;90m';
+    if (colorName === 'green') {
+        return GREEN;
+    }
+    if (colorName === 'yellow') {
+        return YELLOW;
+    }
+    if (colorName === 'orange') {
+        return '\x1b[38;2;255;165;0m';
+    }
+    if (colorName === 'dark_red') {
+        return '\x1b[38;2;139;0;0m';
+    }
+    if (colorName === 'gray') {
+        return '\x1b[0;90m';
+    }
     return RESET;
 }
 
@@ -219,6 +245,8 @@ const COLOR_NAMES = {
     bright_magenta: '\x1b[0;95m',
     bright_cyan: '\x1b[0;96m',
     bright_white: '\x1b[0;97m',
+    bold_white: '\x1b[1;97m',
+    dim: '\x1b[2m',
 };
 
 /**
@@ -247,6 +275,13 @@ const COLOR_CONFIG_KEYS = {
     color_blue: 'blue',
     color_magenta: 'magenta',
     color_cyan: 'cyan',
+    // Per-property color keys
+    color_context_length: 'context_length',
+    color_project_name: 'project_name',
+    color_branch_name: 'branch_name',
+    color_mi_score: 'mi_score',
+    color_zone: 'zone',
+    color_separator: 'separator',
 };
 
 /**
@@ -474,8 +509,14 @@ process.stdin.on('end', () => {
     const cMagenta = c.magenta || MAGENTA;
     const cCyan = c.cyan || CYAN;
 
-    // Git info (pass configurable colors)
-    const gitInfo = getGitInfo(projectDir, cMagenta, cCyan);
+    // Per-property color defaults (highlighted key info)
+    // Falls back to old color keys for backward compatibility, then to new defaults
+    const cProjectName = c.project_name || (c.blue ? cBlue : CYAN);
+    const cBranchName = c.branch_name || (c.magenta ? cMagenta : GREEN);
+    const cSeparator = c.separator || DIM;
+
+    // Git info (use per-property branch color, fallback to green)
+    const gitInfo = getGitInfo(projectDir, cBranchName, cCyan);
 
     // Extract session_id once for reuse
     const sessionId = data.session_id;
@@ -535,11 +576,15 @@ process.stdin.on('end', () => {
         const ctxMI = computeMI(usedTokens, totalSize, modelId, miCurveBeta);
         const ctxColor = getMIColor(ctxMI.mi, ctxUtil, cGreen, cYellow, cRed);
 
-        contextInfo = ` | ${ctxColor}${freeDisplay} (${freePct.toFixed(1)}%)${RESET}`;
+        // Use per-property context_length color if configured, else MI-based color
+        const effectiveCtxColor = c.context_length || ctxColor;
+
+        contextInfo = ` | ${effectiveCtxColor}${freeDisplay} (${freePct.toFixed(1)}%)${RESET}`;
 
         // Always show zone indicator
         const zoneResult = getContextZone(usedTokens, totalSize);
-        const zoneAnsi = zoneAnsiColor(zoneResult.colorName);
+        // Use per-property zone color if configured, else dynamic zone color
+        const zoneAnsi = c.zone || zoneAnsiColor(zoneResult.colorName);
         zoneInfo = ` | ${zoneAnsi}${zoneResult.zone}${RESET}`;
 
         // Read previous entry if needed for delta OR MI
@@ -609,7 +654,7 @@ process.stdin.on('end', () => {
                     const deltaDisplay = tokenDetail
                         ? delta.toLocaleString('en-US')
                         : `${(delta / 1000).toFixed(1)}k`;
-                    deltaInfo = ` | ${DIM}+${deltaDisplay}${RESET}`;
+                    deltaInfo = ` | ${cSeparator}+${deltaDisplay}${RESET}`;
                 }
             }
 
@@ -618,7 +663,9 @@ process.stdin.on('end', () => {
                 const miResult = computeMI(usedTokens, totalSize, modelId, miCurveBeta);
                 const miUtil = totalSize > 0 ? usedTokens / totalSize : 0;
                 const miColor = getMIColor(miResult.mi, miUtil, cGreen, cYellow, cRed);
-                miInfo = ` | ${miColor}MI:${miResult.mi.toFixed(3)}${RESET}`;
+                // Use per-property mi_score color if configured, else MI-based color
+                const effectiveMIColor = c.mi_score || miColor;
+                miInfo = ` | ${effectiveMIColor}MI:${miResult.mi.toFixed(3)}${RESET}`;
             }
 
             // Only append if context usage changed (avoid duplicates from multiple refreshes)
@@ -656,11 +703,11 @@ process.stdin.on('end', () => {
 
     // Display session_id if enabled
     if (showSession && sessionId) {
-        sessionInfo = ` | ${DIM}${sessionId}${RESET}`;
+        sessionInfo = ` | ${cSeparator}${sessionId}${RESET}`;
     }
 
     // Output: [Model] dir | branch [n] | free (%) [+delta] [AC] session
-    const base = `${DIM}${model}${RESET} | ${cBlue}${dirName}${RESET}`;
+    const base = `${cSeparator}${model}${RESET} | ${cProjectName}${dirName}${RESET}`;
     const maxWidth = getTerminalWidth();
     const parts = [base, gitInfo, contextInfo, zoneInfo, miInfo, deltaInfo, sessionInfo];
     console.log(fitToWidth(parts, maxWidth));
@@ -668,5 +715,11 @@ process.stdin.on('end', () => {
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { maybeRotateStateFile, ROTATION_THRESHOLD, ROTATION_KEEP, computeMI, getContextZone };
+    module.exports = {
+        maybeRotateStateFile,
+        ROTATION_THRESHOLD,
+        ROTATION_KEEP,
+        computeMI,
+        getContextZone,
+    };
 }

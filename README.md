@@ -254,6 +254,13 @@ mi_curve_beta=0      # Use model-specific profile (0=auto, or set custom beta)
 color_green=#7dcfff
 color_red=#f7768e
 color_yellow=bright_yellow
+
+# Per-property colors (override individual elements)
+color_context_length=bold_white   # Context remaining
+color_project_name=cyan           # Project directory
+color_branch_name=green           # Git branch
+color_mi_score=yellow             # MI score
+color_separator=dim               # Model, delta, session
 ```
 
 </details>

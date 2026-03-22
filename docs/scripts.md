@@ -129,15 +129,29 @@ Scripts receive JSON via stdin from Claude Code:
 
 All scripts use consistent ANSI colors (defaults, overridable via `~/.claude/statusline.conf`):
 
-| Color   | Code         | Usage                      | Config Key      |
-| ------- | ------------ | -------------------------- | --------------- |
-| Blue    | `\033[0;34m` | Directory                  | `color_blue`    |
-| Magenta | `\033[0;35m` | Git branch                 | `color_magenta` |
-| Cyan    | `\033[0;36m` | Changes count              | `color_cyan`    |
-| Green   | `\033[0;32m` | High availability (>50%)   | `color_green`   |
-| Yellow  | `\033[0;33m` | Medium availability (>25%) | `color_yellow`  |
-| Red     | `\033[0;31m` | Low availability (<=25%)   | `color_red`     |
-| Dim     | `\033[2m`    | Model, AC indicator        | —               |
-| Reset   | `\033[0m`    | Reset formatting           | —               |
+### Per-Property Colors
+
+Each statusline element has its own configurable color with a fallback chain:
+
+| Element          | Default          | Config Key             | Fallback          |
+| ---------------- | ---------------- | ---------------------- | ----------------- |
+| Context length   | Bold White       | `color_context_length` | MI-based color    |
+| Project name     | Cyan             | `color_project_name`   | `color_blue`      |
+| Git branch       | Green            | `color_branch_name`    | `color_magenta`   |
+| MI score         | Yellow           | `color_mi_score`       | MI-based color    |
+| Zone indicator   | (zone color)     | `color_zone`           | Dynamic zone color|
+| Separator/dim    | Dim              | `color_separator`      | —                 |
+
+### Base Colors
+
+| Color      | Code              | Usage                    | Config Key      |
+| ---------- | ----------------- | ------------------------ | --------------- |
+| Cyan       | `\033[0;36m`      | Changes count            | `color_cyan`    |
+| Green      | `\033[0;32m`      | MI-based (good)          | `color_green`   |
+| Yellow     | `\033[0;33m`      | MI-based (warning)       | `color_yellow`  |
+| Red        | `\033[0;31m`      | MI-based (critical)      | `color_red`     |
+| Bold White | `\033[1;97m`      | Context length default   | —               |
+| Dim        | `\033[2m`         | Separator default        | —               |
+| Reset      | `\033[0m`         | Reset formatting         | —               |
 
 See [Configuration](configuration.md#custom-colors) for details on overriding colors with named colors or hex codes.

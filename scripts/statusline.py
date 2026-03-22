@@ -55,10 +55,10 @@ MODEL_PROFILES = {
 
 # Zone indicator thresholds
 LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
-ZONE_1M_P_MAX = 70_000    # P zone: < 70k used
-ZONE_1M_C_MAX = 100_000   # C zone: 70k–100k used
-ZONE_1M_D_MAX = 250_000   # D zone: 100k–250k used
-ZONE_1M_X_MAX = 275_000   # X zone: 250k–275k used; Z zone: >= 275k
+ZONE_1M_P_MAX = 70_000  # P zone: < 70k used
+ZONE_1M_C_MAX = 100_000  # C zone: 70k–100k used
+ZONE_1M_D_MAX = 250_000  # D zone: 100k–250k used
+ZONE_1M_X_MAX = 275_000  # X zone: 250k–275k used; Z zone: >= 275k
 ZONE_STD_DUMP_ZONE = 0.40
 ZONE_STD_WARN_BUFFER = 30_000
 ZONE_STD_HARD_LIMIT = 0.70
@@ -209,6 +209,8 @@ _COLOR_NAMES = {
     "bright_magenta": "\033[0;95m",
     "bright_cyan": "\033[0;96m",
     "bright_white": "\033[0;97m",
+    "bold_white": "\033[1;97m",
+    "dim": "\033[2m",
 }
 
 
@@ -231,6 +233,13 @@ _COLOR_KEYS = {
     "color_blue": "blue",
     "color_magenta": "magenta",
     "color_cyan": "cyan",
+    # Per-property color keys
+    "color_context_length": "context_length",
+    "color_project_name": "project_name",
+    "color_branch_name": "branch_name",
+    "color_mi_score": "mi_score",
+    "color_zone": "zone",
+    "color_separator": "separator",
 }
 
 # Pattern to strip ANSI escape sequences
@@ -444,8 +453,14 @@ def main():
     c_magenta = c.get("magenta", MAGENTA)
     c_cyan = c.get("cyan", CYAN)
 
-    # Git info (pass configurable colors)
-    git_info = get_git_info(project_dir, magenta=c_magenta, cyan=c_cyan)
+    # Per-property color defaults (highlighted key info)
+    # Falls back to old color keys for backward compatibility, then to new defaults
+    c_project_name = c.get("project_name", c_blue if "blue" in c else CYAN)
+    c_branch_name = c.get("branch_name", c_magenta if "magenta" in c else GREEN)
+    c_separator = c.get("separator", DIM)
+
+    # Git info (use per-property branch color, fallback to green)
+    git_info = get_git_info(project_dir, magenta=c_branch_name, cyan=c_cyan)
 
     # Extract session_id once for reuse
     session_id = data.get("session_id")
@@ -501,11 +516,18 @@ def main():
         ctx_mi = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
         ctx_color = get_mi_color(ctx_mi, ctx_util)
 
-        context_info = f" | {ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
+        # Use per-property context_length color if configured, else MI-based color
+        effective_ctx_color = c.get("context_length", ctx_color)
+
+        context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
 
         # Always show zone indicator
         zone_word, zone_color_name = get_context_zone(used_tokens, total_size)
-        zone_ansi = _zone_ansi_color(zone_color_name)
+        # Use per-property zone color if configured, else dynamic zone color
+        if "zone" in c:
+            zone_ansi = c["zone"]
+        else:
+            zone_ansi = _zone_ansi_color(zone_color_name)
         zone_info = f" | {zone_ansi}{zone_word}{RESET}"
 
         # Read previous entry if needed for delta OR MI
@@ -564,14 +586,16 @@ def main():
                         delta_display = f"{delta:,}"
                     else:
                         delta_display = f"{delta / 1000:.1f}k"
-                    delta_info = f" | {DIM}+{delta_display}{RESET}"
+                    delta_info = f" | {c_separator}+{delta_display}{RESET}"
 
             # Calculate and display MI score if enabled
             if show_mi:
                 mi_val = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
                 mi_util = used_tokens / total_size if total_size > 0 else 0.0
                 mi_color = get_mi_color(mi_val, mi_util)
-                mi_info = f" | {mi_color}MI:{mi_val:.3f}{RESET}"
+                # Use per-property mi_score color if configured, else MI-based color
+                effective_mi_color = c.get("mi_score", mi_color)
+                mi_info = f" | {effective_mi_color}MI:{mi_val:.3f}{RESET}"
 
             # Only append if context usage changed (avoid duplicates from multiple refreshes)
             if not has_prev or used_tokens != prev_tokens:
@@ -605,10 +629,10 @@ def main():
 
     # Display session_id if enabled
     if show_session and session_id:
-        session_info = f" | {DIM}{session_id}{RESET}"
+        session_info = f" | {c_separator}{session_id}{RESET}"
 
     # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC] [S:session_id]
-    base = f"{DIM}{model}{RESET} | {c_blue}{dir_name}{RESET}"
+    base = f"{c_separator}{model}{RESET} | {c_project_name}{dir_name}{RESET}"
     max_width = get_terminal_width()
     parts = [base, git_info, context_info, zone_info, mi_info, delta_info, session_info]
     print(fit_to_width(parts, max_width))

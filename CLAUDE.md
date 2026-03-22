@@ -63,6 +63,7 @@ The following logic is duplicated across three implementations and **must be kep
 | MI colors | `graphs/intelligence.py:get_mi_color()` | `get_mi_color()` | `getMIColor()` |
 | Zone indicator | `graphs/intelligence.py:get_context_zone()` | `get_context_zone()` | `getContextZone()` |
 | Zone constants | `ZONE_1M_*`, `ZONE_STD_*`, `LARGE_MODEL_THRESHOLD` | same | same |
+| Per-property colors | `colors.py:ColorManager` props, `config.py:_COLOR_KEYS` | `_COLOR_KEYS`, per-property vars | `COLOR_CONFIG_KEYS`, per-property consts |
 
 ## Cross-References
 

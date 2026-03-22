@@ -42,28 +42,30 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 [Opus 4.6] my-project | main [3] | 64,000 free (32.0%) [+2,500] MI:0.918 [AC:45k] session_id
 ```
 
-| Component     | Description              | Color            |
-| ------------- | ------------------------ | ---------------- |
-| `[Opus 4.6]`  | Current AI model         | Dim              |
-| `my-project`  | Current directory        | Blue             |
-| `main`        | Git branch               | Magenta          |
-| `[3]`         | Uncommitted changes      | Cyan             |
-| `64,000 free` | Available tokens         | Green/Yellow/Red |
-| `(32.0%)`     | Context usage percentage | -                |
-| `[+2,500]`    | Token delta              | Dim              |
-| `MI:0.918`    | Model Intelligence score | Green/Yellow/Red |
-| `[AC:45k]`    | Autocompact buffer       | Dim              |
-| `session_id`  | Current session          | Dim              |
+| Component     | Description              | Default Color    | Config Key             |
+| ------------- | ------------------------ | ---------------- | ---------------------- |
+| `[Opus 4.6]`  | Current AI model         | Dim              | `color_separator`      |
+| `my-project`  | Current directory        | Cyan             | `color_project_name`   |
+| `main`        | Git branch               | Green            | `color_branch_name`    |
+| `[3]`         | Uncommitted changes      | Cyan             | `color_cyan`           |
+| `64,000 free` | Available tokens         | Bold White       | `color_context_length` |
+| `(32.0%)`     | Context usage percentage | -                | -                      |
+| `[+2,500]`    | Token delta              | Dim              | `color_separator`      |
+| `MI:0.918`    | Model Intelligence score | Yellow           | `color_mi_score`       |
+| `[AC:45k]`    | Autocompact buffer       | Dim              | -                      |
+| `session_id`  | Current session          | Dim              | `color_separator`      |
 
 ## Token Colors
 
-Context availability is color-coded:
+Context availability is color-coded based on Model Intelligence (MI) score (not raw percentages):
 
-| Availability | Color  |
-| ------------ | ------ |
-| > 50%        | Green  |
-| > 25%        | Yellow |
-| <= 25%       | Red    |
+| MI Score  | Color  | Meaning                                    |
+| --------- | ------ | ------------------------------------------ |
+| > 0.70    | Green  | Model is operating well                    |
+| 0.40–0.70 | Yellow | Context pressure building                  |
+| < 0.40    | Red    | Significant degradation                    |
+
+When `color_context_length` is explicitly set, it overrides MI-based coloring.
 
 ## Model Intelligence Colors
 
@@ -109,21 +111,39 @@ Double-click to select and copy. Set `show_session=false` to hide.
 
 ## Custom Colors
 
-Override any status line color with named colors or hex codes:
+### Per-Property Colors
+
+Override individual statusline elements with their own colors. These take precedence over the base color slots:
 
 ```bash
-# Available slots
-color_green=#7dcfff       # Context >50% free
-color_yellow=bright_yellow # Context 25-50% free
-color_red=#f7768e         # Context <25% free
-color_blue=bright_blue    # Directory name
-color_magenta=#bb9af7     # Git branch
+# Per-property color keys
+color_context_length=bold_white   # Context remaining (most critical info)
+color_project_name=cyan           # Which project you're in
+color_branch_name=green           # Git branch at a glance
+color_mi_score=yellow             # MI score
+color_zone=default                # Zone indicator (uses zone color by default)
+color_separator=dim               # Model name, delta, session (visual structure)
+```
+
+**Fallback chain:** Per-property key → base color key → built-in default. For example, if `color_project_name` is not set, the `color_blue` value is used (if set), otherwise the built-in default (cyan).
+
+### Base Color Slots
+
+Override the base MI/context colors and legacy element colors:
+
+```bash
+# Base color slots (used for MI-based context coloring and as fallbacks)
+color_green=#7dcfff       # MI score > 0.70
+color_yellow=bright_yellow # MI score 0.40–0.70
+color_red=#f7768e         # MI score < 0.40
+color_blue=bright_blue    # Fallback for project name (if color_project_name not set)
+color_magenta=#bb9af7     # Fallback for branch name (if color_branch_name not set)
 color_cyan=bright_cyan    # Git change count
 ```
 
-### Supported color values
+### Supported Color Values
 
-**Named colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `bright_black`, `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`
+**Named colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `bright_black`, `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`, `bold_white`, `dim`
 
 **Hex colors**: Any `#rrggbb` value (requires terminal with 24-bit color support)
 

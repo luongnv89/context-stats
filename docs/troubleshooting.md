@@ -189,15 +189,15 @@ ls -la ~/.claude/statusline/statusline.*.state
 
 ### Wrong token colors
 
-Token colors depend on availability percentage:
+Context token colors are based on Model Intelligence (MI) score, not raw percentages:
 
-| Availability | Expected Color |
-| ------------ | -------------- |
-| > 50%        | Green          |
-| > 25%        | Yellow         |
-| <= 25%       | Red            |
+| MI Score  | Expected Color |
+| --------- | -------------- |
+| > 0.70    | Green          |
+| 0.40–0.70 | Yellow         |
+| < 0.40    | Red            |
 
-If colors look wrong, check terminal color support.
+Per-property colors (e.g., `color_context_length=bold_white`) override MI-based coloring when explicitly set. If colors look wrong, check terminal color support and your `~/.claude/statusline.conf` settings.
 
 ### Delta always shows zero
 
