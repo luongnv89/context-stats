@@ -48,9 +48,17 @@ cc-context-stats gives you a **Model Intelligence (MI) score** — a single numb
 | **Hard limit** | ExDump | Dark red | Start a new session now |
 | **Dead zone** | Dead | Gray | Nothing productive here |
 
-| Plan zone (green — safe to plan and code) | Code zone (yellow — avoid starting new plans) | Dump zone (orange — quality declining) |
-|:---:|:---:|:---:|
-| ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
+**Plan zone** (green — safe to plan and code):
+
+![Plan zone](images/1.12.0/plan-zone.png)
+
+**Code zone** (yellow — avoid starting new plans):
+
+![Code zone](images/1.12.0/code-zone.png)
+
+**Dump zone** (orange — quality declining):
+
+![Dump zone](images/1.12.0/dump-zone.png)
 
 No screenshots for ExDump and Dead zones — I don't dare go that far into a session.
 
