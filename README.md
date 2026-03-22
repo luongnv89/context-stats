@@ -37,7 +37,7 @@ cc-context-stats gives you a **Model Intelligence (MI) score** — a single numb
 - **One glance, full picture** — MI score lives in your Claude Code status bar. Green means sharp. Yellow means degrading. Red means stop and start fresh.
 - **Per-model awareness** — Opus (beta=1.8) retains quality longest. Sonnet (beta=1.5) is moderate. Haiku (beta=1.2) degrades earliest. MI reflects your actual model automatically.
 - **Live dashboard** — ASCII graphs track context growth, MI degradation, and token I/O over time. Watch quality erode in real-time so you can make informed decisions.
-- **Zero config, zero dependencies** — Install in one command. Works with pip, npm, or a shell script. No API keys, no network calls. All data stays local.
+- **Fully customizable** — Control the color of every element, toggle each component on/off, and use named colors or hex codes to match your terminal theme.
 - **Context zones** — Five-state indicators tell you where you stand:
 
 | Zone | Indicator | Color | What It Means |
@@ -51,6 +51,14 @@ cc-context-stats gives you a **Model Intelligence (MI) score** — a single numb
 [**Install and See Your MI Score →**](#installation)
 
 ## How It Works
+
+```mermaid
+graph LR
+    A["Claude Code<br/>sends JSON via stdin"] --> B["Statusline Script<br/>(Python / Node.js / Bash)"]
+    B --> C["Status Bar Output<br/>colored, fitted to terminal width"]
+    B --> D["CSV State File<br/>~/.claude/statusline/"]
+    D --> E["context-stats CLI<br/>live ASCII dashboard"]
+```
 
 1. **Install** — One command: `pip install cc-context-stats` or `npm install -g cc-context-stats`
 2. **Configure** — Add the statusline command to `~/.claude/settings.json` (two lines of JSON)
@@ -67,9 +75,186 @@ cc-context-stats gives you a **Model Intelligence (MI) score** — a single numb
 
 [**See Full CLI Options →**](#context-stats-cli)
 
+## Customization
+
+Every element in the status line can be individually colored and toggled. Configuration lives in `~/.claude/statusline.conf` (created automatically on first run).
+
+### Status Line Anatomy
+
+The status line is assembled left-to-right in **priority order** — when the terminal is too narrow, lower-priority elements on the right are dropped first:
+
+```
+ project-dir | main [3] | 64,000 free (32.0%) | Plan | MI:0.918 | +2,500 | Opus 4.6 (1M context) | session_id
+ ─────┬────   ───┬────    ────────┬──────────   ──┬──   ───┬────   ──┬───   ──────────┬──────────   ────┬──────
+      │          │                │               │        │         │                │                │
+ project_name  branch_name   context_length     zone    mi_score   separator       separator       separator
+ (cyan)        (green)       (bold_white)     (auto)   (yellow)     (dim)           (dim)           (dim)
+```
+
+| Position | Element | Config Key | Default Color | What It Shows |
+|:---:|---|---|---|---|
+| 1 | Project directory | `color_project_name` | cyan | Current working directory |
+| 2 | Git branch + changes | `color_branch_name` | green | Branch name and `[N]` uncommitted changes |
+| 3 | Context remaining | `color_context_length` | bold_white | Tokens free + usage percentage |
+| 4 | Zone indicator | `color_zone` | auto (zone color) | Plan / Code / Dump / ExDump / Dead |
+| 5 | MI score | `color_mi_score` | yellow | Model Intelligence: `MI:0.918` |
+| 6 | Token delta | `color_separator` | dim | Change since last refresh: `+2,500` |
+| 7 | Model name | `color_separator` | dim | `Opus 4.6 (1M context)` |
+| 8 | Session ID | `color_separator` | dim | Session identifier |
+
+Elements 6-8 share `color_separator` because they are structural/secondary information. The most critical data (project, branch, context, zone, MI) each have their own dedicated color key.
+
+### Per-Element Color Control
+
+Override any element's color independently. Per-property keys take precedence over base color slots.
+
+```bash
+# ~/.claude/statusline.conf
+
+# Each element has its own color key
+color_context_length=bold_white   # The most critical info — tokens remaining
+color_project_name=cyan           # Which project you're working in
+color_branch_name=green           # Git branch at a glance
+color_mi_score=yellow             # Model Intelligence score
+color_zone=default                # Zone indicator (uses zone's own color by default)
+color_separator=dim               # Model name, delta, session ID
+```
+
+### Base Color Slots (MI-Aware)
+
+These control the automatic MI-based coloring of context tokens and act as fallbacks for per-property keys:
+
+```bash
+# Base MI color thresholds
+color_green=#7dcfff       # Used when MI > 0.70 (model is sharp)
+color_yellow=bright_yellow # Used when MI 0.40–0.70 (quality degrading)
+color_red=#f7768e         # Used when MI < 0.40 (start a new session)
+
+# Legacy element fallbacks (used if per-property key is not set)
+color_blue=bright_blue    # Fallback for color_project_name
+color_magenta=#bb9af7     # Fallback for color_branch_name
+color_cyan=bright_cyan    # Git change count [N]
+```
+
+### Color Resolution Order
+
+When rendering each element, the system checks colors in this order:
+
+```mermaid
+graph TD
+    A["Per-property key set?<br/>(e.g. color_project_name)"] -->|Yes| B["Use per-property color"]
+    A -->|No| C["Base color key set?<br/>(e.g. color_blue)"]
+    C -->|Yes| D["Use base color"]
+    C -->|No| E["Use built-in default"]
+```
+
+For example, `color_project_name` falls back to `color_blue`, which falls back to the built-in cyan.
+
+### Supported Color Values
+
+| Format | Examples | Notes |
+|---|---|---|
+| Named colors | `red`, `green`, `cyan`, `white` | Standard 16-color terminal palette |
+| Bright variants | `bright_red`, `bright_green`, `bright_cyan` | High-intensity versions |
+| Special | `bold_white`, `dim` | Weight/opacity modifiers |
+| Hex codes | `#7dcfff`, `#f7768e`, `#bb9af7` | 24-bit truecolor (requires terminal support) |
+
+Full named color list: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `bright_black`, `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`, `bold_white`, `dim`
+
+Unrecognized values are ignored with a warning to stderr. Omitted keys use defaults.
+
+### Toggle Elements On/Off
+
+Control which elements appear in the status line:
+
+```bash
+# ~/.claude/statusline.conf
+
+show_delta=true      # Show token delta [+2,500] (default: true)
+show_session=true    # Show session ID (default: true)
+show_mi=false        # Show MI score (default: false — enable it!)
+token_detail=true    # Exact counts "64,000" vs abbreviated "64.0k" (default: true)
+autocompact=true     # Factor in autocompact buffer (default: true)
+reduced_motion=false # Disable text animations (default: false)
+```
+
+### Example Configurations
+
+**Tokyo Night theme** — dark purple/blue palette:
+
+```bash
+# ~/.claude/statusline.conf
+color_green=#7dcfff
+color_yellow=#e0af68
+color_red=#f7768e
+color_project_name=#7aa2f7
+color_branch_name=#bb9af7
+color_context_length=bold_white
+color_mi_score=#e0af68
+color_separator=dim
+show_mi=true
+```
+
+**High contrast** — maximum readability:
+
+```bash
+# ~/.claude/statusline.conf
+color_project_name=bright_white
+color_branch_name=bright_green
+color_context_length=bold_white
+color_mi_score=bright_yellow
+color_separator=bright_black
+color_green=bright_green
+color_yellow=bright_yellow
+color_red=bright_red
+show_mi=true
+```
+
+**Minimal** — context and MI only, muted colors:
+
+```bash
+# ~/.claude/statusline.conf
+show_delta=false
+show_session=false
+show_mi=true
+color_project_name=dim
+color_branch_name=dim
+color_context_length=bold_white
+color_mi_score=yellow
+color_separator=dim
+```
+
+**Monochrome** — no color, just structure:
+
+```bash
+# ~/.claude/statusline.conf
+color_project_name=white
+color_branch_name=white
+color_context_length=bold_white
+color_mi_score=white
+color_separator=dim
+color_green=white
+color_yellow=white
+color_red=white
+```
+
+### MI Curve Customization
+
+The MI degradation curve is model-specific by default. Override it for all models with `mi_curve_beta`:
+
+```bash
+# ~/.claude/statusline.conf
+mi_curve_beta=0      # Auto-detect (default): Opus=1.8, Sonnet=1.5, Haiku=1.2
+mi_curve_beta=1.5    # Force Sonnet-like curve for all models
+mi_curve_beta=2.0    # More optimistic — quality retained longer
+mi_curve_beta=1.0    # More pessimistic — warns earlier
+```
+
+Higher beta = the model retains quality longer before degrading. Lower beta = earlier warnings.
+
 ## Model Intelligence — The Science
 
-MI isn't a guess. It's derived from `MI(u) = max(0, 1 - u^beta)` where `u` is context utilization and `beta` is a model-specific degradation rate calibrated against Anthropic's MRCR v2 8-needle long-context retrieval benchmark.
+MI is derived from `MI(u) = max(0, 1 - u^beta)` where `u` is context utilization and `beta` is a model-specific degradation rate calibrated against Anthropic's MRCR v2 8-needle long-context retrieval benchmark.
 
 | Model | Beta | MI at 50% Context | MI at 75% Context | When to Worry |
 |-------|------|-----------|-----------|---------------|
@@ -206,7 +391,7 @@ Yes. MI auto-detects your model and applies the correct degradation curve. Each 
 Python (pip), Node.js (npm), or pure Bash. The statusline scripts are implemented in all three languages so you can use whichever runtime you have available.
 
 **How do I customize colors?**
-Create `~/.claude/statusline.conf` with named colors or hex codes. See [Configuration docs](docs/configuration.md) for all options.
+Create `~/.claude/statusline.conf` with named colors or hex codes. See the [Customization section](#customization) above or the [full configuration docs](docs/configuration.md).
 
 ## Start Shipping with Confidence
 
@@ -219,59 +404,15 @@ cc-context-stats is MIT licensed, has zero dependencies, installs in one command
 ---
 
 <details>
-<summary><strong>Status Line Components</strong></summary>
-
-The status line shows at-a-glance metrics in your Claude Code interface:
-
-| Component | Description                               |
-| --------- | ----------------------------------------- |
-| Model     | Current Claude model                      |
-| Context   | Tokens used / remaining with color coding |
-| Delta     | Token change since last update            |
-| MI        | Model Intelligence score (per-model)      |
-| Git       | Branch name and uncommitted changes       |
-| Session   | Session ID for correlation                |
-
-Colors change based on MI score and context utilization — green when the model is sharp, yellow as quality degrades.
-
-</details>
-
-<details>
-<summary><strong>Configuration</strong></summary>
-
-Create `~/.claude/statusline.conf`:
-
-```bash
-token_detail=true    # Show exact token counts (vs abbreviated like "12.5k")
-show_delta=true      # Show token delta in status line
-show_session=true    # Show session ID
-autocompact=true     # Show autocompact buffer indicator
-reduced_motion=false # Disable animations for accessibility
-show_mi=false        # Show Model Intelligence score (disabled by default)
-mi_curve_beta=0      # Use model-specific profile (0=auto, or set custom beta)
-
-# Custom colors - named colors or hex (#rrggbb)
-color_green=#7dcfff
-color_red=#f7768e
-color_yellow=bright_yellow
-
-# Per-property colors (override individual elements)
-color_context_length=bold_white   # Context remaining
-color_project_name=cyan           # Project directory
-color_branch_name=green           # Git branch
-color_mi_score=yellow             # MI score
-color_separator=dim               # Model, delta, session
-```
-
-</details>
-
-<details>
 <summary><strong>Migration from cc-statusline</strong></summary>
 
 If you were using the previous `cc-statusline` package:
 
 ```bash
 pip uninstall cc-statusline
+```
+
+```bash
 pip install cc-context-stats
 ```
 
