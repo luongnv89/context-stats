@@ -53,13 +53,13 @@ const MODEL_PROFILES = {
 
 // Zone indicator thresholds
 const LARGE_MODEL_THRESHOLD = 500000; // >= 500k context = 1M-class model
-const ZONE_1M_P_MAX = 70000;    // P zone: < 70k used
-const ZONE_1M_C_MAX = 100000;   // C zone: 70k–100k used
-const ZONE_1M_D_MAX = 250000;   // D zone: 100k–250k used
-const ZONE_1M_X_MAX = 275000;   // X zone: 250k–275k used; Z zone: >= 275k
-const ZONE_STD_DUMP_ZONE = 0.40;
+const ZONE_1M_P_MAX = 70000; // P zone: < 70k used
+const ZONE_1M_C_MAX = 100000; // C zone: 70k–100k used
+const ZONE_1M_D_MAX = 250000; // D zone: 100k–250k used
+const ZONE_1M_X_MAX = 275000; // X zone: 250k–275k used; Z zone: >= 275k
+const ZONE_STD_DUMP_ZONE = 0.4;
 const ZONE_STD_WARN_BUFFER = 30000;
-const ZONE_STD_HARD_LIMIT = 0.70;
+const ZONE_STD_HARD_LIMIT = 0.7;
 const ZONE_STD_DEAD_ZONE = 0.75;
 
 /**
@@ -716,7 +716,10 @@ process.stdin.on('end', () => {
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        maybeRotateStateFile, ROTATION_THRESHOLD, ROTATION_KEEP,
-        computeMI, getContextZone,
+        maybeRotateStateFile,
+        ROTATION_THRESHOLD,
+        ROTATION_KEEP,
+        computeMI,
+        getContextZone,
     };
 }

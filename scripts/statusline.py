@@ -55,10 +55,10 @@ MODEL_PROFILES = {
 
 # Zone indicator thresholds
 LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
-ZONE_1M_P_MAX = 70_000    # P zone: < 70k used
-ZONE_1M_C_MAX = 100_000   # C zone: 70k–100k used
-ZONE_1M_D_MAX = 250_000   # D zone: 100k–250k used
-ZONE_1M_X_MAX = 275_000   # X zone: 250k–275k used; Z zone: >= 275k
+ZONE_1M_P_MAX = 70_000  # P zone: < 70k used
+ZONE_1M_C_MAX = 100_000  # C zone: 70k–100k used
+ZONE_1M_D_MAX = 250_000  # D zone: 100k–250k used
+ZONE_1M_X_MAX = 275_000  # X zone: 250k–275k used; Z zone: >= 275k
 ZONE_STD_DUMP_ZONE = 0.40
 ZONE_STD_WARN_BUFFER = 30_000
 ZONE_STD_HARD_LIMIT = 0.70
