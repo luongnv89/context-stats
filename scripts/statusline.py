@@ -457,8 +457,7 @@ show_session=true
                             )
                     except ValueError:
                         sys.stderr.write(
-                            f"[statusline] warning: invalid integer for {key}: "
-                            f"'{raw_value}'\n"
+                            f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n"
                         )
                 elif key in _ZONE_FLOAT_KEYS:
                     try:
@@ -472,8 +471,7 @@ show_session=true
                             )
                     except ValueError:
                         sys.stderr.write(
-                            f"[statusline] warning: invalid number for {key}: "
-                            f"'{raw_value}'\n"
+                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
                         )
     except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
@@ -574,7 +572,9 @@ def main():
             free_display = f"{free_tokens / 1000:.1f}k"
 
         # Zone indicator — determines color for both context info and zone label
-        zone_word, zone_color_name = get_context_zone(used_tokens, total_size, config.get("zone_config"))
+        zone_word, zone_color_name = get_context_zone(
+            used_tokens, total_size, config.get("zone_config")
+        )
         zone_ansi = _zone_ansi_color(zone_color_name)
 
         # Context info uses zone color (traffic-light), with per-property override
