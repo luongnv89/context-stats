@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-03-23
+
+### Added
+
+- **Configurable zone indicator thresholds** — Override default Plan/Code/Dump/ExDump/Dead zone boundaries via `~/.claude/statusline.conf` for both standard and 1M-class models (#27, #31)
+- **End-to-end CI tests** — 4 new E2E jobs (`e2e-install-bash`, `e2e-install-npm`, `e2e-install-pip`, `e2e-exec`) verify installation paths and script execution across Ubuntu/macOS with multiple runtime versions (#30, #32)
+
+### Changed
+
+- **Updated zone indicator screenshots** — Refreshed `code-zone.png` and `dump-zone.png` for v1.12.0 documentation
+
 ## [1.12.1] - 2026-03-22
 
 ### Changed
