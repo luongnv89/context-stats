@@ -16,8 +16,8 @@ Windows location: `%USERPROFILE%\.claude\statusline.conf`
 
 ```bash
 # Autocompact setting - sync with Claude Code's /config
-autocompact=true   # (default) Show reserved buffer for compacting
-autocompact=false  # When autocompact is disabled via /config
+autocompact=false  # (default) Autocompact disabled
+autocompact=true   # Enable when autocompact is on via /config
 
 # Token display format
 token_detail=true  # (default) Show exact token count: 64,000 free

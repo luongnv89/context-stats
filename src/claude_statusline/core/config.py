@@ -259,7 +259,7 @@ color_separator=dim
 class Config:
     """Configuration settings for the statusline."""
 
-    autocompact: bool = True
+    autocompact: bool = False
     token_detail: bool = True
     show_delta: bool = True
     show_session: bool = True

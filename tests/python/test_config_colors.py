@@ -1,6 +1,8 @@
 """Tests for color configuration and config file I/O in Config."""
 
-from claude_statusline.core.config import Config
+from pathlib import Path
+
+from claude_statusline.core.config import Config, _DEFAULT_CONFIG_TEMPLATE
 
 
 class TestConfigColorOverrides:
@@ -137,3 +139,51 @@ class TestConfigDefaultRoundTrip:
 
         # File must still contain the original custom content
         assert config_file.read_text(encoding="utf-8") == custom_content
+
+
+class TestInlineTemplateSync:
+    """Ensure the inline _DEFAULT_CONFIG_TEMPLATE stays in sync with examples/statusline.conf."""
+
+    def test_inline_template_matches_example_file(self):
+        """The inline template in config.py must match examples/statusline.conf exactly."""
+        repo_root = Path(__file__).resolve().parents[2]
+        example_file = repo_root / "examples" / "statusline.conf"
+        assert example_file.exists(), (
+            f"examples/statusline.conf not found at {example_file}"
+        )
+        example_content = example_file.read_text(encoding="utf-8")
+        assert _DEFAULT_CONFIG_TEMPLATE == example_content, (
+            "Inline _DEFAULT_CONFIG_TEMPLATE in config.py is out of sync with "
+            "examples/statusline.conf. Update one to match the other."
+        )
+
+
+class TestFirstLoadColorOverrides:
+    """Test that first-load (auto-generated config) applies color overrides."""
+
+    def test_first_load_applies_template_colors(self, tmp_path):
+        """First load creates default config and reads back color overrides from it."""
+        config_file = tmp_path / "statusline.conf"
+        # File does not exist yet -- first load triggers _create_default()
+        # then _read_config(), which should pick up colors from the template.
+        config = Config.load(config_path=config_file)
+        assert config_file.exists(), "Default config file should be created on first load"
+
+        # The default template sets color_green=#7dcfff, so the 'green' slot
+        # must be present in color_overrides after first load.
+        assert "green" in config.color_overrides, (
+            "First load should apply color_green from template"
+        )
+        # Verify it parsed the hex value (38;2;r;g;b format)
+        assert "38;2;" in config.color_overrides["green"], (
+            "color_green should be parsed as 24-bit ANSI from hex #7dcfff"
+        )
+
+    def test_first_load_color_overrides_match_second_load(self, tmp_path):
+        """Color overrides from first load must equal those from a second load."""
+        config_file = tmp_path / "statusline.conf"
+        config1 = Config.load(config_path=config_file)
+        config2 = Config.load(config_path=config_file)
+        assert config1.color_overrides == config2.color_overrides, (
+            "First and second loads should produce identical color_overrides"
+        )
