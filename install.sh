@@ -250,21 +250,90 @@ create_config() {
     fi
 
     cat >"$CONFIG_FILE" <<'EOF'
-# Autocompact setting - sync with Claude Code's /config
+# cc-context-stats — statusline configuration
+# Full reference: https://github.com/luongnv89/cc-context-stats/blob/main/docs/configuration.md
+
+# ─── Display Settings ───────────────────────────────────────────────
+
+# Autocompact setting — sync with Claude Code's /config
+# When true, 22.5% of the context window is reserved for the autocompact buffer.
 autocompact=true
 
 # Token display format
+# true  = exact count (e.g., 64,000)
+# false = abbreviated  (e.g., 64.0k)
 token_detail=true
 
-# Show token delta since last refresh (adds file I/O on every refresh)
-# Disable if you don't need it to reduce overhead
+# Show token delta since last refresh (e.g., +2,500)
+# Adds file I/O on every refresh; disable if you don't need it
 show_delta=true
 
-# Show session_id in status line
+# Show session_id in the status line
 show_session=true
 
-# Disable rotating text animations
+# Show input/output token breakdown (reserved for future use)
+show_io_tokens=true
+
+# Disable rotating text animations (accessibility)
 reduced_motion=false
+
+# ─── Model Intelligence (MI) ────────────────────────────────────────
+
+# Show the MI score in the status line
+show_mi=false
+
+# MI curve beta override (0 = use model-specific profile)
+# Per-model defaults: opus=1.8, sonnet=1.5, haiku=1.2
+# Set a positive value to override for all models (e.g., 1.5)
+mi_curve_beta=0
+
+# ─── Zone Threshold Overrides ───────────────────────────────────────
+# Uncomment and set a positive value to override the built-in defaults.
+# Omitted or commented-out keys use the defaults shown below.
+
+# Context windows >= this value use 1M-class thresholds (token count)
+# large_model_threshold=500000
+
+# 1M-class models (context >= large_model_threshold)
+# Values are token counts for zone boundaries
+# zone_1m_plan_max=70000
+# zone_1m_code_max=100000
+# zone_1m_dump_max=250000
+# zone_1m_xdump_max=275000
+
+# Standard models (context < large_model_threshold)
+# Ratios are 0–1 fractions of the context window; warn_buffer is a token count
+# zone_std_dump_ratio=0.40
+# zone_std_warn_buffer=30000
+# zone_std_hard_limit=0.70
+# zone_std_dead_ratio=0.75
+
+# ─── Base Color Slots ───────────────────────────────────────────────
+# Override the MI/context traffic-light colors and legacy element colors.
+# Accepts named colors or hex codes (#rrggbb).
+#
+# Named colors: black, red, green, yellow, blue, magenta, cyan, white,
+#   bright_black, bright_red, bright_green, bright_yellow,
+#   bright_blue, bright_magenta, bright_cyan, bright_white,
+#   bold_white, dim
+#
+# color_green=green
+# color_yellow=yellow
+# color_red=red
+# color_blue=blue
+# color_magenta=magenta
+# color_cyan=cyan
+
+# ─── Per-Property Colors ────────────────────────────────────────────
+# Override individual statusline elements. These take precedence over
+# base color slots. Unset keys fall back to the base slot or built-in.
+#
+# color_context_length=bold_white
+# color_project_name=cyan
+# color_branch_name=green
+# color_mi_score=yellow
+# color_zone=default
+# color_separator=dim
 EOF
     echo -e "${GREEN}✓${RESET} Created config file: $CONFIG_FILE"
 }
