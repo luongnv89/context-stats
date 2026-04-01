@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-04-01
+
+### Added
+
+- **Export session stats as Markdown** — Added the `context-stats export` command to generate a markdown report for a session, with optional `--output` support (#45, #46)
+
 ## [1.13.1] - 2026-03-26
 
 ### Added

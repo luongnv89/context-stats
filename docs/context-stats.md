@@ -85,7 +85,7 @@ Session Summary
   Model:               claude-sonnet-4-6
   Session Duration:    2h 29m
 
-Powered by cc-context-stats v1.13.1 - https://github.com/luongnv89/cc-context-stats
+Powered by cc-context-stats v1.14.0 - https://github.com/luongnv89/cc-context-stats
 ```
 
 ## Features
@@ -136,6 +136,10 @@ context-stats [session_id] [options]
 
 ARGUMENTS:
     session_id    Optional session ID. If not provided, uses the latest session.
+
+COMMANDS:
+    export        Export session stats as a markdown report
+                   context-stats export [session_id] [--output FILE]
 
 OPTIONS:
     --type <type>  Graph type to display:

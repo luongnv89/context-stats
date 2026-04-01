@@ -385,6 +385,8 @@ Session Summary
 context-stats                    # Live monitoring (default)
 context-stats -w 5               # Custom refresh interval (5 seconds)
 context-stats --no-watch         # Show once and exit
+context-stats export             # Export session stats as Markdown
+context-stats export abc123def --output report.md
 context-stats --type cumulative  # Show cumulative context usage
 context-stats --type both        # Show both graphs
 context-stats --type mi          # Model Intelligence over time
