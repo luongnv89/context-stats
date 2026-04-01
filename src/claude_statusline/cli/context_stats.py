@@ -47,12 +47,14 @@ def show_help() -> None:
 USAGE:
     context-stats [session_id] [options]
     context-stats explain
+    context-stats export [session_id] [--output FILE]
 
 ARGUMENTS:
     session_id    Optional session ID. If not provided, uses the latest session.
 
 COMMANDS:
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
+    export        Export session stats as a markdown report
 
 OPTIONS:
     --type <type>  Graph type to display:
@@ -96,6 +98,10 @@ EXAMPLES:
 
     # Diagnostic dump (pipe Claude Code JSON context)
     echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
+
+    # Export session stats as markdown
+    context-stats export
+    context-stats export abc123def --output report.md
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
@@ -499,6 +505,13 @@ def main() -> None:
             sys.stderr.write("Usage: echo '{...}' | context-stats explain\n")
             sys.exit(1)
         run_explain(data, no_color=no_color)
+        return
+
+    # Handle 'export' subcommand before argparse
+    if len(sys.argv) > 1 and sys.argv[1] == "export":
+        from claude_statusline.cli.export import run_export
+
+        run_export(sys.argv[2:])
         return
 
     args = parse_args()
