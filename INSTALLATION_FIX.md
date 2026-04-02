@@ -52,7 +52,7 @@ If package is missing entirely:
 
 If there's a version mismatch:
 ```
-⚠ Python package version mismatch:
+✗ Python package version mismatch:
     Script version:   1.15.0
     Package version:  1.11.0
   Run: pip3 install --upgrade cc-context-stats
