@@ -43,8 +43,5 @@
   ],
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "cc-context-stats": "^1.15.0"
   }
 }

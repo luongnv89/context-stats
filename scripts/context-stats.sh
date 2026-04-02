@@ -1008,10 +1008,11 @@ dispatch_python_subcommand() {
     fi
 
     if [ "$installed_version" != "$VERSION" ]; then
-        echo -e "${YELLOW}⚠${RESET}  Python package version mismatch:" >&2
+        echo -e "${RED}✗${RESET} Python package version mismatch:" >&2
         echo "    Script version:   $VERSION" >&2
         echo "    Package version:  $installed_version" >&2
         echo "  Run: pip3 install --upgrade cc-context-stats" >&2
+        return 1
     fi
 
     $py_cmd -m claude_statusline.cli.context_stats "$subcommand" "$@"

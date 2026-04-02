@@ -272,7 +272,7 @@ install_python_package() {
     fi
 
     if $pip_cmd install --quiet --upgrade "$pkg" 2>/dev/null; then
-        echo -e "${GREEN}✓${RESET} Python package installed: $pkg==$(pip3 show $pkg 2>/dev/null | grep -o 'Version: [^[:space:]]*' | awk '{print $2}')"
+        echo -e "${GREEN}✓${RESET} Python package installed: $pkg==($($pip_cmd show $pkg 2>/dev/null | grep -o 'Version: [^[:space:]]*' | awk '{print $2}'))"
     else
         echo -e "${YELLOW}⚠${RESET} Failed to install Python package. Try manually: pip3 install $pkg"
     fi
