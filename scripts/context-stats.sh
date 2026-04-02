@@ -26,7 +26,7 @@
 
 # === CONFIGURATION ===
 # shellcheck disable=SC2034
-VERSION="1.11.1"
+VERSION="1.15.0"
 COMMIT_HASH="dev" # Will be replaced during installation
 STATE_DIR=~/.claude/statusline
 CONFIG_FILE=~/.claude/statusline.conf
@@ -988,17 +988,35 @@ dispatch_python_subcommand() {
     local subcommand=$1
     shift
 
+    local py_cmd=""
     if command -v python3 >/dev/null 2>&1; then
-        python3 -m claude_statusline.cli.context_stats "$subcommand" "$@"
-        return $?
+        py_cmd="python3"
+    elif command -v python >/dev/null 2>&1; then
+        py_cmd="python"
+    else
+        error_exit "Python 3 is required for '$subcommand'."
     fi
 
-    if command -v python >/dev/null 2>&1; then
-        python -m claude_statusline.cli.context_stats "$subcommand" "$@"
-        return $?
+    # Check installed package is available and version matches this script
+    local installed_version
+    installed_version=$($py_cmd -c "import claude_statusline; print(claude_statusline.__version__)" 2>/dev/null || echo "")
+
+    if [ -z "$installed_version" ]; then
+        echo -e "${RED}✗${RESET} Python package 'cc-context-stats' is not installed." >&2
+        echo "  Install it with: pip3 install cc-context-stats==$VERSION" >&2
+        return 1
     fi
 
-    error_exit "Python 3 is required for '$subcommand'."
+    if [ "$installed_version" != "$VERSION" ]; then
+        echo -e "${RED}✗${RESET} Python package version mismatch:" >&2
+        echo "    Script version:   $VERSION" >&2
+        echo "    Package version:  $installed_version" >&2
+        echo "  Run: pip3 install --upgrade cc-context-stats" >&2
+        return 1
+    fi
+
+    $py_cmd -m claude_statusline.cli.context_stats "$subcommand" "$@"
+    return $?
 }
 
 # Render graphs once

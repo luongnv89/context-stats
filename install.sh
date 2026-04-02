@@ -240,6 +240,44 @@ install_context_stats() {
     fi
 }
 
+# Install or upgrade the Python package to match this script version
+install_python_package() {
+    local pkg="cc-context-stats"
+
+    # Extract version from package.json (same source as scripts)
+    local version
+    if [ "$INSTALL_MODE" = "local" ]; then
+        version=$(grep -o '"version": *"[^"]*"' "$SCRIPT_DIR/package.json" 2>/dev/null | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+    else
+        version=$(curl -fsSL "${GITHUB_RAW_URL}/package.json" 2>/dev/null | grep -o '"version": *"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+    fi
+
+    if [ -z "$version" ]; then
+        version="latest"
+    fi
+
+    local pip_cmd=""
+    if command -v pip3 >/dev/null 2>&1; then
+        pip_cmd="pip3"
+    elif command -v pip >/dev/null 2>&1; then
+        pip_cmd="pip"
+    elif command -v python3 >/dev/null 2>&1; then
+        pip_cmd="python3 -m pip"
+    fi
+
+    if [ -z "$pip_cmd" ]; then
+        echo -e "${YELLOW}⚠${RESET} pip not found. The 'export' and 'explain' commands require the Python package."
+        echo "  Install manually: pip3 install $pkg"
+        return 0
+    fi
+
+    if $pip_cmd install --quiet --upgrade "$pkg" 2>/dev/null; then
+        echo -e "${GREEN}✓${RESET} Python package installed: $pkg==$($pip_cmd show $pkg 2>/dev/null | grep -o 'Version: [^[:space:]]*' | awk '{print $2}')"
+    else
+        echo -e "${YELLOW}⚠${RESET} Failed to install Python package. Try manually: pip3 install $pkg"
+    fi
+}
+
 # Create config file with defaults if it doesn't exist
 create_config() {
     CONFIG_FILE="$CLAUDE_DIR/statusline.conf"
@@ -380,6 +418,7 @@ main() {
     select_script
     install_script
     install_context_stats
+    install_python_package
     create_config
     update_settings
 

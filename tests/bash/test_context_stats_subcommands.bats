@@ -14,6 +14,12 @@ setup() {
 
     cat >"$FAKE_BIN_DIR/python3" <<'EOF'
 #!/usr/bin/env bash
+# Handle version check by detecting import statement
+if [[ "$*" == *"import claude_statusline"* ]]; then
+    echo "1.15.0"
+    exit 0
+fi
+# Capture all other arguments
 printf '%s\n' "$@" > "$CAPTURE_FILE"
 exit 0
 EOF
