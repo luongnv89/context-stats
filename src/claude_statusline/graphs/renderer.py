@@ -265,6 +265,7 @@ class GraphRenderer:
         entries: list,  # list[StateEntry]
         deltas: list[int],
         mi_score: object | None = None,  # IntelligenceScore
+        graph_type: str | None = None,
     ) -> None:
         """Render summary statistics.
 
@@ -376,6 +377,29 @@ class GraphRenderer:
                 f"  {self.colors.cyan}{'Cache Read:':<20}{self.colors.reset} "
                 f"{format_tokens(last.cache_read, self.token_detail)}"
             )
+        if graph_type == "cache":
+            # Show cache TTL countdown after cache stats
+            last_cache_ts = None
+            for entry in reversed(entries):
+                if entry.cache_creation > 0:
+                    last_cache_ts = entry.timestamp
+                    break
+            if last_cache_ts is not None:
+                import time
+
+                elapsed = int(time.time()) - last_cache_ts
+                ttl_remaining = max(0, 300 - elapsed)
+                if ttl_remaining > 0:
+                    ttl_text = format_duration(ttl_remaining, precise=True)
+                    self._emit(
+                        f"  {self.colors.yellow}{'Cache TTL:':<20}"
+                        f"{self.colors.reset} {ttl_text}"
+                    )
+                else:
+                    self._emit(
+                        f"  {self.colors.yellow}{'Cache TTL:':<20}"
+                        f"{self.colors.red}{self.colors.bold}expired{self.colors.reset}"
+                    )
         if last.lines_added > 0 or last.lines_removed > 0:
             self._emit(
                 f"  {self.colors.dim}{'Lines Changed:':<20}{self.colors.reset} "

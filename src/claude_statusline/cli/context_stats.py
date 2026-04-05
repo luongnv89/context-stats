@@ -339,7 +339,7 @@ def render_once(
             )
 
     # Summary and footer
-    renderer.render_summary(entries, deltas, mi_score=mi_score)
+    renderer.render_summary(entries, deltas, mi_score=mi_score, graph_type=graph_type)
     renderer.render_footer(__version__)
 
     if watch_mode:
