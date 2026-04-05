@@ -444,3 +444,101 @@ class TestZoneThresholds:
     def test_empty_entries_no_output(self):
         output = _render_summary_output([])
         assert output == ""
+
+
+# ---------------------------------------------------------------------------
+# Class 7: Cache Graph Rendering
+# ---------------------------------------------------------------------------
+
+
+def _render_graphs_output(entries, graph_type):
+    """Render graphs and return buffered output as string."""
+    renderer = GraphRenderer(
+        colors=ColorManager(enabled=False),
+        dimensions=GraphDimensions(
+            term_width=120,
+            term_height=40,
+            graph_width=105,
+            graph_height=13,
+        ),
+    )
+    renderer.begin_buffering()
+    timestamps = [e.timestamp for e in entries]
+    cache_creation = [e.cache_creation for e in entries]
+    cache_read_tokens = [e.cache_read for e in entries]
+    current_input = [e.current_input_tokens for e in entries]
+    current_output = [e.current_output_tokens for e in entries]
+    context_used = [e.current_used_tokens for e in entries]
+    deltas = calculate_deltas(context_used)
+    delta_times = timestamps[1:]
+
+    if graph_type in ("cumulative", "both", "all"):
+        renderer.render_timeseries(context_used, timestamps, "Context Usage Over Time", "")
+    if graph_type in ("delta", "both", "all"):
+        renderer.render_timeseries(deltas, delta_times, "Context Growth Per Interaction", "")
+    if graph_type in ("io", "all"):
+        renderer.render_timeseries(current_input, timestamps, "Input Tokens (per request)", "")
+        renderer.render_timeseries(current_output, timestamps, "Output Tokens (per request)", "")
+    if graph_type in ("cache", "all"):
+        renderer.render_timeseries(
+            cache_creation, timestamps, "Cache Creation Tokens (per request)", ""
+        )
+        renderer.render_timeseries(
+            cache_read_tokens, timestamps, "Cache Read Tokens (per request)", ""
+        )
+
+    return renderer.get_buffer()
+
+
+class TestCacheGraphRendering:
+    """Tests for cache graph type rendering."""
+
+    def test_cache_graph_renders_with_data(self):
+        entries = [
+            _make_entry(timestamp=1000, cache_creation=5000, cache_read=10000),
+            _make_entry(timestamp=2000, cache_creation=8000, cache_read=15000),
+        ]
+        output = _render_graphs_output(entries, "cache")
+        assert "Cache Creation Tokens (per request)" in output
+        assert "Cache Read Tokens (per request)" in output
+
+    def test_cache_graph_renders_with_zero_data(self):
+        entries = [
+            _make_entry(timestamp=1000, cache_creation=0, cache_read=0),
+            _make_entry(timestamp=2000, cache_creation=0, cache_read=0),
+        ]
+        output = _render_graphs_output(entries, "cache")
+        assert "Cache Creation Tokens (per request)" in output
+        assert "Cache Read Tokens (per request)" in output
+
+    def test_cache_included_in_all(self):
+        entries = [
+            _make_entry(timestamp=1000, cache_creation=5000, cache_read=10000),
+            _make_entry(timestamp=2000, cache_creation=8000, cache_read=15000),
+        ]
+        output = _render_graphs_output(entries, "all")
+        assert "Cache Creation Tokens (per request)" in output
+        assert "Cache Read Tokens (per request)" in output
+        assert "Context Usage Over Time" in output
+        assert "Input Tokens (per request)" in output
+
+    def test_cache_not_in_io(self):
+        entries = [
+            _make_entry(timestamp=1000, cache_creation=5000, cache_read=10000),
+            _make_entry(timestamp=2000, cache_creation=8000, cache_read=15000),
+        ]
+        output = _render_graphs_output(entries, "io")
+        assert "Cache Creation Tokens" not in output
+        assert "Cache Read Tokens" not in output
+
+    def test_summary_shows_cache_when_nonzero(self):
+        entries = [_make_entry(cache_creation=5000, cache_read=10000)]
+        output = _render_summary_output(entries)
+        assert "Cache Creation:" in output
+        assert "Cache Read:" in output
+
+    def test_summary_hides_cache_when_zero(self):
+        entries = [_make_entry(cache_creation=0, cache_read=0)]
+        output = _render_summary_output(entries)
+        assert "Cache Creation:" not in output
+        assert "Cache Read:" not in output
