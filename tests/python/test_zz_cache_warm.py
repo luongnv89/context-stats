@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import os
+import shutil
 import sys
 import tempfile
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -29,6 +29,21 @@ from claude_statusline.cli.cache_warm import (
     load_warm_state,
     run_cache_warm,
 )
+
+
+@pytest.fixture()
+def tmp_dir(monkeypatch):
+    """Provide a temp directory that avoids pytest's tmp_path atexit cleanup.
+
+    pytest's tmp_path registers a cleanup_numbered_dir atexit handler that can
+    raise KeyboardInterrupt on Windows when pytest-cov terminates the process.
+    Using tempfile.mkdtemp() with explicit cleanup sidesteps this entirely.
+    """
+    d = tempfile.mkdtemp(prefix="test_cache_warm_")
+    path = Path(d)
+    monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", path)
+    yield path
+    shutil.rmtree(d, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -75,33 +90,21 @@ class TestParseDuration:
 # ---------------------------------------------------------------------------
 
 class TestWarmStatePersistence:
-    def test_save_and_load(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(
-            "claude_statusline.cli.cache_warm._STATE_DIR", tmp_path
-        )
+    def test_save_and_load(self, tmp_dir):
         state = {"pid": 12345, "start_time": 1000, "expiry_time": 2000, "interval": 240}
         _save_warm_state("sess1", state)
         loaded = load_warm_state("sess1")
         assert loaded == state
 
-    def test_load_missing_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(
-            "claude_statusline.cli.cache_warm._STATE_DIR", tmp_path
-        )
+    def test_load_missing_returns_none(self, tmp_dir):
         assert load_warm_state("nonexistent") is None
 
-    def test_clear_removes_file(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(
-            "claude_statusline.cli.cache_warm._STATE_DIR", tmp_path
-        )
+    def test_clear_removes_file(self, tmp_dir):
         _save_warm_state("sess2", {"pid": 1})
         _clear_warm_state("sess2")
-        assert not (tmp_path / "cache-warm.sess2.json").exists()
+        assert not (tmp_dir / "cache-warm.sess2.json").exists()
 
-    def test_clear_nonexistent_is_noop(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(
-            "claude_statusline.cli.cache_warm._STATE_DIR", tmp_path
-        )
+    def test_clear_nonexistent_is_noop(self, tmp_dir):
         _clear_warm_state("ghost")  # Should not raise
 
 
@@ -110,23 +113,20 @@ class TestWarmStatePersistence:
 # ---------------------------------------------------------------------------
 
 class TestIsCacheWarmActive:
-    def test_no_state_returns_false(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_no_state_returns_false(self, tmp_dir):
         active, remaining = is_cache_warm_active("s1")
         assert active is False
         assert remaining == 0
 
-    def test_expired_state_returns_false_and_clears(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_expired_state_returns_false_and_clears(self, tmp_dir):
         past = int(time.time()) - 100
         _save_warm_state("s2", {"pid": 99999, "expiry_time": past, "interval": 240})
         active, remaining = is_cache_warm_active("s2")
         assert active is False
         assert remaining == 0
-        assert not (tmp_path / "cache-warm.s2.json").exists()
+        assert not (tmp_dir / "cache-warm.s2.json").exists()
 
-    def test_active_state_with_live_pid(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_active_state_with_live_pid(self, tmp_dir):
         future = int(time.time()) + 600
         own_pid = os.getpid()
         _save_warm_state("s3", {"pid": own_pid, "expiry_time": future, "interval": 240})
@@ -134,15 +134,14 @@ class TestIsCacheWarmActive:
         assert active is True
         assert remaining > 0
 
-    def test_dead_pid_returns_false_and_clears(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_dead_pid_returns_false_and_clears(self, tmp_dir):
         future = int(time.time()) + 600
         # Use a PID that is almost certainly dead
         _save_warm_state("s4", {"pid": 9999999, "expiry_time": future, "interval": 240})
         with patch("claude_statusline.cli.cache_warm._is_process_alive", return_value=False):
             active, remaining = is_cache_warm_active("s4")
         assert active is False
-        assert not (tmp_path / "cache-warm.s4.json").exists()
+        assert not (tmp_dir / "cache-warm.s4.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -151,8 +150,7 @@ class TestIsCacheWarmActive:
 
 class TestCacheWarmOn:
     @unix_only
-    def test_starts_heartbeat_and_saves_state(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_starts_heartbeat_and_saves_state(self, tmp_dir, capsys):
         colors = _mock_colors()
 
         fake_pid = 42000
@@ -169,8 +167,7 @@ class TestCacheWarmOn:
         assert state["expiry_time"] > int(time.time())
 
     @unix_only
-    def test_default_duration_is_30m(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_default_duration_is_30m(self, tmp_dir):
         colors = _mock_colors()
 
         with patch("os.fork", return_value=99, create=True):
@@ -181,15 +178,13 @@ class TestCacheWarmOn:
         # Allow ±5 seconds for test execution time
         assert abs(state["expiry_time"] - expected_expiry) < 5
 
-    def test_invalid_duration_exits(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_invalid_duration_exits(self, tmp_dir):
         colors = _mock_colors()
 
         with pytest.raises(SystemExit):
             cmd_cache_warm_on("sess", "badval", colors)
 
-    def test_no_fork_platform_exits(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_no_fork_platform_exits(self, tmp_dir, monkeypatch, capsys):
         colors = _mock_colors()
 
         # Simulate a platform without os.fork (e.g. Windows) by hiding the attribute
@@ -201,8 +196,7 @@ class TestCacheWarmOn:
         assert "unix" in err.lower() or "fork" in err.lower()
 
     @unix_only
-    def test_fork_oserror_exits(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_fork_oserror_exits(self, tmp_dir, capsys):
         colors = _mock_colors()
 
         with patch("os.fork", side_effect=OSError("resource limit"), create=True):
@@ -213,8 +207,7 @@ class TestCacheWarmOn:
         assert "fork" in err.lower()
 
     @unix_only
-    def test_already_active_refreshes(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_already_active_refreshes(self, tmp_dir, capsys):
         colors = _mock_colors()
         future = int(time.time()) + 600
         own_pid = os.getpid()
@@ -234,8 +227,7 @@ class TestCacheWarmOn:
 
 
 class TestCacheWarmOff:
-    def test_stops_active_session(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_stops_active_session(self, tmp_dir, capsys):
         colors = _mock_colors()
         future = int(time.time()) + 600
         _save_warm_state("sess", {"pid": 9999999, "expiry_time": future, "interval": 240})
@@ -248,16 +240,14 @@ class TestCacheWarmOff:
         assert "stopped" in out.lower()
         assert load_warm_state("sess") is None
 
-    def test_no_active_session_prints_message(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_no_active_session_prints_message(self, tmp_dir, capsys):
         colors = _mock_colors()
 
         cmd_cache_warm_off("sess", colors)
         out = capsys.readouterr().out
         assert "no active" in out.lower()
 
-    def test_silent_suppresses_output(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_silent_suppresses_output(self, tmp_dir, capsys):
         colors = _mock_colors()
 
         cmd_cache_warm_off("sess", colors, silent=True)
@@ -270,8 +260,7 @@ class TestCacheWarmOff:
 # ---------------------------------------------------------------------------
 
 class TestRunCacheWarm:
-    def test_no_args_shows_usage(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_no_args_shows_usage(self, tmp_dir, capsys):
         colors = _mock_colors()
 
         with pytest.raises(SystemExit) as exc:
@@ -280,24 +269,21 @@ class TestRunCacheWarm:
         out = capsys.readouterr().out
         assert "cache-warm" in out.lower()
 
-    def test_on_dispatches(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_on_dispatches(self, tmp_dir):
         colors = _mock_colors()
 
         with patch("claude_statusline.cli.cache_warm.cmd_cache_warm_on") as mock_on:
             run_cache_warm("sess", ["on", "15m"], colors)
             mock_on.assert_called_once_with("sess", "15m", colors)
 
-    def test_off_dispatches(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_off_dispatches(self, tmp_dir):
         colors = _mock_colors()
 
         with patch("claude_statusline.cli.cache_warm.cmd_cache_warm_off") as mock_off:
             run_cache_warm("sess", ["off"], colors)
             mock_off.assert_called_once_with("sess", colors)
 
-    def test_unknown_subcmd_exits(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("claude_statusline.cli.cache_warm._STATE_DIR", tmp_path)
+    def test_unknown_subcmd_exits(self, tmp_dir):
         colors = _mock_colors()
 
         with pytest.raises(SystemExit):
