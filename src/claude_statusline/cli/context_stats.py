@@ -61,9 +61,10 @@ OPTIONS:
                    - delta: Context growth per interaction (default)
                    - cumulative: Total context usage over time
                    - io: Input/output tokens over time
+                   - cache: Cache creation/read tokens over time
                    - mi: Model Intelligence score over time
                    - both: Show cumulative and delta graphs
-                   - all: Show all graphs including I/O and MI
+                   - all: Show all graphs including I/O, cache, and MI
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
     --no-color     Disable color output
@@ -118,7 +119,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("session_id", nargs="?", default=None, help="Session ID")
     parser.add_argument(
         "--type",
-        choices=["cumulative", "delta", "io", "mi", "both", "all"],
+        choices=["cumulative", "delta", "io", "cache", "mi", "both", "all"],
         default="delta",
         help="Graph type to display (default: delta)",
     )
@@ -228,6 +229,8 @@ def render_once(
     # Per-request I/O tokens from current_usage
     current_input = [e.current_input_tokens for e in entries]
     current_output = [e.current_output_tokens for e in entries]
+    cache_creation = [e.cache_creation for e in entries]
+    cache_read_tokens = [e.cache_read for e in entries]
     deltas = calculate_deltas(context_used)
     delta_times = timestamps[1:]  # Deltas start from second entry
 
@@ -291,6 +294,14 @@ def render_once(
             current_output, timestamps, "Output Tokens (per request)", colors.magenta
         )
 
+    if graph_type in ("cache", "all"):
+        renderer.render_timeseries(
+            cache_creation, timestamps, "Cache Creation Tokens (per request)", colors.red
+        )
+        renderer.render_timeseries(
+            cache_read_tokens, timestamps, "Cache Read Tokens (per request)", colors.cyan
+        )
+
     # Compute MI scores for graph and/or summary
     mi_score = None
     if entries:
@@ -328,7 +339,7 @@ def render_once(
             )
 
     # Summary and footer
-    renderer.render_summary(entries, deltas, mi_score=mi_score)
+    renderer.render_summary(entries, deltas, mi_score=mi_score, graph_type=graph_type)
     renderer.render_footer(__version__)
 
     if watch_mode:

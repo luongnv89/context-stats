@@ -37,8 +37,9 @@ context-stats --type delta       # Context growth per interaction (default)
 context-stats --type cumulative  # Total context usage over time
 context-stats --type both        # Show both graphs
 context-stats --type io          # Input/output token breakdown
+context-stats --type cache       # Cache creation/read tokens over time
 context-stats --type mi          # Model Intelligence over time
-context-stats --type all         # Show all graphs including MI
+context-stats --type all         # Show all graphs including I/O, cache, and MI
 ```
 
 ### Diagnostic Dump
@@ -81,6 +82,8 @@ Session Summary
   Last Growth:         +2,500
   Input Tokens:        59,015
   Output Tokens:       43,429
+  Cache Creation:      10,000
+  Cache Read:          20,000
   Total Cost:          $0.1234
   Model:               claude-sonnet-4-6
   Session Duration:    2h 29m
@@ -146,9 +149,11 @@ OPTIONS:
                    - delta: Context growth per interaction (default)
                    - cumulative: Total context usage over time
                    - io: Input/output tokens over time
+                   - cache: Cache creation/read tokens over time
+                            Includes a Cache TTL countdown (5m) based on last cache write
                    - mi: Model Intelligence over time
                    - both: Show cumulative and delta graphs
-                   - all: Show all graphs including I/O and MI
+                   - all: Show all graphs including I/O, cache, and MI
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
     --no-color     Disable color output

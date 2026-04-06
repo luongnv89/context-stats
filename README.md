@@ -110,13 +110,17 @@ The CLI gives you the full session picture when the status line is not enough.
 | Model Intelligence | How quickly quality is degrading as context grows |
 | Zone distribution | Where the session spent most of its time |
 | Final context composition | How much of the final request was cache, reads, or new input |
-| Cache activity trend | When cache creation and cache reads changed over time |
+| Cache activity trend | When cache creation and cache reads changed over time, with TTL countdown |
 
 | Status bar view | Context growth | Cumulative graph |
 |:---:|:---:|:---:|
 | ![Green statusline](images/1.10/statusline-green.png) | ![Delta graph](images/1.10/1.10-delta.png) | ![Cumulative graph](images/1.10/1.10-cumulative.png) |
 
-| MI view | Status bar warning state | 
+| Cumulative graph | Cache graph |
+|:---:|:---:|
+| ![Cumulative graph](images/1.10/1.10-cumulative.png) | ![Cache graph](images/1.16.0/1.16-cache.png) |
+
+| MI view | Status bar warning state |
 |:---:|:---:|
 | ![Model Intelligence view](images/1.10/1.10.0-model-intelligence.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
 
@@ -127,6 +131,7 @@ Each image shows a different slice of the same session:
 - `1.10-cumulative.png` shows overall context usage over time.
 - `1.10.0-model-intelligence.png` shows the MI view as context pressure rises.
 - `1.10-statusline.png` shows the warning state when the session is getting tight.
+- `1.16-cache.png` shows cache creation and read tokens per request with a TTL countdown.
 
 ## Export Report
 
