@@ -14,41 +14,39 @@ Context Stats tracks your context usage and warns you as performance degrades:
 
 ## Usage
 
+The CLI uses an explicit action-based pattern: `context-stats <session_id> <action> [options]`
+
 By default, `context-stats` runs in live monitoring mode:
 
 ```bash
 # Live monitoring (default, refreshes every 2s)
-context-stats
+context-stats <session_id> graph
 
 # Custom refresh interval
-context-stats -w 5
+context-stats <session_id> graph -w 5
 
 # Show once and exit
-context-stats --no-watch
-
-# Show specific session
-context-stats <session_id>
+context-stats <session_id> graph --no-watch
 ```
 
 ### Graph Types
 
 ```bash
-context-stats --type delta       # Context growth per interaction (default)
-context-stats --type cumulative  # Total context usage over time
-context-stats --type both        # Show both graphs
-context-stats --type io          # Input/output token breakdown
-context-stats --type cache       # Cache creation/read tokens over time
-context-stats --type mi          # Model Intelligence over time
-context-stats --type all         # Show all graphs including I/O, cache, and MI
+context-stats <session_id> graph --type delta       # Context growth per interaction (default)
+context-stats <session_id> graph --type cumulative  # Total context usage over time
+context-stats <session_id> graph --type both        # Show both graphs
+context-stats <session_id> graph --type io          # Input/output token breakdown
+context-stats <session_id> graph --type cache       # Cache creation/read tokens over time
+context-stats <session_id> graph --type mi          # Model Intelligence over time
+context-stats <session_id> graph --type all         # Show all graphs including I/O, cache, and MI
 ```
 
 ### Diagnostic Dump
 
-The `explain` command shows how cc-context-stats interprets Claude Code's JSON context. Pipe any session JSON to stdin:
+The `explain` action shows how cc-context-stats interprets Claude Code's JSON context. Pipe any session JSON to stdin:
 
 ```bash
 echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
-echo '{"model":{"display_name":"Opus"},...}' | context-stats explain --no-color
 ```
 
 Output includes model info, workspace, context window breakdown with derived values (free tokens, autocompact buffer), cost, session metadata, vim/agent extensions, active config, and raw JSON.
@@ -125,7 +123,7 @@ Features:
 To disable watch mode and show graphs once:
 
 ```bash
-context-stats --no-watch
+context-stats <session_id> graph --no-watch
 ```
 
 ## Data Source
