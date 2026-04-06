@@ -4,7 +4,7 @@
 Displays ASCII graphs of token consumption over time.
 
 Usage:
-    context-stats [session_id] [action] [options]
+    context-stats <session_id> <action> [parameters]
 
 Actions:
     graph    Live ASCII graphs of context usage (default)
@@ -50,14 +50,14 @@ def show_help() -> None:
         """Context Stats Visualizer for Claude Code
 
 USAGE:
-    context-stats [session_id] [action] [options]
-    context-stats [options]
+    context-stats <session_id> <action> [parameters]
 
 ARGUMENTS:
-    session_id    Optional session ID. If not provided, uses the latest session.
+    session_id    Required. The session ID to operate on.
+    action        Required. The action to perform.
 
 ACTIONS:
-    graph         Show live ASCII graphs of context usage (default action)
+    graph         Show live ASCII graphs of context usage
     export        Export session stats as a markdown report
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
 
@@ -82,35 +82,30 @@ GLOBAL OPTIONS:
     --help         Show this help message
 
 NOTE:
-    By default, context-stats runs in live monitoring mode, refreshing every 2 seconds.
+    By default, graph action runs in live monitoring mode, refreshing every 2 seconds.
     Press Ctrl+C to exit. Use --no-watch to display graphs once and exit.
 
 EXAMPLES:
-    # Live monitoring (default, refreshes every 2s)
-    context-stats
-    context-stats abc123def
-
-    # Live monitoring with custom interval
-    context-stats -w 5
-    context-stats abc123def -w 5
+    # Show live graphs (refreshes every 2s)
+    context-stats abc123def graph
 
     # Show graphs once and exit
-    context-stats --no-watch
-    context-stats abc123def --no-watch
+    context-stats abc123def graph --no-watch
 
     # Show only cumulative graph
-    context-stats --type cumulative
-    context-stats abc123def --type cumulative
+    context-stats abc123def graph --type cumulative
+
+    # Show graphs with custom refresh interval
+    context-stats abc123def graph -w 5
 
     # Export session stats as markdown
-    context-stats export
     context-stats abc123def export --output report.md
 
     # Diagnostic dump (pipe Claude Code JSON context)
     echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
 
     # Output to file (no colors, single run)
-    context-stats --no-watch --no-color > output.txt
+    context-stats abc123def graph --no-watch --no-color > output.txt
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
@@ -122,53 +117,49 @@ DATA SOURCE:
 _KNOWN_ACTIONS = {"graph", "export", "explain"}
 
 
-def _normalize_argv(argv: list[str]) -> tuple[str, str | None, list[str]]:
+def _normalize_argv(argv: list[str]) -> tuple[str, str, list[str]]:
     """Determine action, session_id, and remaining args from raw argv.
 
-    Supports these calling patterns:
-      context-stats [options]                     -> action=graph, session=None
-      context-stats <session_id> [options]        -> action=graph, session=<session_id>
-      context-stats <session_id> graph [options]  -> action=graph, session=<session_id>
-      context-stats <session_id> export [options] -> action=export, session=<session_id>
-      context-stats export [options]              -> action=export, session=None
-      context-stats <session_id> explain [options]-> action=explain, session=<session_id>
-      context-stats explain [options]             -> action=explain, session=None
+    Requires the explicit pattern:
+      context-stats <session_id> <action> [parameters]
+
+    Special case: explain can be called as 'context-stats explain' (without session_id).
+    When session_id is missing and action is 'explain', uses '-' as placeholder.
 
     Args:
         argv: sys.argv[1:] (arguments after the program name).
 
     Returns:
         Tuple of (action, session_id, remaining_args).
+
+    Raises:
+        SystemExit: If session_id or action are missing (except for explain).
     """
     # Strip out global flags so they don't interfere with positional detection
     positionals = [a for a in argv if not a.startswith("-")]
 
-    action = "graph"
-    session_id: str | None = None
+    # Special case: explain can be called with just 'explain' (reads from stdin)
+    if len(positionals) == 1 and positionals[0] == "explain":
+        remaining = list(argv)
+        remaining.remove("explain")
+        return "explain", "-", remaining
+
+    if len(positionals) < 2:
+        sys.stderr.write("Error: Missing required arguments.\n\n")
+        show_help()
+        sys.exit(1)
+
+    session_id = positionals[0]
+    action = positionals[1]
+
+    if action not in _KNOWN_ACTIONS:
+        sys.stderr.write(f"Error: Unknown action '{action}'. Valid actions: {', '.join(sorted(_KNOWN_ACTIONS))}\n")
+        sys.exit(1)
+
+    # Build remaining args: remove session_id and action from argv
     remaining = list(argv)
-
-    if not positionals:
-        return action, session_id, remaining
-
-    first = positionals[0]
-
-    # If first positional is a known action, treat it as action with no session_id
-    if first in _KNOWN_ACTIONS:
-        action = first
-        remaining = remaining[:]
-        remaining.remove(first)
-        return action, session_id, remaining
-
-    # Otherwise, first positional is session_id
-    session_id = first
-    remaining = remaining[:]
-    remaining.remove(first)
-
-    # Check if the next positional is an action
-    second_positionals = [a for a in remaining if not a.startswith("-")]
-    if second_positionals and second_positionals[0] in _KNOWN_ACTIONS:
-        action = second_positionals[0]
-        remaining.remove(action)
+    remaining.remove(session_id)
+    remaining.remove(action)
 
     return action, session_id, remaining
 
@@ -223,28 +214,29 @@ def parse_args() -> argparse.Namespace:
         show_help()
         sys.exit(0)
 
+    # Parse required session_id and action
     action, session_id, remaining = _normalize_argv(raw_argv)
 
+    # Validate session_id format (skip for "-" placeholder used by explain)
+    if session_id != "-":
+        try:
+            _validate_session_id(session_id)
+        except ValueError as e:
+            sys.stderr.write(f"Error: {e}\n")
+            sys.exit(1)
+
     if action == "graph":
-        # Inject pre-resolved session_id into remaining so graph parser can pick it up
-        if session_id is not None:
-            remaining = [session_id] + remaining
+        # Inject session_id into remaining for graph parser
+        remaining = [session_id] + remaining
         parser = _build_graph_parser()
         args = parser.parse_args(remaining)
         if args.help:
             parser.print_help()
             sys.exit(0)
         args.action = "graph"
-        # Validate session_id
-        if args.session_id is not None:
-            try:
-                _validate_session_id(args.session_id)
-            except ValueError as e:
-                sys.stderr.write(f"Error: {e}\n")
-                sys.exit(1)
         return args
 
-    # For export and explain, we return a minimal namespace; main() handles them directly
+    # For export and explain, return minimal namespace; main() handles them
     args = argparse.Namespace(action=action, session_id=session_id, remaining=remaining)
     return args
 

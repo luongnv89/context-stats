@@ -297,8 +297,8 @@ class TestGenerateMarkdown:
 class TestExportCommand:
     """Integration tests for the export CLI command."""
 
-    def _run_export(self, extra_args=None):
-        cmd = [sys.executable, "-m", "claude_statusline.cli.context_stats", "export"]
+    def _run_export(self, session_id, extra_args=None):
+        cmd = [sys.executable, "-m", "claude_statusline.cli.context_stats", session_id, "export"]
         if extra_args:
             cmd.extend(extra_args)
         return subprocess.run(
@@ -309,18 +309,18 @@ class TestExportCommand:
         )
 
     def test_export_help(self):
-        result = self._run_export(["--help"])
+        result = self._run_export("test-session", ["--help"])
         assert result.returncode == 0
         assert "session_id" in result.stdout
         assert "--output" in result.stdout
 
     def test_export_invalid_session_id(self):
-        result = self._run_export(["../../../etc/passwd"])
+        result = self._run_export("../../../etc/passwd")
         assert result.returncode != 0
         assert "Invalid" in result.stderr or "Error" in result.stderr
 
     def test_export_nonexistent_session(self):
-        result = self._run_export(["nonexistent-session-id-12345"])
+        result = self._run_export("nonexistent-session-id-12345")
         assert result.returncode != 0
         assert "No state file" in result.stderr or "Error" in result.stderr
 

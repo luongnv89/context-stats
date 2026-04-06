@@ -215,7 +215,7 @@ class TestCliSessionIdRejection:
 
     def test_cli_rejects_path_traversal(self):
         result = subprocess.run(
-            [sys.executable, "-m", "claude_statusline.cli.context_stats", "../../etc/passwd"],
+            [sys.executable, "-m", "claude_statusline.cli.context_stats", "../../etc/passwd", "graph"],
             capture_output=True,
             text=True,
         )
@@ -224,7 +224,7 @@ class TestCliSessionIdRejection:
 
     def test_cli_rejects_backslash(self):
         result = subprocess.run(
-            [sys.executable, "-m", "claude_statusline.cli.context_stats", "test\\bad"],
+            [sys.executable, "-m", "claude_statusline.cli.context_stats", "test\\bad", "graph"],
             capture_output=True,
             text=True,
         )
