@@ -68,6 +68,16 @@ repos:
       - id: markdownlint
         args: ['--fix', '--disable', 'MD013', 'MD024', 'MD033', 'MD040', 'MD041', '--']
 
+  # E2E clean install smoke tests (local script)
+  - repo: local
+    hooks:
+      - id: e2e-install-tests
+        name: E2E clean install smoke tests
+        language: script
+        entry: scripts/e2e-install-test.sh
+        pass_filenames: false
+        always_run: true
+
 ci:
   autofix_prs: true
   autofix_commit_msg: 'style: auto-fix pre-commit issues'
