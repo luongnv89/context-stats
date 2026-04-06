@@ -4,10 +4,16 @@
 Displays ASCII graphs of token consumption over time.
 
 Usage:
-    context-stats [session_id] [options]
+    context-stats [session_id] [action] [options]
+    context-stats [action] [session_id] [options]
+
+Actions:
+    graph    Live ASCII graphs of context usage (default)
+    export   Export session stats as a markdown report
+    explain  Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
 
 Options:
-    --type <cumulative|delta|io|both|all>  Graph type to display (default: both)
+    --type <cumulative|delta|io|both|all>  Graph type to display (default: delta)
     --watch, -w [interval]                  Real-time monitoring mode (default: 2s)
     --no-color                              Disable color output
     --version, -V                           Show version and exit
@@ -45,18 +51,19 @@ def show_help() -> None:
         """Context Stats Visualizer for Claude Code
 
 USAGE:
-    context-stats [session_id] [options]
-    context-stats explain
-    context-stats export [session_id] [--output FILE]
+    context-stats [session_id] [action] [options]
+    context-stats [action] [session_id] [options]
+    context-stats [options]
 
 ARGUMENTS:
     session_id    Optional session ID. If not provided, uses the latest session.
 
-COMMANDS:
-    explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
+ACTIONS:
+    graph         Show live ASCII graphs of context usage (default action)
     export        Export session stats as a markdown report
+    explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
 
-OPTIONS:
+GRAPH OPTIONS:
     --type <type>  Graph type to display:
                    - delta: Context growth per interaction (default)
                    - cumulative: Total context usage over time
@@ -67,6 +74,11 @@ OPTIONS:
                    - all: Show all graphs including I/O, cache, and MI
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
+
+EXPORT OPTIONS:
+    --output FILE  Output file path (default: context-stats-<session>.md)
+
+GLOBAL OPTIONS:
     --no-color     Disable color output
     --version, -V  Show version and exit
     --help         Show this help message
@@ -78,31 +90,34 @@ NOTE:
 EXAMPLES:
     # Live monitoring (default, refreshes every 2s)
     context-stats
+    context-stats graph
+
+    # Live monitoring for a specific session
+    context-stats abc123def
+    context-stats abc123def graph
 
     # Live monitoring with custom interval
     context-stats -w 5
+    context-stats graph -w 5
 
     # Show graphs once and exit
     context-stats --no-watch
-
-    # Show graphs for specific session
-    context-stats abc123def
+    context-stats graph --no-watch
 
     # Show only cumulative graph
     context-stats --type cumulative
-
-    # Combine options
-    context-stats abc123 --type cumulative -w 3
-
-    # Output to file (no colors, single run)
-    context-stats --no-watch --no-color > output.txt
-
-    # Diagnostic dump (pipe Claude Code JSON context)
-    echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
+    context-stats graph --type cumulative
 
     # Export session stats as markdown
     context-stats export
     context-stats export abc123def --output report.md
+    context-stats abc123def export --output report.md
+
+    # Diagnostic dump (pipe Claude Code JSON context)
+    echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
+
+    # Output to file (no colors, single run)
+    context-stats --no-watch --no-color > output.txt
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
@@ -110,10 +125,74 @@ DATA SOURCE:
     )
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments."""
+# Known action names — used to distinguish actions from session IDs in argv
+_KNOWN_ACTIONS = {"graph", "export", "explain"}
+
+
+def _normalize_argv(argv: list[str]) -> tuple[str, str | None, list[str]]:
+    """Determine action, session_id, and remaining args from raw argv.
+
+    Supports these calling patterns (all equivalent where applicable):
+      context-stats [options]                     -> action=graph, session=None
+      context-stats <session_id> [options]        -> action=graph, session=<session_id>
+      context-stats graph [session_id] [options]  -> action=graph, session=optional
+      context-stats export [session_id] [options] -> action=export, session=optional
+      context-stats explain [options]             -> action=explain, session=None
+      context-stats <session_id> graph [options]  -> action=graph, session=<session_id>
+      context-stats <session_id> export [options] -> action=export, session=<session_id>
+
+    Args:
+        argv: sys.argv[1:] (arguments after the program name).
+
+    Returns:
+        Tuple of (action, session_id, remaining_args).
+    """
+    # Strip out global flags so they don't interfere with positional detection
+    positionals = [a for a in argv if not a.startswith("-")]
+    flags = [a for a in argv if a.startswith("-")]
+
+    action = "graph"
+    session_id: str | None = None
+    remaining = list(argv)
+
+    if not positionals:
+        return action, session_id, remaining
+
+    first = positionals[0]
+    if first in _KNOWN_ACTIONS:
+        # Pattern: context-stats <action> [session_id] [options]
+        action = first
+        remaining = [a for a in argv if a != first or flags.count(a) > 0]
+        # Remove the action from remaining once
+        if first in remaining:
+            remaining = remaining[:]
+            remaining.remove(first)
+        # Check if there's a session_id after the action
+        second_positionals = [a for a in remaining if not a.startswith("-")]
+        if second_positionals:
+            session_id = second_positionals[0]
+            remaining = [a for a in remaining if a != session_id or a.startswith("-")]
+            if session_id in remaining:
+                remaining = remaining[:]
+                remaining.remove(session_id)
+    else:
+        # Pattern: context-stats <session_id> [action] [options]
+        session_id = first
+        remaining = remaining[:]
+        remaining.remove(first)
+        second_positionals = [a for a in remaining if not a.startswith("-")]
+        if second_positionals and second_positionals[0] in _KNOWN_ACTIONS:
+            action = second_positionals[0]
+            remaining.remove(action)
+
+    return action, session_id, remaining
+
+
+def _build_graph_parser() -> argparse.ArgumentParser:
+    """Build argument parser for the graph action."""
     parser = argparse.ArgumentParser(
-        description="Context Stats Visualizer for Claude Code",
+        prog="context-stats graph",
+        description="Show live ASCII graphs of context usage",
         add_help=False,
     )
     parser.add_argument("session_id", nargs="?", default=None, help="Session ID")
@@ -121,21 +200,17 @@ def parse_args() -> argparse.Namespace:
         "--type",
         choices=["cumulative", "delta", "io", "cache", "mi", "both", "all"],
         default="delta",
-        help="Graph type to display (default: delta)",
+        help="Graph type (default: delta)",
     )
     parser.add_argument(
-        "--watch",
-        "-w",
-        nargs="?",
-        const=2,
-        type=int,
-        default=2,
-        help="Watch mode interval in seconds (default: 2, use --no-watch to disable)",
+        "--watch", "-w",
+        nargs="?", const=2, type=int, default=2,
+        help="Refresh interval in seconds (default: 2)",
     )
     parser.add_argument(
         "--no-watch",
         action="store_true",
-        help="Disable watch mode (show graphs once and exit)",
+        help="Show graphs once and exit",
     )
     parser.add_argument(
         "--no-color",
@@ -143,35 +218,49 @@ def parse_args() -> argparse.Namespace:
         help="Disable color output",
     )
     parser.add_argument(
-        "--help",
-        "-h",
+        "--help", "-h",
         action="store_true",
-        help="Show help message",
+        help="Show help for graph action",
     )
-    parser.add_argument(
-        "--version",
-        "-V",
-        action="store_true",
-        help="Show version and exit",
-    )
+    return parser
 
-    args = parser.parse_args()
 
-    if args.version:
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments using action-based dispatch."""
+    # Top-level flags handled before action dispatch
+    raw_argv = sys.argv[1:]
+
+    if "--version" in raw_argv or "-V" in raw_argv:
         print(f"cc-context-stats {__version__}")
         sys.exit(0)
 
-    if args.help:
+    if not raw_argv or raw_argv == ["--help"] or raw_argv == ["-h"]:
         show_help()
         sys.exit(0)
 
-    if args.session_id is not None:
-        try:
-            _validate_session_id(args.session_id)
-        except ValueError as e:
-            sys.stderr.write(f"Error: {e}\n")
-            sys.exit(1)
+    action, session_id, remaining = _normalize_argv(raw_argv)
 
+    if action == "graph":
+        # Inject pre-resolved session_id into remaining so graph parser can pick it up
+        if session_id is not None:
+            remaining = [session_id] + remaining
+        parser = _build_graph_parser()
+        args = parser.parse_args(remaining)
+        if args.help:
+            parser.print_help()
+            sys.exit(0)
+        args.action = "graph"
+        # Validate session_id
+        if args.session_id is not None:
+            try:
+                _validate_session_id(args.session_id)
+            except ValueError as e:
+                sys.stderr.write(f"Error: {e}\n")
+                sys.exit(1)
+        return args
+
+    # For export and explain, we return a minimal namespace; main() handles them directly
+    args = argparse.Namespace(action=action, session_id=session_id, remaining=remaining)
     return args
 
 
@@ -502,8 +591,9 @@ def main() -> None:
     """Main entry point for context-stats CLI."""
     _ensure_utf8_stdout()
 
-    # Handle 'explain' subcommand before argparse (it expects stdin JSON, not flags)
-    if len(sys.argv) > 1 and sys.argv[1] == "explain":
+    args = parse_args()
+
+    if args.action == "explain":
         import json
 
         from claude_statusline.cli.explain import run_explain
@@ -518,15 +608,18 @@ def main() -> None:
         run_explain(data, no_color=no_color)
         return
 
-    # Handle 'export' subcommand before argparse
-    if len(sys.argv) > 1 and sys.argv[1] == "export":
+    if args.action == "export":
         from claude_statusline.cli.export import run_export
 
-        run_export(sys.argv[2:])
+        # Build argv for export: inject session_id if resolved, then pass remaining flags
+        export_argv: list[str] = []
+        if args.session_id is not None:
+            export_argv.append(args.session_id)
+        export_argv.extend(args.remaining)
+        run_export(export_argv)
         return
 
-    args = parse_args()
-
+    # Default action: graph
     # Load config for token_detail setting
     config = Config.load()
 
