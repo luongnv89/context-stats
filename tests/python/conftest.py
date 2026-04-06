@@ -1,9 +1,23 @@
 """Pytest configuration and fixtures for statusline tests."""
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Disable coverage tracer before atexit handlers run on Windows.
+
+    On Windows, the coverage C extension's sys.settrace tracer can cause a
+    KeyboardInterrupt in pytest's cleanup_numbered_dir atexit handler, making
+    the process exit with code 1 even when all tests pass. Clearing the tracer
+    here prevents that race between coverage cleanup and atexit callbacks.
+    """
+    if sys.platform == "win32":
+        sys.settrace(None)
+        sys.setprofile(None)
 
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.parent
