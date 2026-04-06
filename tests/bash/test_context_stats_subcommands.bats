@@ -16,7 +16,7 @@ setup() {
 #!/usr/bin/env bash
 # Handle version check by detecting import statement
 if [[ "$*" == *"import claude_statusline"* ]]; then
-    echo "1.15.0"
+    echo "1.15.1"
     exit 0
 fi
 # Capture all other arguments
