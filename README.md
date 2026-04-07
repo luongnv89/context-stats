@@ -1,65 +1,59 @@
 <div align="center">
   <img src="assets/logo/logo-full.svg" alt="context-stats" width="320"/>
 
-  <h1>Know your context zone. Act before Claude degrades.</h1>
+  <h1>Understand how you use Claude Code — and spend less doing it.</h1>
 
 [![PyPI version](https://img.shields.io/pypi/v/context-stats)](https://pypi.org/project/context-stats/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/context-stats)](https://pypi.org/project/context-stats/)
 [![GitHub stars](https://img.shields.io/github/stars/luongnv89/cc-context-stats)](https://github.com/luongnv89/cc-context-stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Real-time context window monitoring for Claude Code. Five zones tell you exactly what to do next — keep coding, finish up, export your session, or restart.
+Three levels of analytics — live session awareness, per-session deep dives, and multi-week cost reports — so you can use Claude Code at its best and know exactly where your tokens go.
 
 [**Get Started →**](#installation)
 </div>
 
 ---
 
-## How It Works
+## Three Levels of Stats
 
 ```mermaid
-graph LR
-    A["Claude Code session"] --> B["Python statusline script"]
-    B --> C["Context zone + MI score"]
-    B --> D["Local CSV state file"]
-    D --> E["Live graph dashboard"]
-    D --> F["Session export report"]
-    D --> G["Cross-project analytics"]
-    E --> H["Delta · Cumulative · Cache · MI · I/O"]
-    F --> I["Snapshot · Takeaways · Timeline · Charts"]
-    G --> J["Cost · Tokens · Patterns · Sessions"]
+graph TD
+    A["Claude Code session"] --> B["statusline script"]
+    B --> D["Live status line · context zone · MI"]
+    B --> C["Local CSV state"]
+
+    C --> E["context-stats graph"]
+    C --> F["context-stats export"]
+    C --> G["context-stats report"]
+
+    subgraph L1["Level 1 — Live"]
+        D
+        E
+    end
+
+    subgraph L2["Level 2 — Session"]
+        F
+    end
+
+    subgraph L3["Level 3 — Report"]
+        G
+    end
 ```
 
-1. Claude Code pipes session JSON to the Python statusline script on every refresh.
-2. The script computes zone, Model Intelligence (MI) score, and displays a compact status line.
-3. The CLI reads local state files for live charts, session reports, and cross-project analytics.
-4. Everything stays local — `~/.claude/statusline/` for session state, `~/.claude/projects/` for analytics.
+| Level | Tool | What you learn |
+|---|---|---|
+| **Live** | Status line + graph dashboard | Context zone, MI score, token delta — act now, not after it's too late |
+| **Session** | `context-stats export` | Cache efficiency, interaction timeline, zone history for one session |
+| **Report** | `context-stats report` | Cost breakdown, cache analysis, cross-project patterns across weeks or months |
 
 ---
 
-## Context Zones
+## Level 1: Live Stats
 
-Five zones with a clear action for each:
+### Status Line
 
-| Zone | Color | Meaning | Do this now |
-|---|:---:|---|---|
-| Planning | Green | Plenty of room | Keep planning and coding |
-| Code-only | Yellow | Context tightening | Finish the current task, no new plans |
-| Dump | Orange | Quality declining | Wrap up and prepare to export |
-| ExDump | Dark red | Near hard limit | Start a new session |
-| Dead | Gray | Exhausted | Stop — nothing productive left |
-
-Thresholds are **model-size-aware**: 1M context models use absolute token counts (70k/100k/250k/275k); standard models use utilization ratios (40%/70%/75%). Both are configurable.
-
-| Plan zone | Code zone | Dump zone |
-|:---:|:---:|:---:|
-| ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
-
----
-
-## Status Line
-
-A single line in your Claude Code terminal that shows everything at a glance:
+A single line in your Claude Code terminal updated on every refresh:
 
 ```
 my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
@@ -67,14 +61,10 @@ my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.
 
 | Element | What it tells you |
 |---|---|
-| `my-project` | Current directory |
-| `main [3]` | Git branch + uncommitted changes |
 | `64,000 free (32.0%)` | Available tokens and utilization |
-| `Code` | Current context zone (color-coded) |
+| `Code` | Context zone — color-coded action signal |
 | `MI:0.918` | Model Intelligence score — how sharp the model still is |
 | `+2,500` | Tokens consumed since last refresh |
-| `Opus 4.6` | Active model |
-| `abc-123` | Session ID (double-click to copy) |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 
@@ -82,40 +72,31 @@ When the terminal is narrow, lower-priority elements drop off in order — the p
 |:---:|:---:|
 | ![Green statusline](images/1.10/statusline-green.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
 
-### Customization
+### Context Zones
 
-Every element has its own color key. Override per-property or set hex values:
+Five zones tell you exactly what to do next:
 
-```bash
-# ~/.claude/statusline.conf
-color_project_name=bright_cyan
-color_branch_name=bright_magenta
-color_mi_score=#ff9e64
-color_green=#7dcfff
-color_yellow=#e0af68
-color_red=#f7768e
-show_mi=true
-show_delta=true
-token_detail=true
-```
+| Zone | Color | Meaning | Action |
+|---|:---:|---|---|
+| Planning | Green | Plenty of room | Keep planning and coding |
+| Code-only | Yellow | Context tightening | Finish current task, no new plans |
+| Dump | Orange | Quality declining | Wrap up and prepare to export |
+| ExDump | Dark red | Near hard limit | Start a new session |
+| Dead | Gray | Exhausted | Stop — nothing productive left |
 
-Full palette: 18 named colors + any `#rrggbb` hex. Copy the annotated example to get started:
+Thresholds are **model-size-aware**: 1M context models use absolute token counts; standard models use utilization ratios. Both are configurable.
 
-```bash
-cp examples/statusline.conf ~/.claude/statusline.conf
-```
+| Plan zone | Code zone | Dump zone |
+|:---:|:---:|:---:|
+| ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
 
----
+### Model Intelligence (MI)
 
-## Model Intelligence (MI)
-
-MI estimates how well Claude performs at the current context fill level. It is a single number from 0.000 to 1.000 calibrated from the **MRCR v2 8-needle** long-context retrieval benchmark.
+MI estimates how well Claude performs at the current fill level, calibrated from the MRCR v2 8-needle benchmark:
 
 ```
 MI(u) = max(0, 1 - u^β)
 ```
-
-Each model family has a measured beta:
 
 | Model | β | MI at 50% | MI at 75% |
 |---|---|---|---|
@@ -123,14 +104,12 @@ Each model family has a measured beta:
 | Sonnet 4.6 | 1.5 | 0.646 | 0.350 |
 | Haiku 4.5 | 1.2 | 0.565 | 0.292 |
 
-Color-coded: **green** (>0.70, operating well), **yellow** (0.40–0.70, pressure building), **red** (<0.40, start new session). Override the curve with `mi_curve_beta=1.5` in config.
+Color-coded: **green** (>0.70), **yellow** (0.40–0.70), **red** (<0.40 — start a new session). Override with `mi_curve_beta=1.5` in config.
 
----
-
-## Live Graph Dashboard
+### Live Graph Dashboard
 
 ```bash
-context-stats <session_id> graph               # Context growth per interaction (default)
+context-stats <session_id> graph               # Context growth per interaction
 context-stats <session_id> graph --type all    # All graphs
 ```
 
@@ -138,12 +117,11 @@ context-stats <session_id> graph --type all    # All graphs
 |---|---|
 | `delta` | How many tokens each interaction consumed |
 | `cumulative` | Total context used over the session |
-| `cache` | Cache creation and read tokens over time, with 5-min TTL countdown |
+| `cache` | Cache creation and read tokens, with 5-min TTL countdown |
 | `mi` | How MI degraded across the session |
 | `io` | Input/output token breakdown |
-| `both` | Cumulative + delta side by side |
 
-Auto-refreshes every 2 seconds (flicker-free). Pass `-w 5` to slow it down or `--no-watch` to show once.
+Auto-refreshes every 2 seconds. Pass `-w 5` to slow down or `--no-watch` to show once.
 
 | Context growth | Cumulative graph | Cache activity |
 |:---:|:---:|:---:|
@@ -155,55 +133,21 @@ Auto-refreshes every 2 seconds (flicker-free). Pass `-w 5` to slow it down or `-
 
 ---
 
-## Cross-Project Analytics
+## Level 2: Session Report
 
-Aggregate token usage and cost across **all** Claude Code projects and sessions:
-
-```bash
-context-stats report                     # Full analytics report (all time)
-context-stats report --since-days 30     # Last 30 days only
-context-stats report --output report.md  # Write to specific file
-```
-
-The report breaks down every token dollar spent across projects, models, and sessions:
-
-```markdown
-## Grand Totals
-
-- Total Tokens: 128,254,398
-  - Input: 19,574,606 · Output: 46,329,340
-  - Cache Creation: 1,835,113 · Cache Read: 60,515,339
-- Total Cost: $6,292.64
-- Total Sessions: 751 across 59 projects
-```
-
-| Section | What you learn |
-|---|---|
-| Grand Totals | Total spend, token breakdown (input/output/cache), session count |
-| Per-project breakdown | Which projects consume the most tokens and cost the most |
-| Top sessions | Heaviest sessions per project — identify costly workflows |
-| Cache efficiency | Cache read vs. cache creation ratio — high read ratio means good reuse |
-| Token composition | How much of your spend is output (expensive) vs. cache reads (cheap) |
-
-Cache reads cost ~10x less than input tokens. The report makes cache efficiency visible so you can optimize session structure.
-
----
-
-## Session Export
-
-Export a full session report when you need the timeline, charts, and analysis in one Markdown file:
+Export a full deep-dive when you need to understand what happened in a specific session:
 
 ```bash
 context-stats <session_id> export --output report.md
 ```
 
-| Section | Contents |
+| Section | What you learn |
 |---|---|
-| Executive Snapshot | Model, project, duration, interactions, final zone, cache activity |
-| Summary | Window size, token totals, cost, final MI |
+| Executive Snapshot | Model, project, duration, interactions, final zone |
+| Cache Activity | Cache creation vs. read ratio — did your session reuse the cache? |
+| Interaction Timeline | Per-interaction context, MI score, and zone history |
+| Visual Charts | Mermaid charts: context growth, zones, cache, token composition |
 | Key Takeaways | Short read of what changed |
-| Visual Summary | Mermaid charts: context, zones, cache, composition |
-| Interaction Timeline | Per-interaction context, MI, and zone history |
 
 Example output:
 
@@ -211,22 +155,18 @@ Example output:
 ## Executive Snapshot
 | Signal | Value | Why it matters |
 |--------|-------|----------------|
-| Session | `8bb55603-...` | Link back to source session |
-| Project | claude-howto | Identify where the report came from |
-| Model | claude-sonnet-4-6 | See which model produced the session |
+| Model | claude-sonnet-4-6 | Which model produced the session |
 | Duration | 59m 32s | Relate context growth to session length |
-| Interactions | 135 | Show how active the session was |
-| Final usage | 129,755 (64.9%) | See how close the session got to the limit |
-| Final zone | Dump zone | See whether the session stayed in a safe range |
+| Interactions | 135 | How active the session was |
+| Final usage | 129,755 (64.9%) | How close the session got to the limit |
+| Final zone | Dump zone | Whether the session stayed in a safe range |
 ```
 
 See the full example in [`context-stats-export-output.md`](context-stats-export-output.md).
 
----
+### Cache Keep-Warm
 
-## Cache Keep-Warm
-
-Claude's prompt cache has a ~5 minute TTL. A background heartbeat prevents expensive cache misses during pauses.
+Claude's prompt cache has a ~5 minute TTL. Keep it alive during pauses to avoid expensive cache misses:
 
 ```bash
 context-stats <session_id> cache-warm on 30m
@@ -236,27 +176,63 @@ context-stats <session_id> cache-warm on 30m
 context-stats <session_id> cache-warm off
 ```
 
-Heartbeats fire every 4 minutes (under the 5-min TTL). Runs as a detached background process on Unix, subprocess fallback on Windows.
+Heartbeats fire every 4 minutes. Runs as a detached background process.
+
+---
+
+## Level 3: Usage Report
+
+Aggregate token usage and cost across **all** Claude Code projects and sessions:
+
+```bash
+context-stats report                     # All time
+context-stats report --since-days 30     # Last 30 days
+context-stats report --output report.md  # Write to file
+```
+
+The report is a Markdown file with these sections:
+
+| Section | What you learn |
+|---|---|
+| Executive Summary | Total spend, sessions, projects, cache hit ratio, avg session cost, most expensive project |
+| Model Usage Breakdown | Cost and token share per model family (Opus / Sonnet / Haiku) with pie chart |
+| Cost Optimization | Top 10 costliest sessions, sessions with low cache efficiency, high-spend projects |
+| Cost Efficiency | Overall cache hit ratio, tokens per dollar, most and least efficient sessions |
+| Daily Activity Heatmap | Sessions by day-of-week and hour — see when you code and how that affects cost |
+| Weekly Trend | Spend and session count per week with charts |
+| Code Productivity | Lines changed per dollar and per 1k tokens across projects |
+| Projects Table | Per-project: sessions, cost, % of total, tokens, cache hit %, avg cost, dominant model |
+
+Example executive summary:
+
+```markdown
+| Metric | Value |
+|--------|-------|
+| Report Period | 2026-03-08 → 2026-04-07 |
+| Total Spend | $6,413.24 |
+| Total Sessions | 764 |
+| Projects Analyzed | 58 |
+| Cache Hit Ratio | 46.9% |
+| Avg Session Cost | $8.39 |
+| Avg Session Duration | 2h 1m 8s |
+| Most Expensive Project | agent-skill-manager ($1,204.58, 18.8% of total) |
+```
+
+Cache reads cost ~10x less than input tokens. Sessions with low cache hit ratios are flagged in the optimization section so you know exactly where to cut costs.
 
 ---
 
 ## Installation
 
-### pip
-
 ```bash
 pip install context-stats
 ```
-
-### uv
 
 ```bash
 uv pip install context-stats
 ```
 
-### Claude Code setup
-
-Add to your Claude Code settings:
+Add to Claude Code settings:
 
 ```json
 {
@@ -267,7 +243,27 @@ Add to your Claude Code settings:
 }
 ```
 
-Restart Claude Code. The status line, graph dashboard, session export, and analytics report all read the same local state files.
+Restart Claude Code. The status line, graph dashboard, session export, and report all read the same local state files.
+
+---
+
+## Customization
+
+```bash
+# ~/.claude/statusline.conf
+color_project_name=bright_cyan
+color_branch_name=bright_magenta
+color_mi_score=#ff9e64
+show_mi=true
+show_delta=true
+token_detail=true
+```
+
+Full palette: 18 named colors + any `#rrggbb` hex.
+
+```bash
+cp examples/statusline.conf ~/.claude/statusline.conf
+```
 
 ---
 
@@ -280,7 +276,7 @@ Yes. MIT licensed, zero external dependencies.
 No. Session data stays local in `~/.claude/statusline/`. Analytics read from `~/.claude/projects/`.
 
 **What runtimes does it support?**
-Python 3 only. Install via `pip install context-stats`.
+Python 3.9+. Install via `pip install context-stats`.
 
 ---
 
