@@ -29,24 +29,11 @@ setup() {
     grep -q "set -euo pipefail" "$SCRIPT"
 }
 
-@test "e2e-install-test.sh contains Node.js test section" {
-    grep -q "run_nodejs_e2e" "$SCRIPT"
-    grep -q "npm install" "$SCRIPT"
-    grep -q "statusline.js" "$SCRIPT"
-}
-
 @test "e2e-install-test.sh contains Python test section" {
     grep -q "run_python_e2e" "$SCRIPT"
     grep -q "virtualenv\|venv" "$SCRIPT"
     grep -q "claude-statusline" "$SCRIPT"
     grep -q "context-stats" "$SCRIPT"
-}
-
-@test "e2e-install-test.sh contains Bash test section" {
-    grep -q "run_bash_e2e" "$SCRIPT"
-    grep -q "statusline-full.sh" "$SCRIPT"
-    grep -q "statusline-minimal.sh" "$SCRIPT"
-    grep -q "statusline-git.sh" "$SCRIPT"
 }
 
 @test "e2e-install-test.sh reports pass/fail per test" {
@@ -63,20 +50,8 @@ setup() {
     grep -q "FAILED_ITEMS" "$SCRIPT"
 }
 
-@test "e2e-install-test.sh accepts --nodejs flag" {
-    grep -q '\-\-nodejs' "$SCRIPT"
-}
-
 @test "e2e-install-test.sh accepts --python flag" {
     grep -q '\-\-python' "$SCRIPT"
-}
-
-@test "e2e-install-test.sh accepts --bash flag" {
-    grep -q '\-\-bash' "$SCRIPT"
-}
-
-@test "e2e-install-test.sh tests bash scripts in clean environment" {
-    grep -q "env -i" "$SCRIPT"
 }
 
 @test "e2e-install-test.sh --help exits 0" {

@@ -24,7 +24,7 @@
    cat ~/.claude/settings.json
    ```
 
-**pip/npm install:**
+**pip install:**
 
 1. Verify the command is available:
 
@@ -46,33 +46,7 @@
 echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline.py
 ```
 
-### jq not found
-
-The bash scripts require `jq` for JSON parsing. Python and Node.js scripts do **not** need `jq`.
-
-**macOS:**
-
-```bash
-brew install jq
-```
-
-**Linux (Debian/Ubuntu):**
-
-```bash
-sudo apt install jq
-```
-
-**Linux (Fedora/RHEL):**
-
-```bash
-sudo dnf install jq
-```
-
-Alternatively, use the Python or Node.js version which don't require `jq`.
-
 ### context-stats command not found
-
-**If installed via pip or npm:**
 
 1. Verify installation:
 
@@ -83,24 +57,10 @@ Alternatively, use the Python or Node.js version which don't require `jq`.
 2. Reinstall if missing:
 
    ```bash
-   pip install cc-context-stats   # or: npm install -g cc-context-stats
+   pip install cc-context-stats
    ```
 
-**If installed via shell installer:**
-
-1. Verify installation:
-
-   ```bash
-   ls -la ~/.local/bin/context-stats
-   ```
-
-2. Check PATH:
-
-   ```bash
-   echo $PATH | grep -q "$HOME/.local/bin" && echo "In PATH" || echo "Not in PATH"
-   ```
-
-3. Add to PATH if needed:
+3. Check PATH if pip installed to user directory:
 
    ```bash
    # zsh
@@ -132,35 +92,11 @@ Alternatively, use the Python or Node.js version which don't require `jq`.
    uv pip install cc-context-stats
    ```
 
-### npm install fails
-
-1. Ensure Node.js 18+:
-
-   ```bash
-   node --version
-   ```
-
-2. Try with sudo (Linux/macOS):
-
-   ```bash
-   sudo npm install -g cc-context-stats
-   ```
-
-3. Or fix npm permissions:
-
-   ```bash
-   mkdir -p ~/.npm-global
-   npm config set prefix '~/.npm-global'
-   echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
-   source ~/.zshrc
-   npm install -g cc-context-stats
-   ```
-
 ### No token graph data
 
 Token history requires:
 
-1. Python or Node.js statusline script (bash scripts do **not** write state files)
+1. Python statusline script (the Python script writes state files)
 2. `show_delta=true` in `~/.claude/statusline.conf` (default)
 3. Active Claude Code session generating state files
 4. State files at `~/.claude/statusline/statusline.<session_id>.state`
@@ -248,13 +184,11 @@ cat << 'EOF' > /tmp/test-input.json
 }
 EOF
 
-# Test each script
-cat /tmp/test-input.json | ~/.claude/statusline.sh
-cat /tmp/test-input.json | python3 ~/.claude/statusline.py
-cat /tmp/test-input.json | node ~/.claude/statusline.js
-
-# Test pip/npm installed version
+# Test installed version
 cat /tmp/test-input.json | claude-statusline
+
+# Or test standalone script directly
+cat /tmp/test-input.json | python3 ~/.claude/statusline.py
 ```
 
 ### Check state files
@@ -273,6 +207,6 @@ watch -n 1 'tail -5 ~/.claude/statusline/statusline.*.state'
 - Open a new issue with:
   - Operating system
   - Shell type (bash/zsh)
-  - Installation method (pip, npm, shell installer, manual)
+  - Installation method (pip, uv, manual)
   - Script version being used
   - Error messages or unexpected behavior

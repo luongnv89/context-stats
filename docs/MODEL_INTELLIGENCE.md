@@ -147,15 +147,15 @@ The `mi_curve_beta` config overrides the model profile's beta (but not alpha). S
 
 If `context_window_size == 0` (malformed data), MI returns 1.0 with utilization 0.0.
 
-## Cross-Implementation Sync Points
+## Sync Points: Package vs Standalone Script
 
-The MI formula and zone logic are implemented in 4 languages and must be kept in sync:
+The MI formula and zone logic are duplicated between the package and the standalone script and must be kept in sync:
 
-| Logic | Package (`src/`) | Standalone Python | Node.js | Bash |
-|-------|-----------------|-------------------|---------|------|
-| MODEL_PROFILES | `intelligence.py` | `statusline.py` | `statusline.js` | `statusline-full.sh` |
-| get_model_profile | `intelligence.py` | `statusline.py` | `statusline.js` | inline in awk |
-| MI formula | `calculate_context_pressure()` | `compute_mi()` | `computeMI()` | `compute_mi()` |
-| Color thresholds | `get_mi_color()` | `get_mi_color()` | `getMIColor()` | `get_mi_color()` |
-| Zone indicator | `get_context_zone()` | `get_context_zone()` | `getContextZone()` | (not yet) |
-| Zone constants | `ZONE_1M_*`, `ZONE_STD_*` | `ZONE_1M_*`, `ZONE_STD_*` | `ZONE_1M_*`, `ZONE_STD_*` | (not yet) |
+| Logic | Package (`src/`) | Standalone Python (`scripts/statusline.py`) |
+|-------|-----------------|----------------------------------------------|
+| MODEL_PROFILES | `intelligence.py` | `statusline.py` |
+| get_model_profile | `intelligence.py` | `statusline.py` |
+| MI formula | `calculate_context_pressure()` | `compute_mi()` |
+| Color thresholds | `get_mi_color()` | `get_mi_color()` |
+| Zone indicator | `get_context_zone()` | `get_context_zone()` |
+| Zone constants | `ZONE_1M_*`, `ZONE_STD_*` | `ZONE_1M_*`, `ZONE_STD_*` |

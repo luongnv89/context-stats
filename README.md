@@ -4,9 +4,7 @@
   <h1>Know your context zone. Act before Claude degrades.</h1>
 
 [![PyPI version](https://img.shields.io/pypi/v/cc-context-stats)](https://pypi.org/project/cc-context-stats/)
-[![npm version](https://img.shields.io/npm/v/cc-context-stats)](https://www.npmjs.com/package/cc-context-stats)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/cc-context-stats)](https://pypi.org/project/cc-context-stats/)
-[![npm Downloads](https://img.shields.io/npm/dm/cc-context-stats)](https://www.npmjs.com/package/cc-context-stats)
 [![GitHub stars](https://img.shields.io/github/stars/luongnv89/cc-context-stats)](https://github.com/luongnv89/cc-context-stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -209,19 +207,7 @@ See the full example in [`context-stats-export-output.md`](context-stats-export-
 
 ## Installation and Configuration
 
-### Shell script (recommended)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
-```
-
-### npm
-
-```bash
-npm install -g cc-context-stats
-```
-
-### Python (pip)
+### Python (pip) — recommended
 
 ```bash
 pip install cc-context-stats
@@ -259,14 +245,14 @@ Yes. MIT licensed, zero external dependencies.
 No. Session data stays local in `~/.claude/statusline/`.
 
 **What runtimes does it support?**
-Shell (Bash + jq), Python 3, and Node.js. All three read the same config; Python and Node.js also write state files for the CLI.
+Python 3. Install via `pip install cc-context-stats`.
 
 ---
 
 ## Get Started
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
+pip install cc-context-stats
 ```
 
 [Read the docs](docs/installation.md) · [View export example](context-stats-export-output.md) · MIT Licensed
@@ -304,7 +290,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 Context Stats hooks into Claude Code's status line feature to track token usage across sessions. The Python and Node.js statusline scripts write state data to local CSV files, which the `context-stats` CLI reads to render live graphs. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
 
-The statusline is implemented in three languages (Bash, Python, Node.js) so you can choose whichever runtime you have available. Claude Code invokes the statusline script via stdin JSON pipe — any implementation that reads JSON from stdin and writes formatted text to stdout works.
+The statusline is implemented in Python. Claude Code invokes the statusline script via stdin JSON pipe — the script reads JSON from stdin and writes formatted text to stdout.
 
 </details>
 

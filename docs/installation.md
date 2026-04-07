@@ -2,38 +2,7 @@
 
 ## Quick Install
 
-### One-Line Install (Recommended)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
-```
-
-This downloads and runs the installer directly from GitHub. It installs the **full** statusline script and the `context-stats` CLI tool.
-
-### NPM (Recommended for Node.js users)
-
-```bash
-npm install -g cc-context-stats
-```
-
-Or with yarn:
-
-```bash
-yarn global add cc-context-stats
-```
-
-After installation, add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "claude-statusline"
-  }
-}
-```
-
-### Python (Recommended for Python users)
+### Python (pip) — Recommended
 
 ```bash
 pip install cc-context-stats
@@ -61,37 +30,20 @@ After installation, add to `~/.claude/settings.json`:
 ```bash
 git clone https://github.com/luongnv89/cc-context-stats.git
 cd cc-context-stats
-./install.sh
+pip install .
 ```
-
-The installer will:
-
-1. Install the statusline script to `~/.claude/`
-2. Install `context-stats` CLI tool to `~/.local/bin/`
-3. Create default configuration at `~/.claude/statusline.conf`
-4. Update `~/.claude/settings.json`
 
 ### Windows
 
-Use the Python or Node.js version (no `jq` required):
-
 ```powershell
-# Python (via pip)
 pip install cc-context-stats
-
-# Or manually copy the script
-git clone https://github.com/luongnv89/cc-context-stats.git
-copy cc-context-stats\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
 ```
 
-Or with Node.js:
+Or manually copy the script:
 
 ```powershell
-# Node.js (via npm)
-npm install -g cc-context-stats
-
-# Or manually copy the script
-copy cc-context-stats\scripts\statusline.js %USERPROFILE%\.claude\statusline.js
+git clone https://github.com/luongnv89/cc-context-stats.git
+copy cc-context-stats\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
 ```
 
 ## Manual Installation
@@ -99,8 +51,8 @@ copy cc-context-stats\scripts\statusline.js %USERPROFILE%\.claude\statusline.js
 ### macOS / Linux
 
 ```bash
-cp scripts/statusline-full.sh ~/.claude/statusline.sh
-chmod +x ~/.claude/statusline.sh
+cp scripts/statusline.py ~/.claude/statusline.py
+chmod +x ~/.claude/statusline.py
 ```
 
 ### Context Stats CLI (Optional)
@@ -131,26 +83,13 @@ Add to your Claude Code settings:
 - macOS/Linux: `~/.claude/settings.json`
 - Windows: `%USERPROFILE%\.claude\settings.json`
 
-### pip / npm Install
-
-If you installed via `pip install cc-context-stats` or `npm install -g cc-context-stats`:
+### pip Install
 
 ```json
 {
   "statusLine": {
     "type": "command",
     "command": "claude-statusline"
-  }
-}
-```
-
-### Bash (macOS/Linux)
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/statusline.sh"
   }
 }
 ```
@@ -177,74 +116,20 @@ Windows:
 }
 ```
 
-### Node.js (Manual Copy)
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node ~/.claude/statusline.js"
-  }
-}
-```
-
-Windows:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node %USERPROFILE%\\.claude\\statusline.js"
-  }
-}
-```
-
 ## Requirements
 
-### macOS
-
-```bash
-brew install jq   # Only needed for bash scripts
-```
-
-### Linux (Debian/Ubuntu)
-
-```bash
-sudo apt install jq   # Only needed for bash scripts
-```
-
-### Linux (Fedora/RHEL)
-
-```bash
-sudo dnf install jq   # Only needed for bash scripts
-```
-
-### Windows
-
-No additional requirements for Python/Node.js scripts (via pip or npm).
-
-For bash scripts via WSL:
-
-```bash
-sudo apt install jq
-```
+Python 3.9+ is the only requirement. No additional system packages needed.
 
 ## Verify Installation
 
 Test your statusline:
 
 ```bash
-# If installed via pip or npm
+# If installed via pip
 echo '{"model":{"display_name":"Test"}}' | claude-statusline
-
-# Bash script (macOS/Linux)
-echo '{"model":{"display_name":"Test"}}' | ~/.claude/statusline.sh
 
 # Python script (manual copy)
 echo '{"model":{"display_name":"Test"}}' | python3 ~/.claude/statusline.py
-
-# Node.js script (manual copy)
-echo '{"model":{"display_name":"Test"}}' | node ~/.claude/statusline.js
 
 # Windows (Python)
 echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline.py

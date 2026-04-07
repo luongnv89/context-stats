@@ -2,73 +2,22 @@
 
 ## Overview
 
-| Script                  | Platform     | Requirements | State Writes | Features                          |
-| ----------------------- | ------------ | ------------ | ------------ | --------------------------------- |
-| `statusline-full.sh`    | macOS, Linux | `jq`         | No           | Full-featured with all indicators |
-| `statusline-git.sh`     | macOS, Linux | `jq`         | No           | Git branch and changes            |
-| `statusline-minimal.sh` | macOS, Linux | `jq`         | No           | Model + directory only            |
-| `statusline.py`         | All          | Python 3     | Yes          | Cross-platform, full-featured     |
-| `statusline.js`         | All          | Node.js 18+  | Yes          | Cross-platform, full-featured     |
-| `context-stats.sh`      | macOS, Linux | Bash         | No           | Token usage visualization (CLI)   |
+| Script             | Platform | Requirements | State Writes | Features                      |
+| ------------------ | -------- | ------------ | ------------ | ----------------------------- |
+| `statusline.py`    | All      | Python 3     | Yes          | Cross-platform, full-featured |
+| `context-stats.sh` | macOS, Linux | Bash     | No           | Token usage visualization (CLI) |
 
 ## Installation Methods
 
 | Method | Statusline Command | Context Stats Command |
 | ------ | ------------------ | --------------------- |
 | `pip install cc-context-stats` | `claude-statusline` | `context-stats` |
-| `npm install -g cc-context-stats` | `claude-statusline` | `context-stats` |
-| Shell installer (`install.sh`) | `~/.claude/statusline.sh` | `~/.local/bin/context-stats` |
 
-## Bash Scripts
+## statusline.py
 
-### statusline-full.sh (Recommended for bash users)
+Python implementation. Works on Windows, macOS, and Linux without additional dependencies beyond Python 3.
 
-Complete status line with all features:
-
-- Model name
-- Current directory
-- Git branch and changes
-- Token usage with color coding
-- Token delta tracking
-- Model Intelligence (MI) score with per-model profiles
-- Autocompact indicator
-- Session ID
-
-> **Note:** Does not write state files. For context-stats CLI support, use the Python or Node.js script instead.
-
-### statusline-git.sh
-
-Lighter version with git info:
-
-- Model name
-- Current directory
-- Git branch and changes
-
-### statusline-minimal.sh
-
-Minimal footprint:
-
-- Model name
-- Current directory
-
-## Cross-Platform Scripts
-
-### statusline.py
-
-Python implementation matching `statusline-full.sh` functionality. Works on Windows, macOS, and Linux without additional dependencies beyond Python 3.
-
-Features beyond bash scripts:
-- Writes state files for context-stats CLI
-- Duplicate-entry deduplication
-- State file rotation (10k/5k threshold)
-- Model Intelligence (MI) with per-model profiles
-- 5-second git command timeout
-
-### statusline.js
-
-Node.js implementation matching `statusline-full.sh` functionality. Works on all platforms with Node.js 18+ installed.
-
-Features beyond bash scripts:
+Features:
 - Writes state files for context-stats CLI
 - Duplicate-entry deduplication
 - State file rotation (10k/5k threshold)
@@ -79,11 +28,9 @@ Features beyond bash scripts:
 
 ### context-stats.sh
 
-Standalone bash CLI tool for visualizing token consumption. Reads state files written by the Python or Node.js statusline scripts. See [Context Stats](context-stats.md) for details.
+Standalone bash CLI tool for visualizing token consumption. Reads state files written by the Python statusline script. See [Context Stats](context-stats.md) for details.
 
 ## Output Format
-
-All statusline scripts produce consistent output:
 
 ```
 [Model] directory | branch [changes] | XXk free (XX%) [+delta] MI:0.XXX [AC:XXk] session_id
@@ -127,7 +74,7 @@ Scripts receive JSON via stdin from Claude Code:
 
 ## Color Codes
 
-All scripts use consistent ANSI colors (defaults, overridable via `~/.claude/statusline.conf`):
+The script uses consistent ANSI colors (defaults, overridable via `~/.claude/statusline.conf`):
 
 ### Per-Property Colors
 

@@ -12,55 +12,6 @@ concurrency:
 
 jobs:
   # ============================================
-  # BASH SCRIPTS - LINT AND TEST
-  # ============================================
-  bash-lint:
-    name: Bash Lint (ShellCheck)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: './scripts'
-          additional_files: 'install.sh'
-          severity: warning
-          format: tty
-
-  bash-test:
-    name: Bash Tests (${{ matrix.os }})
-    needs: bash-lint
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install jq
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y jq
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install jq
-          fi
-
-      - name: Install Bats
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get install -y bats
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install bats-core
-          fi
-
-      - name: Run Bats tests
-        run: bats tests/bash/*.bats
-
-  # ============================================
   # PYTHON SCRIPT - LINT AND TEST
   # ============================================
   python-lint:
@@ -145,105 +96,11 @@ jobs:
           fail_ci_if_error: false
 
   # ============================================
-  # NODE.JS SCRIPT - LINT AND TEST
-  # ============================================
-  node-lint:
-    name: Node.js Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npx eslint scripts/statusline.js
-
-      - name: Run Prettier check
-        run: npx prettier --check scripts/statusline.js
-
-  node-test:
-    name: Node.js Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
-    needs: node-lint
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['18', '20', '22']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Jest tests
-        run: npm test -- --coverage
-
-      - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/node/lcov.info
-          flags: node
-          fail_ci_if_error: false
-
-  # ============================================
-  # CROSS-IMPLEMENTATION PARITY TESTS
-  # ============================================
-  parity-test:
-    name: Parity Tests (${{ matrix.os }})
-    needs: [python-test, node-test]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Bats
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y bats
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install bats-core
-          fi
-
-      - name: Run parity tests
-        run: bats tests/bash/test_parity.bats
-
-  # ============================================
   # INTEGRATION TESTS
   # ============================================
   integration-test:
     name: Integration Tests (${{ matrix.os }})
-    needs: [bash-test, python-test, node-test]
+    needs: python-test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -253,136 +110,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y jq
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install jq
-          fi
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Run integration tests
+      - name: Test Python script produces non-empty output
         run: |
           SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
 
-          echo "Testing bash scripts..."
-          echo "$SAMPLE_INPUT" | ./scripts/statusline-full.sh
-          echo "$SAMPLE_INPUT" | ./scripts/statusline-git.sh
-          echo "$SAMPLE_INPUT" | ./scripts/statusline-minimal.sh
-
           echo "Testing Python script..."
           echo "$SAMPLE_INPUT" | python3 ./scripts/statusline.py
-
-          echo "Testing Node.js script..."
-          echo "$SAMPLE_INPUT" | node ./scripts/statusline.js
 
           echo "All integration tests passed!"
 
   # ============================================
   # END-TO-END TESTS
   # ============================================
-  e2e-install-bash:
-    name: E2E Install Bash (${{ matrix.os }})
-    needs: [bash-lint]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install jq
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y jq
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install jq
-          fi
-
-      - name: Run install.sh
-        run: ./install.sh
-
-      - name: Verify statusline script installed
-        run: |
-          test -f "$HOME/.claude/statusline.sh"
-          echo "✓ statusline.sh exists"
-          test -x "$HOME/.claude/statusline.sh"
-          echo "✓ statusline.sh is executable"
-
-      - name: Verify context-stats CLI installed
-        run: |
-          test -f "$HOME/.local/bin/context-stats"
-          echo "✓ context-stats exists"
-          test -x "$HOME/.local/bin/context-stats"
-          echo "✓ context-stats is executable"
-
-      - name: Verify config file created
-        run: |
-          test -f "$HOME/.claude/statusline.conf"
-          echo "✓ statusline.conf exists"
-
-      - name: Verify settings.json updated
-        run: |
-          test -f "$HOME/.claude/settings.json"
-          grep -q "statusLine" "$HOME/.claude/settings.json"
-          echo "✓ settings.json contains statusLine config"
-
-      - name: Verify installed script produces output
-        run: |
-          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
-          OUTPUT=$(echo "$SAMPLE_INPUT" | "$HOME/.claude/statusline.sh")
-          test -n "$OUTPUT"
-          echo "✓ Installed statusline.sh produces non-empty output"
-          echo "  Output: $OUTPUT"
-
-  e2e-install-npm:
-    name: E2E Install npm (${{ matrix.os }}, Node ${{ matrix.node-version }})
-    needs: [node-lint]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        node-version: ['18', '20', '22']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-
-      - name: Install globally via npm
-        run: npm install -g .
-
-      - name: Verify context-stats command is available
-        run: |
-          which context-stats
-          echo "✓ context-stats is on PATH"
-
-      - name: Verify statusline.js produces output via npm global
-        run: |
-          SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
-          # The npm global install makes statusline.js available as the package main
-          OUTPUT=$(echo "$SAMPLE_INPUT" | node "$(npm root -g)/cc-context-stats/scripts/statusline.js")
-          test -n "$OUTPUT"
-          echo "✓ statusline.js produces non-empty output via npm global install"
-          echo "  Output: $OUTPUT"
-
   e2e-install-pip:
     name: E2E Install pip (${{ matrix.os }}, Python ${{ matrix.python-version }})
     needs: [python-lint]
@@ -424,7 +168,7 @@ jobs:
 
   e2e-exec:
     name: E2E Exec (${{ matrix.os }})
-    needs: [bash-lint, python-lint, node-lint]
+    needs: [python-lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -434,44 +178,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y jq
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install jq
-          fi
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Test all scripts produce non-empty output
+      - name: Test Python script produces non-empty output
         run: |
           SAMPLE_INPUT='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1000,"cache_creation_input_tokens":500,"cache_read_input_tokens":200}}}'
-
-          echo "=== Bash scripts ==="
-          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
-            OUTPUT=$(echo "$SAMPLE_INPUT" | ./scripts/"$script")
-            test -n "$OUTPUT" || { echo "✗ $script produced empty output"; exit 1; }
-            echo "✓ $script: $OUTPUT"
-          done
 
           echo "=== Python script ==="
           OUTPUT=$(echo "$SAMPLE_INPUT" | python3 ./scripts/statusline.py)
           test -n "$OUTPUT" || { echo "✗ statusline.py produced empty output"; exit 1; }
           echo "✓ statusline.py: $OUTPUT"
-
-          echo "=== Node.js script ==="
-          OUTPUT=$(echo "$SAMPLE_INPUT" | node ./scripts/statusline.js)
-          test -n "$OUTPUT" || { echo "✗ statusline.js produced empty output"; exit 1; }
-          echo "✓ statusline.js: $OUTPUT"
 
           echo ""
           echo "All E2E execution tests passed!"
@@ -481,73 +200,66 @@ jobs:
           SAMPLE_1M='{"model":{"display_name":"Claude Opus 4.6"},"workspace":{"current_dir":"/tmp/test","project_dir":"/tmp/test"},"context_window":{"context_window_size":1000000,"current_usage":{"input_tokens":50000,"cache_creation_input_tokens":10000,"cache_read_input_tokens":5000}}}'
 
           echo "=== 1M model context ==="
-          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
-            OUTPUT=$(echo "$SAMPLE_1M" | ./scripts/"$script")
-            test -n "$OUTPUT" || { echo "✗ $script (1M) produced empty output"; exit 1; }
-            echo "✓ $script (1M): $OUTPUT"
-          done
-
           OUTPUT=$(echo "$SAMPLE_1M" | python3 ./scripts/statusline.py)
           test -n "$OUTPUT" || { echo "✗ statusline.py (1M) produced empty output"; exit 1; }
           echo "✓ statusline.py (1M): $OUTPUT"
-
-          OUTPUT=$(echo "$SAMPLE_1M" | node ./scripts/statusline.js)
-          test -n "$OUTPUT" || { echo "✗ statusline.js (1M) produced empty output"; exit 1; }
-          echo "✓ statusline.js (1M): $OUTPUT"
 
       - name: Test with edge case inputs
         run: |
           echo "=== Empty/zero context ==="
           ZERO_CTX='{"model":{"display_name":"Test"},"workspace":{"current_dir":"/tmp","project_dir":"/tmp"},"context_window":{"context_window_size":0,"current_usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}'
-          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
-            OUTPUT=$(echo "$ZERO_CTX" | ./scripts/"$script")
-            test -n "$OUTPUT" || { echo "✗ $script (zero ctx) produced empty output"; exit 1; }
-            echo "✓ $script handles zero context"
-          done
           OUTPUT=$(echo "$ZERO_CTX" | python3 ./scripts/statusline.py)
           test -n "$OUTPUT" || { echo "✗ statusline.py (zero ctx) produced empty output"; exit 1; }
           echo "✓ statusline.py handles zero context"
-          OUTPUT=$(echo "$ZERO_CTX" | node ./scripts/statusline.js)
-          test -n "$OUTPUT" || { echo "✗ statusline.js (zero ctx) produced empty output"; exit 1; }
-          echo "✓ statusline.js handles zero context"
 
           echo "=== High utilization ==="
           HIGH_USE='{"model":{"display_name":"Claude 3.5 Sonnet"},"workspace":{"current_dir":"/tmp","project_dir":"/tmp"},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":180000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}'
-          for script in statusline-full.sh statusline-git.sh statusline-minimal.sh; do
-            OUTPUT=$(echo "$HIGH_USE" | ./scripts/"$script")
-            test -n "$OUTPUT" || { echo "✗ $script (high use) produced empty output"; exit 1; }
-            echo "✓ $script handles high utilization"
-          done
           OUTPUT=$(echo "$HIGH_USE" | python3 ./scripts/statusline.py)
           test -n "$OUTPUT" || { echo "✗ statusline.py (high use) produced empty output"; exit 1; }
           echo "✓ statusline.py handles high utilization"
-          OUTPUT=$(echo "$HIGH_USE" | node ./scripts/statusline.js)
-          test -n "$OUTPUT" || { echo "✗ statusline.js (high use) produced empty output"; exit 1; }
-          echo "✓ statusline.js handles high utilization"
+
+  # ============================================
+  # BASH TESTS (install/check scripts only)
+  # ============================================
+  bash-test:
+    name: Bash Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bats
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get install -y bats
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install bats-core
+          fi
+
+      - name: Run Bats tests
+        run: bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
 
   # ============================================
   # FINAL STATUS CHECK
   # ============================================
   ci-success:
     name: CI Success
-    needs: [bash-lint, bash-test, python-lint, python-test, node-lint, node-test, integration-test, parity-test, e2e-install-bash, e2e-install-npm, e2e-install-pip, e2e-exec]
+    needs: [python-lint, python-test, integration-test, e2e-install-pip, e2e-exec, bash-test]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
-          if [[ "${{ needs.bash-lint.result }}" != "success" ]] || \
-             [[ "${{ needs.bash-test.result }}" != "success" ]] || \
-             [[ "${{ needs.python-lint.result }}" != "success" ]] || \
+          if [[ "${{ needs.python-lint.result }}" != "success" ]] || \
              [[ "${{ needs.python-test.result }}" != "success" ]] || \
-             [[ "${{ needs.node-lint.result }}" != "success" ]] || \
-             [[ "${{ needs.node-test.result }}" != "success" ]] || \
              [[ "${{ needs.integration-test.result }}" != "success" ]] || \
-             [[ "${{ needs.parity-test.result }}" != "success" ]] || \
-             [[ "${{ needs.e2e-install-bash.result }}" != "success" ]] || \
-             [[ "${{ needs.e2e-install-npm.result }}" != "success" ]] || \
              [[ "${{ needs.e2e-install-pip.result }}" != "success" ]] || \
-             [[ "${{ needs.e2e-exec.result }}" != "success" ]]; then
+             [[ "${{ needs.e2e-exec.result }}" != "success" ]] || \
+             [[ "${{ needs.bash-test.result }}" != "success" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
