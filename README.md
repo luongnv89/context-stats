@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/logo/logo-full.svg" alt="cc-context-stats" width="320"/>
 
-  <h1>See the current context zone and act fast</h1>
+  <h1>Know your context zone. Act before Claude degrades.</h1>
 
 [![PyPI version](https://img.shields.io/pypi/v/cc-context-stats)](https://pypi.org/project/cc-context-stats/)
 [![npm version](https://img.shields.io/npm/v/cc-context-stats)](https://www.npmjs.com/package/cc-context-stats)
@@ -10,197 +10,206 @@
 [![GitHub stars](https://img.shields.io/github/stars/luongnv89/cc-context-stats)](https://github.com/luongnv89/cc-context-stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-  <p><strong>Status line zones for Claude Code, with the next task to do in each state.</strong><br/>Know when to keep coding, finish up, export the session, or restart fresh.</p>
-
-  <table>
-    <tr>
-      <th>Current zone</th>
-      <th>Do this now</th>
-    </tr>
-    <tr>
-      <td>Planning</td>
-      <td>Keep planning and coding</td>
-    </tr>
-    <tr>
-      <td>Code-only</td>
-      <td>Finish the current task</td>
-    </tr>
-    <tr>
-      <td>Dump zone</td>
-      <td>Export the session and wrap up</td>
-    </tr>
-    <tr>
-      <td>ExDump</td>
-      <td>Start a new session now</td>
-    </tr>
-    <tr>
-      <td>Dead zone</td>
-      <td>Stop and restart fresh</td>
-    </tr>
-  </table>
-
-  <p>
-    <a href="https://github.com/luongnv89/claude-howto">claude-howto</a> ·
-    <a href="https://github.com/luongnv89/asm">asm</a> ·
-    <a href="https://custats.info">custats.info</a>
-  </p>
+Real-time context window monitoring for Claude Code. Five zones tell you exactly what to do next — keep coding, finish up, export your session, or restart.
 
 [**Get Started →**](#installation-and-configuration)
 </div>
 
 ---
 
-## What It Gives You
-
-| Need | What cc-context-stats shows |
-|---|---|
-| Statusline with context zone | Planning, Code-only, Dump, ExDump, and Dead at a glance |
-| Export report with deep analysis | Snapshot, takeaways, charts, and timeline in Markdown |
-| Live context monitoring | Current usage, MI, delta, cumulative growth, and cache activity |
-
 ## How It Works
 
 ```mermaid
 graph LR
-    A["Claude Code session"] --> B["Status line"]
-    B --> C["Context zone + MI"]
-    B --> D["Local session data"]
-    D --> E["Live dashboard"]
-    D --> F["Export report"]
-    E --> G["Charts and timeline"]
-    F --> H["Executive snapshot and deep analysis"]
+    A["Claude Code session"] --> B["Status line script"]
+    B --> C["Context zone + MI score"]
+    B --> D["Local CSV state file"]
+    D --> E["Live graph dashboard"]
+    D --> F["Markdown export report"]
+    E --> G["Delta · Cumulative · Cache · MI · I/O"]
+    F --> H["Snapshot · Takeaways · Timeline · Charts"]
 ```
 
-1. Claude Code emits session state on every refresh.
-2. The status line turns it into a zone, context, and MI signal.
-3. The CLI reads local session data for live charts and exportable reports.
-4. Everything stays local on disk.
+1. Claude Code pipes session JSON to the status line script on every refresh.
+2. The script computes zone, Model Intelligence (MI) score, and displays a compact status line.
+3. The CLI reads the local state file for live charts and exportable session reports.
+4. Everything stays local in `~/.claude/statusline/`.
+
+---
+
+## Context Zones
+
+Five zones with a clear action for each:
+
+| Zone | Color | Meaning | Do this now |
+|---|:---:|---|---|
+| Planning | Green | Plenty of room | Keep planning and coding |
+| Code-only | Yellow | Context tightening | Finish the current task, no new plans |
+| Dump | Orange | Quality declining | Wrap up and prepare to export |
+| ExDump | Dark red | Near hard limit | Start a new session |
+| Dead | Gray | Exhausted | Stop — nothing productive left |
+
+Thresholds are **model-size-aware**: 1M context models use absolute token counts (70k/100k/250k/275k); standard models use utilization ratios (40%/70%/75%). Both are configurable.
+
+| Plan zone | Code zone | Dump zone |
+|:---:|:---:|:---:|
+| ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
+
+---
 
 ## Status Line
 
-The status line is the fastest way to see whether a session is still healthy.
+A single line in your Claude Code terminal that shows everything at a glance:
 
-| Zone | Meaning | What to do |
-|---|---|---|
-| Planning | Plenty of room left | Keep planning and coding |
-| Code-only | Context is getting tighter | Finish the current task |
-| Dump zone | Quality is slipping | Wrap up soon |
-| ExDump | Near the hard limit | Start a new session |
-| Dead zone | No useful headroom left | Stop and restart |
+```
+my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
+```
 
-**Plan zone**
-
-![Plan zone](images/1.12.0/plan-zone.png)
-
-**Code zone**
-
-![Code zone](images/1.12.0/code-zone.png)
-
-**Dump zone**
-
-![Dump zone](images/1.12.0/dump-zone.png)
-
-## Live Monitoring
-
-The CLI gives you the full session picture when the status line is not enough.
-
-| Chart | What it answers |
+| Element | What it tells you |
 |---|---|
-| Context trend | How fast the session is filling up |
-| Model Intelligence | How quickly quality is degrading as context grows |
-| Zone distribution | Where the session spent most of its time |
-| Final context composition | How much of the final request was cache, reads, or new input |
-| Cache activity trend | When cache creation and cache reads changed over time, with TTL countdown |
+| `my-project` | Current directory |
+| `main [3]` | Git branch + uncommitted changes |
+| `64,000 free (32.0%)` | Available tokens and utilization |
+| `Code` | Current context zone (color-coded) |
+| `MI:0.918` | Model Intelligence score — how sharp the model still is |
+| `+2,500` | Tokens consumed since last refresh |
+| `Opus 4.6` | Active model |
+| `abc-123` | Session ID (double-click to copy) |
 
-| Status bar view | Context growth | Cumulative graph |
+When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
+
+| Green status | Warning state |
+|:---:|:---:|
+| ![Green statusline](images/1.10/statusline-green.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
+
+### Rich Customization
+
+Every element has its own color key. Override per-property or set hex values:
+
+```bash
+# ~/.claude/statusline.conf
+color_project_name=bright_cyan
+color_branch_name=bright_magenta
+color_mi_score=#ff9e64
+color_green=#7dcfff
+color_yellow=#e0af68
+color_red=#f7768e
+show_mi=true
+show_delta=true
+token_detail=true
+```
+
+Full palette: 18 named colors + any `#rrggbb` hex. Per-property colors override base color slots; base slots override built-in defaults. Copy the annotated example to get started:
+
+```bash
+cp examples/statusline.conf ~/.claude/statusline.conf
+```
+
+---
+
+## Model Intelligence (MI)
+
+MI estimates how well Claude performs at the current context fill level. It is a single number from 0.000 to 1.000 calibrated from the **MRCR v2 8-needle** long-context retrieval benchmark.
+
+```
+MI(u) = max(0, 1 - u^β)
+```
+
+Each model family has a measured beta:
+
+| Model | β | MI at 50% | MI at 75% |
+|---|---|---|---|
+| Opus 4.6 | 1.8 | 0.713 | 0.404 |
+| Sonnet 4.6 | 1.5 | 0.646 | 0.350 |
+| Haiku 4.5 | 1.2 | 0.565 | 0.292 |
+
+Color-coded: **green** (>0.70, operating well), **yellow** (0.40–0.70, pressure building), **red** (<0.40, start new session). Override the curve with `mi_curve_beta=1.5` in config.
+
+---
+
+## Live Graph Dashboard
+
+```bash
+context-stats <session_id> graph               # Context growth per interaction (default)
+context-stats <session_id> graph --type all    # All graphs
+```
+
+| Graph | What it answers |
+|---|---|
+| `delta` | How many tokens each interaction consumed |
+| `cumulative` | Total context used over the session |
+| `cache` | Cache creation and read tokens over time, with 5-min TTL countdown |
+| `mi` | How MI degraded across the session |
+| `io` | Input/output token breakdown |
+| `both` | Cumulative + delta side by side |
+
+Auto-refreshes every 2 seconds (flicker-free). Pass `-w 5` to slow it down or `--no-watch` to show once.
+
+| Context growth | Cumulative graph | Cache activity |
 |:---:|:---:|:---:|
-| ![Green statusline](images/1.10/statusline-green.png) | ![Delta graph](images/1.10/1.10-delta.png) | ![Cumulative graph](images/1.10/1.10-cumulative.png) |
+| ![Delta graph](images/1.10/1.10-delta.png) | ![Cumulative graph](images/1.10/1.10-cumulative.png) | ![Cache graph](images/1.16.0/1.16-cache.png) |
 
-| Cumulative graph | Cache graph |
-|:---:|:---:|
-| ![Cumulative graph](images/1.10/1.10-cumulative.png) | ![Cache graph](images/1.16.0/1.16-cache.png) |
+| MI over time |
+|:---:|
+| ![Model Intelligence view](images/1.10/1.10.0-model-intelligence.png) |
 
-| MI view | Status bar warning state |
-|:---:|:---:|
-| ![Model Intelligence view](images/1.10/1.10.0-model-intelligence.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
+---
 
-Each image shows a different slice of the same session:
+## Cache Keep-Warm
 
-- `statusline-green.png` shows the compact status line when the model is still sharp.
-- `1.10-delta.png` shows growth at each interaction.
-- `1.10-cumulative.png` shows overall context usage over time.
-- `1.10.0-model-intelligence.png` shows the MI view as context pressure rises.
-- `1.10-statusline.png` shows the warning state when the session is getting tight.
-- `1.16-cache.png` shows cache creation and read tokens per request with a TTL countdown.
+Claude's prompt cache has a ~5 minute TTL. A background heartbeat prevents expensive cache misses during pauses.
 
-## Export Report
+```bash
+# Start keep-warm for 30 minutes
+context-stats <session_id> cache-warm on 30m
 
-Export a session when you want the timeline, charts, and summary in one Markdown file.
+# Stop it
+context-stats <session_id> cache-warm off
+```
+
+Heartbeats fire every 4 minutes (under the 5-min TTL). Runs as a detached background process on Unix, subprocess fallback on Windows. State tracked in `~/.claude/statusline/cache-warm.<session_id>.json`.
+
+---
+
+## Session Export
+
+Export a full session report when you need the timeline, charts, and analysis in one Markdown file:
 
 ```bash
 context-stats <session_id> export --output report.md
 ```
 
-The report starts with the command that produced it, then folds the headline facts into an executive snapshot.
-
-| Section | What it contains |
+| Section | Contents |
 |---|---|
-| Generate | Copyable export command |
-| Executive Snapshot | Session, project, model, duration, interactions, final usage, final zone, cache activity |
-| Summary | Window size, final usage, token totals, cost, and final MI |
-| Key Takeaways | The short read of what changed in the session |
-| Visual Summary | Mermaid charts for context, zones, cache, and composition |
+| Generate | Copyable command to regenerate this report |
+| Executive Snapshot | Model, project, duration, interactions, final zone, cache activity |
+| Summary | Window size, token totals, cost, final MI |
+| Key Takeaways | Short read of what changed |
+| Visual Summary | Mermaid charts: context, zones, cache, composition |
 | Interaction Timeline | Per-interaction context, MI, and zone history |
 
 Example output:
 
 ```markdown
-# Context Stats Report
-
-## Generate
-
-    context-stats 8bb55603-45b8-4bdf-aa04-d51366610b1a export --output report.md
-
 ## Executive Snapshot
 | Signal | Value | Why it matters |
 |--------|-------|----------------|
-| **Session** | `8bb55603-45b8-4bdf-aa04-d51366610b1a` | Link back to the source session |
-| **Project** | **claude-howto** | Identify where the report came from |
-| **Model** | **claude-sonnet-4-6** | See which model produced the session |
-| **Duration** | **59m 32s** | Relate context growth to session length |
-| **Interactions** | **135** | Show how active the session was |
-| **Final usage** | **129,755** (64.9%) | See how close the session got to the limit |
-| **Final zone** | **Dump zone** | See whether the session stayed in a safe range |
-
-## Visual Summary
-### Cache Activity Trend
-Shows how cache creation and cache reads evolved over time so you can see when the session started reusing previous work versus building new cache.
+| Session | `8bb55603-...` | Link back to source session |
+| Project | claude-howto | Identify where the report came from |
+| Model | claude-sonnet-4-6 | See which model produced the session |
+| Duration | 59m 32s | Relate context growth to session length |
+| Interactions | 135 | Show how active the session was |
+| Final usage | 129,755 (64.9%) | See how close the session got to the limit |
+| Final zone | Dump zone | See whether the session stayed in a safe range |
 ```
 
 See the full example in [`context-stats-export-output.md`](context-stats-export-output.md).
 
-## Customization
-
-Control what appears in the status line and how it looks.
-
-```bash
-# ~/.claude/statusline.conf
-show_delta=true
-show_session=true
-show_mi=true
-token_detail=true
-color_project_name=cyan
-color_branch_name=green
-color_context_length=bold_white
-color_mi_score=yellow
-color_separator=dim
-```
-
-You can also change the order, switch colors, or copy one of the ready-made examples in `examples/statusline.conf`.
+---
 
 ## Installation and Configuration
 
-### Shell script
+### Shell script (recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
@@ -212,19 +221,21 @@ curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/ins
 npm install -g cc-context-stats
 ```
 
-### Python
+### Python (pip)
 
 ```bash
 pip install cc-context-stats
 ```
 
-Or with uv:
+### Python (uv)
 
 ```bash
 uv pip install cc-context-stats
 ```
 
 ### Claude Code setup
+
+Add to your Claude Code settings:
 
 ```json
 {
@@ -235,34 +246,22 @@ uv pip install cc-context-stats
 }
 ```
 
-### Optional full config
+Restart Claude Code. The status line and dashboard both read the same local state files.
 
-```bash
-cp examples/statusline.conf ~/.claude/statusline.conf
-```
-
-Restart Claude Code after installation. The status line and dashboard both read the same local session data.
-
-## Learn More
-
-If you want to go deeper, these references are the next stop:
-
-| Resource | Best for |
-|---|---|
-| [claude-howto](https://github.com/luongnv89/claude-howto) | Learning Claude Code in depth |
-| [asm](https://github.com/luongnv89/asm) | Using a universal skill manager for AI agents |
-| [custats.info](https://custats.info) | Monitoring Claude Code usage limits on Mac Pro/Max plans |
+---
 
 ## FAQ
 
 **Is it free?**
-Yes. MIT licensed and zero dependencies.
+Yes. MIT licensed, zero external dependencies.
 
 **Does it send my data anywhere?**
 No. Session data stays local in `~/.claude/statusline/`.
 
 **What runtimes does it support?**
-Shell, Python, and Node.js statusline implementations are included.
+Shell (Bash + jq), Python 3, and Node.js. All three read the same config; Python and Node.js also write state files for the CLI.
+
+---
 
 ## Get Started
 
@@ -270,7 +269,9 @@ Shell, Python, and Node.js statusline implementations are included.
 curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
 ```
 
-[Read the docs](docs/installation.md) · [View the export report example](context-stats-export-output.md) · [MIT License](LICENSE)
+[Read the docs](docs/installation.md) · [View export example](context-stats-export-output.md) · MIT Licensed
+
+---
 
 <details>
 <summary><strong>Documentation</strong></summary>
@@ -301,7 +302,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 <details>
 <summary><strong>How It Works (Architecture)</strong></summary>
 
-Context Stats hooks into Claude Code's status line feature to track token usage across your sessions. The Python and Node.js statusline scripts write state data to local CSV files, which the context-stats CLI reads to render live graphs. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
+Context Stats hooks into Claude Code's status line feature to track token usage across sessions. The Python and Node.js statusline scripts write state data to local CSV files, which the `context-stats` CLI reads to render live graphs. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
 
 The statusline is implemented in three languages (Bash, Python, Node.js) so you can choose whichever runtime you have available. Claude Code invokes the statusline script via stdin JSON pipe — any implementation that reads JSON from stdin and writes formatted text to stdout works.
 
@@ -327,3 +328,9 @@ The `claude-statusline` command still works. The main change is `token-graph` is
 ## License
 
 MIT
+
+<p align="center">
+  <a href="https://github.com/luongnv89/claude-howto">claude-howto</a> ·
+  <a href="https://github.com/luongnv89/asm">asm</a> ·
+  <a href="https://custats.info">custats.info</a>
+</p>
