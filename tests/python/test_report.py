@@ -50,7 +50,11 @@ def test_generate_report_with_projects():
 
     # Verify report contains expected elements
     assert "Token Usage Analytics Report" in report
-    assert "Grand Totals" in report
+    assert "Executive Summary" in report
+    assert "Model Usage Breakdown" in report
+    assert "Cost Optimization Analysis" in report
+    assert "Daily Activity Heatmap" in report
+    assert "Weekly Activity Trend" in report
     assert "Projects" in report
     assert "/home/user/project1" in report
     assert "abc123" in report
@@ -64,5 +68,5 @@ def test_generate_report_empty():
 
     # Verify report still has structure even with no projects
     assert "Token Usage Analytics Report" in report
-    assert "Grand Totals" in report
-    assert "0" in report  # Should show 0 projects
+    assert "Executive Summary" in report
+    assert "0" in report  # Should show 0 sessions

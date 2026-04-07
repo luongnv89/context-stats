@@ -30,6 +30,8 @@ class SessionStats:
     start_time: int = 0
     end_time: int = 0
     entry_count: int = 0
+    lines_added: int = 0
+    lines_removed: int = 0
 
     def total_tokens(self) -> int:
         """Total tokens (input + output + cache)."""
@@ -39,6 +41,24 @@ class SessionStats:
             + self.total_cache_creation
             + self.total_cache_read
         )
+
+    def cache_hit_ratio(self) -> float:
+        """Cache hit ratio as a percentage."""
+        total = self.total_tokens()
+        if total == 0:
+            return 0.0
+        return self.total_cache_read / total * 100
+
+    def model_family(self) -> str:
+        """Derive model family (opus/sonnet/haiku/other) from model_id."""
+        m = self.model_id.lower()
+        if "opus" in m:
+            return "opus"
+        if "sonnet" in m:
+            return "sonnet"
+        if "haiku" in m:
+            return "haiku"
+        return "other"
 
 
 @dataclass
@@ -62,6 +82,25 @@ class ProjectStats:
             + self.total_cache_creation
             + self.total_cache_read
         )
+
+    def cache_hit_ratio(self) -> float:
+        """Cache hit ratio as a percentage."""
+        total = self.total_tokens()
+        if total == 0:
+            return 0.0
+        return self.total_cache_read / total * 100
+
+    def dominant_model(self) -> str:
+        """Most common model family across sessions."""
+        counts: dict[str, int] = {}
+        for s in self.sessions:
+            fam = s.model_family()
+            counts[fam] = counts.get(fam, 0) + 1
+        return max(counts, key=lambda k: counts[k]) if counts else "other"
+
+    def project_name(self) -> str:
+        """Short project name (last path component)."""
+        return self.project_dir.split("/")[-1] if "/" in self.project_dir else self.project_dir
 
 
 def _discover_state_files() -> list[Path]:
@@ -127,6 +166,8 @@ def _load_session_stats(state_file_path: Path) -> SessionStats | None:
     stats.total_cache_creation = final_entry.cache_creation
     stats.total_cache_read = final_entry.cache_read
     stats.cost_usd = final_entry.cost_usd
+    stats.lines_added = final_entry.lines_added
+    stats.lines_removed = final_entry.lines_removed
 
     return stats
 
@@ -166,6 +207,7 @@ def _group_sessions_by_project(
         proj.cost_usd += session.cost_usd
         proj.session_count += 1
         proj.sessions.append(session)
+        # lines_added/removed are not on ProjectStats — accessed via sessions
 
     return projects
 
