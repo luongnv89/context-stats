@@ -18,7 +18,7 @@
 #   - jq (for JSON configuration, optional but recommended)
 #
 # What gets installed:
-#   - ~/.claude/statusline.sh - Status line command
+#   - ~/.claude/statusline.py - Status line command
 #   - ~/.local/bin/context-stats - CLI tool for live context monitoring
 #   - ~/.claude/statusline.conf - Configuration file
 #   - ~/.claude/settings.json - Claude Code settings updated
@@ -83,11 +83,11 @@ check_curl() {
     fi
 }
 
-# Check for jq (required for bash scripts)
+# Check for jq (optional, used only for automatic settings.json updates)
 check_jq() {
     if ! command -v jq &>/dev/null; then
         echo -e "${YELLOW}Warning: 'jq' is not installed.${RESET}"
-        echo "jq is required for bash status line scripts."
+        echo "jq is only used to update settings.json automatically."
         echo
         if [[ "$OSTYPE" == "darwin"* ]]; then
             echo "Install with: brew install jq"
@@ -130,10 +130,10 @@ get_remote_commit_hash() {
     echo "${hash:-unknown}"
 }
 
-# Set script to install (full featured bash script)
+# Set script to install (Python statusline implementation)
 select_script() {
-    SCRIPT_REMOTE="scripts/statusline-full.sh"
-    SCRIPT_NAME="statusline.sh"
+    SCRIPT_REMOTE="scripts/statusline.py"
+    SCRIPT_NAME="statusline.py"
 
     if [ "$INSTALL_MODE" = "local" ]; then
         SCRIPT_SRC="$SCRIPT_DIR/$SCRIPT_REMOTE"
