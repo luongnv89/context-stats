@@ -7,9 +7,10 @@ Usage:
     context-stats <session_id> <action> [parameters]
 
 Actions:
-    graph    Live ASCII graphs of context usage (default)
-    export   Export session stats as a markdown report
-    explain  Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
+    graph       Live ASCII graphs of context usage (default)
+    export      Export session stats as a markdown report
+    explain     Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
+    cache-warm  Keep session prompt cache alive via a background heartbeat
 
 Options:
     --type <cumulative|delta|io|both|all>  Graph type to display (default: delta)
@@ -60,6 +61,11 @@ ACTIONS:
     graph         Show live ASCII graphs of context usage
     export        Export session stats as a markdown report
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
+    cache-warm    Keep session prompt cache alive via a background heartbeat
+
+CACHE-WARM OPTIONS:
+    on [duration]  Start heartbeat for the given duration (e.g. 30m, 1h). Default: 30m
+    off            Stop an active heartbeat immediately
 
 GRAPH OPTIONS:
     --type <type>  Graph type to display:
@@ -104,6 +110,12 @@ EXAMPLES:
     # Diagnostic dump (pipe Claude Code JSON context)
     echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
 
+    # Start cache-warm heartbeat for 30 minutes
+    context-stats abc123def cache-warm on 30m
+
+    # Stop an active cache-warm heartbeat
+    context-stats abc123def cache-warm off
+
     # Output to file (no colors, single run)
     context-stats abc123def graph --no-watch --no-color > output.txt
 
@@ -114,7 +126,7 @@ DATA SOURCE:
 
 
 # Known action names — used to distinguish actions from session IDs in argv
-_KNOWN_ACTIONS = {"graph", "export", "explain"}
+_KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm"}
 
 
 def _normalize_argv(argv: list[str]) -> tuple[str, str, list[str]]:
@@ -405,7 +417,15 @@ def render_once(
             )
 
     # Summary and footer
-    renderer.render_summary(entries, deltas, mi_score=mi_score, graph_type=graph_type)
+    from claude_statusline.cli.cache_warm import _warm_state_path, is_cache_warm_active
+
+    session_id = state_file.session_id or ""
+    # Only show cache-warm status when a state file exists for this session
+    cache_warm_status = is_cache_warm_active(session_id) if session_id and _warm_state_path(session_id).exists() else None
+    renderer.render_summary(
+        entries, deltas, mi_score=mi_score, graph_type=graph_type,
+        cache_warm_status=cache_warm_status,
+    )
     renderer.render_footer(__version__)
 
     if watch_mode:
@@ -594,6 +614,14 @@ def main() -> None:
             export_argv.append(args.session_id)
         export_argv.extend(args.remaining)
         run_export(export_argv)
+        return
+
+    if args.action == "cache-warm":
+        from claude_statusline.cli.cache_warm import run_cache_warm
+
+        color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
+        colors = ColorManager(enabled=color_enabled)
+        run_cache_warm(args.session_id, args.remaining, colors)
         return
 
     # Default action: graph

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.formatters.time import format_duration, format_timestamp
 from claude_statusline.formatters.tokens import format_tokens
-from claude_statusline.graphs.statistics import calculate_deltas, calculate_stats
+from claude_statusline.graphs.statistics import calculate_stats
 
 
 @dataclass
@@ -266,6 +266,7 @@ class GraphRenderer:
         deltas: list[int],
         mi_score: object | None = None,  # IntelligenceScore
         graph_type: str | None = None,
+        cache_warm_status: tuple[bool, int] | None = None,
     ) -> None:
         """Render summary statistics.
 
@@ -273,6 +274,8 @@ class GraphRenderer:
             entries: List of StateEntry objects
             deltas: List of token deltas
             mi_score: Optional IntelligenceScore for MI display
+            graph_type: Graph type being displayed
+            cache_warm_status: Optional (active, seconds_remaining) from cache_warm module
         """
         if not entries:
             return
@@ -416,6 +419,20 @@ class GraphRenderer:
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
         )
+        if cache_warm_status is not None:
+            active, remaining = cache_warm_status
+            if active:
+                mins = remaining // 60
+                secs = remaining % 60
+                warm_time = f"{mins}m {secs}s" if mins else f"{secs}s"
+                self._emit(
+                    f"  {self.colors.green}{'Cache Warm:':<20}{self.colors.reset} "
+                    f"active ({warm_time} remaining)"
+                )
+            else:
+                self._emit(
+                    f"  {self.colors.dim}{'Cache Warm:':<20}{self.colors.reset} inactive"
+                )
         self._emit()
 
     def render_footer(self, version: str = "1.6.1", commit_hash: str = "dev") -> None:

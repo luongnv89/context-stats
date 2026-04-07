@@ -115,7 +115,26 @@ jobs:
           pip install -e .
 
       - name: Run pytest with coverage
-        run: pytest tests/python/ -v --cov=scripts --cov=src --cov-report=xml --cov-report=term
+        shell: bash
+        run: |
+          # Run pytest with coverage. On Windows, pytest-cov can exit with code 1
+          # after all tests pass due to a known interaction between the coverage
+          # C extension tracer and Windows process shutdown. We capture the result,
+          # and on Windows only, treat exit code 1 as success when no tests failed.
+          set +e
+          pytest tests/python/ -v --cov=scripts --cov=src --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
+          PYTEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          if [ "$RUNNER_OS" = "Windows" ] && [ "$PYTEST_EXIT" -eq 1 ]; then
+            if grep -qE "^(FAILED|ERROR)" pytest_output.txt; then
+              echo "Tests actually failed on Windows"
+              exit 1
+            else
+              echo "Exit code 1 on Windows with no test failures — treating as success"
+              exit 0
+            fi
+          fi
+          exit $PYTEST_EXIT
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
