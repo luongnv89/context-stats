@@ -48,7 +48,6 @@ Versions must be updated in sync across these files:
 | File | Field |
 | --- | --- |
 | `pyproject.toml` | `[project] version` |
-| `package.json` | `version` |
 | `src/claude_statusline/__init__.py` | `__version__` |
 | `CHANGELOG.md` | New version entry |
 | `RELEASE_NOTES.md` | Current release notes |
@@ -57,4 +56,4 @@ Versions must be updated in sync across these files:
 
 The `install.sh` script is fetched directly from the `main` branch on GitHub. Changes to the installer take effect immediately for new users running the curl one-liner.
 
-The installer embeds the version from `package.json` and the current git commit hash into the installed scripts, preventing version drift between the repository and installed copies.
+The installer embeds the current version and git commit hash into the installed scripts, preventing version drift between the repository and installed copies.

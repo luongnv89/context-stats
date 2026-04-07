@@ -1,6 +1,6 @@
 {
   "name": "cc-context-stats",
-  "version": "1.16.1",
+  "version": "1.17.0",
   "description": "Monitor your Claude Code session context in real-time - track token usage and never run out of context",
   "scripts": {
     "format": "prettier --write '*.json' '*.md'",

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-04-07
+
+### Added
+
+- **Comprehensive token usage analytics and reporting** — Added full token usage analytics with charts, summaries, and reporting capabilities for session data (#56, #57)
+
+### Refactored
+
+- **Python-only migration complete** — Removed `context-stats.sh` shell script and all Bash/Node.js implementations; the project now ships a single Python-only codebase (#58, #59)
+
+### Changed
+
+- **README rewrite** — Rewrote the README to highlight key features and improve overall clarity
+
 ## [1.16.1] - 2026-04-07
 
 ### Fixed

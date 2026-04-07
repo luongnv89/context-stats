@@ -9,7 +9,6 @@ Thank you for your interest in contributing to Claude Code Status Line! This doc
 - **Git** - Version control
 - **jq** - JSON processor (for bash scripts)
 - **Python 3.9+** - For Python script and testing
-- **Node.js 18+** - For Node.js script and testing
 - **Bats** - Bash Automated Testing System
 
 ### Installing Dependencies
@@ -22,15 +21,12 @@ brew install jq bats-core
 
 # Clone the repository
 git clone https://github.com/luongnv89/cc-context-stats.git
-cd claude-statusline
+cd cc-context-stats
 
 # Install Python dependencies
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-dev.txt
-
-# Install Node.js dependencies
-npm install
 
 # Install pre-commit hooks
 pre-commit install
@@ -45,15 +41,12 @@ sudo apt-get install -y jq bats
 
 # Clone the repository
 git clone https://github.com/luongnv89/cc-context-stats.git
-cd claude-statusline
+cd cc-context-stats
 
 # Install Python dependencies
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-dev.txt
-
-# Install Node.js dependencies
-npm install
 
 # Install pre-commit hooks
 pre-commit install
@@ -62,19 +55,15 @@ pre-commit install
 ## Project Structure
 
 ```text
-claude-statusline/
+cc-context-stats/
 ├── scripts/                    # Main scripts
-│   ├── statusline-full.sh      # Full-featured bash script
-│   ├── statusline-git.sh       # Git-aware bash script
-│   ├── statusline-minimal.sh   # Minimal bash script
-│   ├── statusline.py           # Python cross-platform script
-│   └── statusline.js           # Node.js cross-platform script
+│   └── statusline.py           # Python standalone statusline
+├── src/                        # Installable Python package
 ├── config/                     # Configuration examples
 ├── tests/                      # Test suites
 │   ├── fixtures/json/          # Test fixtures
 │   ├── bash/                   # Bats tests
-│   ├── python/                 # Pytest tests
-│   └── node/                   # Jest tests
+│   └── python/                 # Pytest tests
 ├── .github/workflows/          # CI/CD workflows
 ├── install.sh                  # Installation script
 └── README.md                   # Documentation
@@ -86,7 +75,7 @@ claude-statusline/
 
 ```bash
 # Run all tests
-npm test && pytest && bats tests/bash/*.bats
+pytest && bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
 ```
 
 ### Individual Test Suites
@@ -100,12 +89,6 @@ pytest tests/python/ -v
 
 # Python tests with coverage
 pytest tests/python/ -v --cov=scripts --cov-report=html
-
-# Node.js tests
-npm test
-
-# Node.js tests with coverage
-npm run test:coverage
 ```
 
 ## Code Quality
@@ -118,8 +101,7 @@ pre-commit run --all-files
 
 # Individual linters
 ruff check scripts/statusline.py          # Python
-npx eslint scripts/statusline.js          # JavaScript
-shellcheck scripts/*.sh install.sh        # Bash
+shellcheck install.sh                     # Bash
 ```
 
 ### Formatting
@@ -128,12 +110,8 @@ shellcheck scripts/*.sh install.sh        # Bash
 # Auto-format Python
 ruff format scripts/statusline.py
 
-# Auto-format JavaScript
-npx prettier --write scripts/statusline.js
-
 # Check formatting without modifying
 ruff format --check scripts/statusline.py
-npx prettier --check scripts/statusline.js
 ```
 
 ## Making Changes
@@ -160,14 +138,11 @@ git checkout -b fix/your-bug-fix
 pre-commit run --all-files
 
 # Run all tests
-bats tests/bash/*.bats
+bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
 pytest tests/python/ -v
-npm test
 
 # Test scripts manually
-echo '{"model":{"display_name":"Test"}}' | ./scripts/statusline-full.sh
 echo '{"model":{"display_name":"Test"}}' | python3 ./scripts/statusline.py
-echo '{"model":{"display_name":"Test"}}' | node ./scripts/statusline.js
 ```
 
 ### 4. Commit Your Changes
@@ -194,10 +169,10 @@ Then create a Pull Request on GitHub.
 
 ### Cross-Script Consistency
 
-All three implementations (bash, Python, Node.js) should produce identical output for the same input. When making changes:
+The Python implementation is the sole implementation. When making changes:
 
-1. Update all three scripts consistently
-2. Run integration tests to verify parity
+1. Update `scripts/statusline.py` and the corresponding `src/` module in sync (see CLAUDE.md for sync points)
+2. Run Python tests to verify correctness
 3. Test on multiple platforms if possible
 
 ### Output Format

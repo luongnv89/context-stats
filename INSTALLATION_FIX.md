@@ -1,3 +1,5 @@
+> **Note (v1.17.0):** `scripts/context-stats.sh` was removed in v1.17.0 as part of the Python-only migration. This document describes a historical fix and is preserved for reference only.
+
 # Installation Fix: Auto-Install Python Package
 
 ## Problem
@@ -28,9 +30,9 @@ This function is now called automatically during installation, right after the b
 
 **Installation output example:**
 ```
-✓ Installed: /Users/montimage/.claude/statusline.sh (v1.16.1)
-✓ Installed: /Users/montimage/.local/bin/context-stats (v1.16.1)
-✓ Python package installed: cc-context-stats==1.16.1
+✓ Installed: /Users/montimage/.claude/statusline.sh (v1.17.0)
+✓ Installed: /Users/montimage/.local/bin/context-stats (v1.17.0)
+✓ Python package installed: cc-context-stats==1.17.0
 ✓ Config file exists: /Users/montimage/.claude/statusline.conf
 ```
 
@@ -47,20 +49,20 @@ Updated the `dispatch_python_subcommand()` function in `scripts/context-stats.sh
 If package is missing entirely:
 ```
 ✗ Python package 'cc-context-stats' is not installed.
-  Install it with: pip3 install cc-context-stats==1.16.1
+  Install it with: pip3 install cc-context-stats==1.17.0
 ```
 
 If there's a version mismatch:
 ```
 ✗ Python package version mismatch:
-    Script version:   1.16.1
+    Script version:   1.17.0
     Package version:  1.11.0
   Run: pip3 install --upgrade cc-context-stats
 ```
 
 ### 3. Version Alignment
 
-Updated VERSION in `scripts/context-stats.sh` from 1.11.1 to 1.16.1 to match `pyproject.toml`.
+Updated VERSION in `scripts/context-stats.sh` from 1.11.1 to 1.17.0 to match `pyproject.toml`.
 
 ## How This Solves the Problem
 
@@ -78,7 +80,6 @@ Updated VERSION in `scripts/context-stats.sh` from 1.11.1 to 1.16.1 to match `py
 
 All tests pass:
 - **Python tests:** 306 tests ✓
-- **Node.js tests:** 84 tests ✓
 - **Bash integration tests:** 66 tests ✓
 
 Verified scenarios:
@@ -91,4 +92,4 @@ Verified scenarios:
 ## Related Files Modified
 
 - `install.sh` — Added `install_python_package()` function and called it from `main()`
-- `scripts/context-stats.sh` — Updated `dispatch_python_subcommand()` with version checking, fixed VERSION to 1.16.1
+- `scripts/context-stats.sh` — Updated `dispatch_python_subcommand()` with version checking, fixed VERSION to 1.17.0

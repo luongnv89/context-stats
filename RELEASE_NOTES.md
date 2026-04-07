@@ -1,19 +1,13 @@
-## v1.6.0 — 2026-03-13
+## v1.17.0 — 2026-04-07
 
 ### Features
-- **CLI `--version` flag** — `context-stats --version` / `-V` now prints the current version
-- **State file rotation** — Automatic rotation at 10,000 lines (keeps most recent 5,000) to prevent unbounded file growth
-- **Session ID validation** — Rejects path-traversal characters (`/`, `\`, `..`, null bytes) for security
-- **Git command timeout** — 5-second timeout on git operations in both Python and Node.js implementations
-- **Core data pipeline unit tests** — 51 tests across 6 classes covering config, state, formatters, graph, and CLI
-- **Cross-implementation parity test** — Ensures Python and Node.js statusline scripts produce consistent output
-- **Stderr warnings** — Critical error paths now emit warnings to stderr for debugging
-- **CSV format documentation** — Formal specification of the 14-field state file format
-- **Comma guard for workspace paths** — Commas in `workspace_project_dir` are replaced with underscores before CSV write
-- **Open-source standard files** — Added CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, and GitHub issue/PR templates
-- **NPM Package** — `cc-context-stats` now available on npm for JavaScript/Node.js environments
+- **Cross-project token analytics** — `context-stats report` aggregates token usage and cost across all Claude Code projects and sessions, with breakdowns by project, model, and cache efficiency. Includes grand totals, per-project breakdown, top sessions, and cache read vs. creation ratios.
 
-### Dependencies
-- Bumped prettier from 3.7.4 to 3.8.0
+### Refactors
+- **Python-only migration** — Removed the standalone `context-stats.sh` shell script; all functionality is now delivered through the Python package (`pip install cc-context-stats`)
+- **Dropped Bash and Node.js implementations** — `scripts/statusline.js`, `scripts/statusline-full.sh`, `scripts/statusline-git.sh`, and `scripts/statusline-minimal.sh` have been removed; only `scripts/statusline.py` and the `src/` package remain
 
-**Full Changelog**: https://github.com/luongnv89/cc-context-stats/compare/v1.5.1...v1.6.0
+### Documentation
+- Rewrote README to highlight key features, zones, Model Intelligence scoring, live graphs, session export, and cross-project analytics
+
+**Full Changelog**: https://github.com/luongnv89/cc-context-stats/compare/v1.16.1...v1.17.0
