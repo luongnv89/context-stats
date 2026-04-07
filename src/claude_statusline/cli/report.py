@@ -266,13 +266,13 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
         )
     lines.append("")
 
-    # Mermaid bar chart: top projects by cost
+    # Mermaid bar chart: top 5 projects by cost (short labels to avoid overlap)
     lines.append("```mermaid")
     lines.append("xychart-beta")
-    lines.append('    title "Top 10 Projects by Cost ($)"')
-    top10_proj = sorted(projects_stats, key=lambda p: p.cost_usd, reverse=True)[:10]
-    proj_labels = [f'"{p.project_name()[:15]}"' for p in top10_proj]
-    proj_costs = [f"{p.cost_usd:.2f}" for p in top10_proj]
+    lines.append('    title "Top 5 Projects by Cost ($)"')
+    top5_proj = sorted(projects_stats, key=lambda p: p.cost_usd, reverse=True)[:5]
+    proj_labels = [f'"{p.project_name()[:8]}"' for p in top5_proj]
+    proj_costs = [f"{p.cost_usd:.2f}" for p in top5_proj]
     lines.append(f'    x-axis [{", ".join(proj_labels)}]')
     lines.append(f'    bar [{", ".join(proj_costs)}]')
     lines.append("```")
@@ -399,13 +399,16 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
 
     sorted_weeks = sorted(week_data.keys())
 
+    # Short labels: strip year prefix, keep only "Wnn" to avoid overlap
+    short_week_labels = [f'"{w.split("-")[1]}"' for w in sorted_weeks]
+    week_costs = [f"{week_data[w]['cost']:.2f}" for w in sorted_weeks]
+    week_session_counts = [str(week_data[w]["sessions"]) for w in sorted_weeks]
+
     # Mermaid line chart: weekly cost trend
     lines.append("```mermaid")
     lines.append("xychart-beta")
     lines.append('    title "Weekly Spend ($)"')
-    week_labels = [f'"{w}"' for w in sorted_weeks]
-    week_costs = [f"{week_data[w]['cost']:.2f}" for w in sorted_weeks]
-    lines.append(f'    x-axis [{", ".join(week_labels)}]')
+    lines.append(f'    x-axis [{", ".join(short_week_labels)}]')
     lines.append(f'    line [{", ".join(week_costs)}]')
     lines.append("```")
     lines.append("")
@@ -414,8 +417,7 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
     lines.append("```mermaid")
     lines.append("xychart-beta")
     lines.append('    title "Weekly Sessions Count"')
-    week_session_counts = [str(week_data[w]["sessions"]) for w in sorted_weeks]
-    lines.append(f'    x-axis [{", ".join(week_labels)}]')
+    lines.append(f'    x-axis [{", ".join(short_week_labels)}]')
     lines.append(f'    bar [{", ".join(week_session_counts)}]')
     lines.append("```")
     lines.append("")
