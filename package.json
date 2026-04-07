@@ -1,6 +1,6 @@
 {
   "name": "cc-context-stats",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "description": "Monitor your Claude Code session context in real-time - track token usage and never run out of context",
   "main": "scripts/statusline.js",
   "bin": {
@@ -43,5 +43,8 @@
   ],
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "cc-context-stats": "^1.16.0"
   }
 }

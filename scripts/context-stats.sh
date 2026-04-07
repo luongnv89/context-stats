@@ -26,7 +26,7 @@
 
 # === CONFIGURATION ===
 # shellcheck disable=SC2034
-VERSION="1.16.0"
+VERSION="1.16.1"
 COMMIT_HASH="dev" # Will be replaced during installation
 STATE_DIR=~/.claude/statusline
 CONFIG_FILE=~/.claude/statusline.conf
@@ -1163,6 +1163,12 @@ main() {
         return $?
         ;;
     esac
+
+    # Delegate `<session_id> cache-warm ...` to the Python CLI.
+    if [ $# -ge 2 ] && [ "${2:-}" = "cache-warm" ]; then
+        dispatch_python_subcommand "$1" "cache-warm" "${@:3}"
+        return $?
+    fi
 
     parse_args "$@"
     init_colors

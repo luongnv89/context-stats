@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-04-07
+
+### Fixed
+
+- **cache-warm dispatch in shell script** — `context-stats <session_id> cache-warm` was silently rejected by `scripts/context-stats.sh` with "Unexpected argument: cache-warm". The shell script now delegates `<session_id> cache-warm ...` to the Python CLI alongside the existing `export` and `explain` delegations.
+
 ## [1.16.0] - 2026-04-07
 
 ### Added
