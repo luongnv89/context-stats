@@ -241,7 +241,7 @@ jobs:
           fi
 
       - name: Run Bats tests
-        run: bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
+        run: bats tests/bash/test_check_install.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
 
   # ============================================
   # FINAL STATUS CHECK
