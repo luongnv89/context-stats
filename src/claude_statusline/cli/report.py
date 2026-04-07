@@ -152,6 +152,18 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
         model_stats[fam]["tokens"] += s.total_tokens()
         model_stats[fam]["cost"] += s.cost_usd
 
+    # Mermaid pie chart: model cost distribution
+    lines.append("```mermaid")
+    lines.append('pie title Model Cost Distribution')
+    for fam in ("opus", "sonnet", "haiku", "other"):
+        if fam not in model_stats:
+            continue
+        ms = model_stats[fam]
+        if ms["cost"] > 0:
+            lines.append(f'    "{fam.capitalize()}" : {ms["cost"]:.2f}')
+    lines.append("```")
+    lines.append("")
+
     lines.append("| Model Family | Sessions | Total Tokens | Cost | % of Total Cost |")
     lines.append("|---|---|---|---|---|")
     for fam in ("opus", "sonnet", "haiku", "other"):
@@ -254,14 +266,34 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
         )
     lines.append("")
 
+    # Mermaid bar chart: top projects by cost
+    lines.append("```mermaid")
+    lines.append("xychart-beta")
+    lines.append('    title "Top 10 Projects by Cost ($)"')
+    top10_proj = sorted(projects_stats, key=lambda p: p.cost_usd, reverse=True)[:10]
+    proj_labels = [f'"{p.project_name()[:15]}"' for p in top10_proj]
+    proj_costs = [f"{p.cost_usd:.2f}" for p in top10_proj]
+    lines.append(f'    x-axis [{", ".join(proj_labels)}]')
+    lines.append(f'    bar [{", ".join(proj_costs)}]')
+    lines.append("```")
+    lines.append("")
+
     # Cost Efficiency
     lines.append("## Cost Efficiency")
     lines.append("")
-    cache_tokens_pct = (
-        sum(s.total_cache_read for s in all_sessions) /
-        sum(s.total_tokens() for s in all_sessions) * 100
-    ) if total_tokens > 0 else 0
+    cache_tokens = sum(s.total_cache_read for s in all_sessions)
+    cache_tokens_pct = (cache_tokens / total_tokens * 100) if total_tokens > 0 else 0
+    fresh_tokens_pct = 100.0 - cache_tokens_pct
     avg_tokens_per_dollar = total_tokens / total_cost if total_cost > 0 else 0
+
+    # Mermaid pie chart: cache vs fresh tokens
+    lines.append("```mermaid")
+    lines.append('pie title Token Serving: Cache vs Fresh')
+    lines.append(f'    "Cache Hit" : {cache_tokens_pct:.1f}')
+    lines.append(f'    "Fresh (non-cached)" : {fresh_tokens_pct:.1f}')
+    lines.append("```")
+    lines.append("")
+
     lines.append(f"- **Overall cache efficiency**: {cache_tokens_pct:.1f}% of tokens served from cache")
     lines.append(f"- **Average tokens per dollar**: {int(avg_tokens_per_dollar)} tokens/$")
     lines.append("")
@@ -313,6 +345,18 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
             hour_counts[dt.hour] += 1
 
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    # Mermaid bar chart: sessions by day of week
+    lines.append("```mermaid")
+    lines.append("xychart-beta")
+    lines.append('    title "Sessions by Day of Week"')
+    dow_labels = [f'"{d}"' for d in day_names]
+    dow_values = [str(dow_counts.get(i, 0)) for i in range(7)]
+    lines.append(f'    x-axis [{", ".join(dow_labels)}]')
+    lines.append(f'    bar [{", ".join(dow_values)}]')
+    lines.append("```")
+    lines.append("")
+
     max_dow = max(dow_counts.values(), default=1)
     lines.append("### Sessions by Day of Week")
     lines.append("| Day | Count | Activity |")
@@ -320,6 +364,17 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
     for i, name in enumerate(day_names):
         cnt = dow_counts.get(i, 0)
         lines.append(f"| {name} | {cnt} | {_bar(cnt, max_dow)} |")
+    lines.append("")
+
+    # Mermaid bar chart: sessions by hour of day
+    lines.append("```mermaid")
+    lines.append("xychart-beta")
+    lines.append('    title "Sessions by Hour of Day"')
+    hour_labels = [f'"{h:02d}h"' for h in range(24)]
+    hour_values = [str(hour_counts.get(h, 0)) for h in range(24)]
+    lines.append(f'    x-axis [{", ".join(hour_labels)}]')
+    lines.append(f'    bar [{", ".join(hour_values)}]')
+    lines.append("```")
     lines.append("")
 
     max_hour = max(hour_counts.values(), default=1)
@@ -342,10 +397,33 @@ def generate_report(projects_stats: list[ProjectStats]) -> str:
             week_data[week]["cost"] += s.cost_usd
             week_data[week]["tokens"] += s.total_tokens()
 
+    sorted_weeks = sorted(week_data.keys())
+
+    # Mermaid line chart: weekly cost trend
+    lines.append("```mermaid")
+    lines.append("xychart-beta")
+    lines.append('    title "Weekly Spend ($)"')
+    week_labels = [f'"{w}"' for w in sorted_weeks]
+    week_costs = [f"{week_data[w]['cost']:.2f}" for w in sorted_weeks]
+    lines.append(f'    x-axis [{", ".join(week_labels)}]')
+    lines.append(f'    line [{", ".join(week_costs)}]')
+    lines.append("```")
+    lines.append("")
+
+    # Mermaid bar chart: weekly sessions
+    lines.append("```mermaid")
+    lines.append("xychart-beta")
+    lines.append('    title "Weekly Sessions Count"')
+    week_session_counts = [str(week_data[w]["sessions"]) for w in sorted_weeks]
+    lines.append(f'    x-axis [{", ".join(week_labels)}]')
+    lines.append(f'    bar [{", ".join(week_session_counts)}]')
+    lines.append("```")
+    lines.append("")
+
     max_week_cost = max((v["cost"] for v in week_data.values()), default=1)
     lines.append("| Week | Sessions | Cost | Tokens | Spend Bar |")
     lines.append("|------|----------|------|--------|-----------|")
-    for week in sorted(week_data.keys()):
+    for week in sorted_weeks:
         wd = week_data[week]
         lines.append(
             f"| {week} | {wd['sessions']} | ${wd['cost']:.2f} "
