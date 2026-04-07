@@ -175,9 +175,8 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         mins = remaining // 60
         secs = remaining % 60
         print(
-            f"{c.yellow}Cache-warm already active for session {session_id}.{c.reset}\n"
-            f"{c.dim}Time remaining: {mins}m {secs}s — use 'cache-warm off' to stop early "
-            f"or run 'cache-warm on' again to refresh the duration.{c.reset}"
+            f"{c.yellow}Cache-warm already active for session {session_id} "
+            f"({mins}m {secs}s remaining). Refreshing duration.{c.reset}"
         )
 
     now = int(time.time())

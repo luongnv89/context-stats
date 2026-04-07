@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.formatters.time import format_duration, format_timestamp
 from claude_statusline.formatters.tokens import format_tokens
-from claude_statusline.graphs.statistics import calculate_deltas, calculate_stats
+from claude_statusline.graphs.statistics import calculate_stats
 
 
 @dataclass
