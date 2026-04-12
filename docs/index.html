@@ -841,7 +841,112 @@
     }
     .footer-links a:hover { color: var(--text); text-decoration: none; }
 
+    /* ── CACHE KEEP-WARM ─────────────────────────────── */
+    #cache-warm { background: var(--bg-subtle); }
+
+    .cw-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      margin-top: 48px;
+      align-items: start;
+    }
+
+    .cw-scenario {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+    .cw-scenario-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+    .cw-scenario-label.bad  { color: var(--red); }
+    .cw-scenario-label.good { color: var(--green); }
+
+    .cw-track {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .cw-event {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cw-event.req  { background: rgba(0,255,65,0.12);  color: var(--green); }
+    .cw-event.hb   { background: rgba(6,182,212,0.12); color: var(--cyan); }
+    .cw-event.exp  { background: rgba(239,68,68,0.12); color: var(--red); }
+    .cw-event.hit  { background: rgba(0,255,65,0.12);  color: var(--green); }
+    .cw-event.miss { background: rgba(239,68,68,0.12); color: var(--red); }
+    .cw-arrow { color: var(--border); font-size: 11px; }
+
+    .cw-stat-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 24px 0;
+    }
+    .cw-stat-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .cw-badge {
+      display: inline-block;
+      background: rgba(0,255,65,0.1);
+      border: 1px solid rgba(0,255,65,0.2);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cw-savings {
+      background: linear-gradient(135deg, rgba(0,255,65,0.06), rgba(6,182,212,0.06));
+      border: 1px solid rgba(0,255,65,0.2);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      margin-top: 4px;
+    }
+    .cw-savings-num {
+      font-size: 44px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .cw-savings-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
     /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .cw-layout { grid-template-columns: 1fr; }
+    }
     @media (max-width: 640px) {
       .nav-links { display: none; }
       .stats-bar { gap: 28px; }
@@ -859,6 +964,7 @@
     </div>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
+      <li><a href="#cache-warm">Cache Warm</a></li>
       <li><a href="#how-it-works">Install</a></li>
       <li><a href="#examples">Examples</a></li>
       <li><a href="#zones">Zones</a></li>
@@ -1023,6 +1129,11 @@
         <h3>No session history</h3>
         <p>After a session ends, you can't audit what happened — which interactions consumed the most tokens or why a particular task ballooned the context.</p>
       </div>
+      <div class="pain-card">
+        <div class="pain-icon">⏱️</div>
+        <h3>Silent cache expiry</h3>
+        <p>Claude's prompt cache has a 5-minute TTL. Every pause — a review, a coffee, a long think — silently evicts it. Your next request pays full token price again, with no warning and no way to tell.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1090,9 +1201,9 @@
             <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
             Mermaid visual charts (context growth, zones, cache)
           </li>
-          <li>
+          <li style="background:rgba(0,255,65,0.04);border-radius:6px;padding:8px 10px;margin-top:4px;border-bottom:none !important;">
             <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
-            Cache keep-warm to maintain 5-min TTL
+            <span>Cache keep-warm — heartbeat every 4 min to prevent costly cache misses &nbsp;<a href="#cache-warm" style="background:rgba(0,255,65,0.15);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;letter-spacing:0.05em;text-decoration:none;">details ↓</a></span>
           </li>
         </ul>
       </div>
@@ -1126,6 +1237,100 @@
             Cost optimization opportunities
           </li>
         </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CACHE KEEP-WARM ────────────────────────────────────────── -->
+<section id="cache-warm">
+  <div class="container">
+    <span class="section-label">Cache Optimization</span>
+    <h2>Never let your prompt cache<br/>expire mid-session.</h2>
+    <p class="lead">Claude's prompt cache has a strict <strong style="color:var(--yellow);">5-minute TTL</strong>. One idle gap — a review pause, a coffee, a long think — silently evicts it. Your next request pays full token price, no warning.</p>
+
+    <div class="cw-layout">
+      <!-- Left: timeline explanation + stats -->
+      <div>
+        <div class="cw-scenario">
+          <div class="cw-scenario-label bad">✗ Without cache-warm</div>
+          <div class="cw-track">
+            <span class="cw-event req">request</span>
+            <span class="cw-arrow">──── 5+ min idle ────</span>
+            <span class="cw-event exp">cache expired</span>
+            <span class="cw-arrow">──</span>
+            <span class="cw-event miss">cache miss 💸</span>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--red);line-height:1.5;">All context tokens re-processed at full price. No warning. No way to know it happened.</div>
+        </div>
+
+        <div class="cw-scenario">
+          <div class="cw-scenario-label good">✓ With cache-warm on</div>
+          <div class="cw-track">
+            <span class="cw-event req">request</span>
+            <span class="cw-arrow">── 4 min ──</span>
+            <span class="cw-event hb">♥ heartbeat</span>
+            <span class="cw-arrow">── 4 min ──</span>
+            <span class="cw-event hb">♥ heartbeat</span>
+            <span class="cw-arrow">──</span>
+            <span class="cw-event hit">cache hit ✓</span>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--green);line-height:1.5;">Cache stays alive. Next request reads cached tokens at ~10% the cost of uncached.</div>
+        </div>
+
+        <div class="cw-stat-rows">
+          <div class="cw-stat-row">
+            <span class="cw-badge">4 min</span>
+            heartbeat interval — always under the 5-min TTL
+          </div>
+          <div class="cw-stat-row">
+            <span class="cw-badge">30 min</span>
+            default duration — configure with <code style="font-family:monospace;font-size:12px;color:var(--cyan);">1h</code>, <code style="font-family:monospace;font-size:12px;color:var(--cyan);">90m</code>, <code style="font-family:monospace;font-size:12px;color:var(--cyan);">3600s</code>
+          </div>
+          <div class="cw-stat-row">
+            <span class="cw-badge">background</span>
+            detached process — zero impact on your Claude session
+          </div>
+        </div>
+
+        <div class="cw-savings">
+          <div class="cw-savings-num">63.4%</div>
+          <div class="cw-savings-label">cache hit rate in a typical session<br/>visible in every <code style="font-family:monospace;font-size:12px;color:var(--cyan);">context-stats export</code> report</div>
+        </div>
+      </div>
+
+      <!-- Right: terminal demo -->
+      <div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">cache-warm — keep the 5-min TTL alive</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-muted"># Activate keep-warm for the current session</div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm on</span></div>
+<div class="t-green">  Cache keep-warm started</div>
+<div><span class="t-key">  Session:  </span><span class="t-cyan">abc-1234</span></div>
+<div><span class="t-key">  Interval: </span><span class="t-cyan">every 4 min</span></div>
+<div><span class="t-key">  Duration: </span><span class="t-cyan">30 min</span><span class="t-muted"> (expires 14:02)</span></div>
+<div><span class="t-key">  PID:      </span><span class="t-indigo">12845</span></div>
+<br/>
+<div class="t-muted"># Use a custom duration</div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm on 1h</span></div>
+<div class="t-green">  Cache keep-warm started <span class="t-muted">(1h)</span></div>
+<br/>
+<div class="t-muted"># Stop the heartbeat early</div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm off</span></div>
+<div class="t-green">  Cache keep-warm stopped</div>
+<br/>
+<div class="t-muted"># Verify savings in your session report</div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats export abc-1234</span></div>
+<div><span class="t-key">  Cache read tokens:  </span><span class="t-green">49,120</span><span class="t-muted">  (63.4% hit rate)</span></div>
+<div><span class="t-key">  Cache savings:      </span><span class="t-money">~$0.087</span><span class="t-muted">  (vs. uncached)</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1540,6 +1745,9 @@ function switchTab(e, panelId) {
           <code style="white-space:pre;"># Live ASCII dashboard — context, MI, cache, delta
 context-stats graph
 
+# Keep the prompt cache alive during idle gaps
+context-stats &lt;session_id&gt; cache-warm on
+
 # Export full session report to Markdown
 context-stats export &lt;session_id&gt;
 
@@ -1596,6 +1804,11 @@ context-stats explain</code>
       <details>
         <summary>What's the difference between the statusline and the graph dashboard?</summary>
         <p>The statusline (<code>claude-statusline</code>) is the persistent one-line display shown by Claude Code at each prompt — it's always on. The graph dashboard (<code>context-stats graph</code>) is an on-demand ASCII chart view you run manually to see usage history, MI trends, cache activity, and delta per interaction over the session.</p>
+      </details>
+
+      <details>
+        <summary>What is cache keep-warm and why do I need it?</summary>
+        <p>Claude's prompt cache has a 5-minute TTL. Any pause longer than 5 minutes — a code review, a coffee break, a long think before replying — silently evicts the cache. Your next request then pays full token price instead of the cached rate (roughly 10× cheaper for large contexts). <code>cache-warm</code> solves this by running a lightweight background heartbeat every 4 minutes, keeping the cache alive for up to 30 minutes (or a custom duration you specify). Start it with <code>context-stats &lt;session_id&gt; cache-warm on</code> from a separate terminal, and stop it with <code>cache-warm off</code>. The savings show up automatically in your <code>context-stats export</code> report.</p>
       </details>
     </div>
   </div>
