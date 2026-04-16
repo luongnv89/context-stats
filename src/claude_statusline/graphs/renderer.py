@@ -89,6 +89,9 @@ class GraphRenderer:
         else:
             print(line)
 
+    # Compaction event marker character
+    COMPACTION_MARKER = "▼"
+
     def render_timeseries(
         self,
         data: list[int],
@@ -96,6 +99,7 @@ class GraphRenderer:
         title: str,
         color: str,
         label_fn: Callable[[int], str] | None = None,
+        compaction_indices: list[int] | None = None,
     ) -> None:
         """Render a timeseries ASCII graph.
 
@@ -105,7 +109,10 @@ class GraphRenderer:
             title: Graph title
             color: ANSI color code for the graph
             label_fn: Optional function to format Y-axis labels. If None, uses format_tokens().
-        """
+            compaction_indices: Optional list of indices (into *data*) where a compaction
+                                event was detected. A ``▼`` marker is drawn at those
+                                x-positions using the orange color.
+"""
         n = len(data)
         if n == 0:
             return
@@ -137,6 +144,21 @@ class GraphRenderer:
         # Build the graph grid
         grid = self._build_grid(data, min_val, max_val, value_range, width, height)
 
+        # Overlay compaction markers (▼) in orange at the detected event positions
+        # Orange ANSI color for the compaction marker
+        _ORANGE = "\033[38;2;255;165;0m"
+        compaction_x_positions: set[int] = set()
+        if compaction_indices:
+            for ci in compaction_indices:
+                if 0 <= ci < n:
+                    # Map data index to x-coordinate (same formula as _build_grid)
+                    if n == 1:
+                        cx = width // 2
+                    else:
+                        cx = int(ci * (width - 1) / (n - 1))
+                    cx = max(0, min(width - 1, cx))
+                    compaction_x_positions.add(cx)
+
         # Print grid with Y-axis labels
         for r in range(height):
             val = max_val - r * value_range // (height - 1)
@@ -148,6 +170,16 @@ class GraphRenderer:
                 label = ""
 
             row_data = grid[r] if r < len(grid) else " " * width
+
+            # Inject compaction markers into the row string when needed.
+            # We place the marker at the top row (r == 0) so it's always visible.
+            if compaction_x_positions and r == 0:
+                row_chars = list(row_data)
+                for cx in compaction_x_positions:
+                    if cx < len(row_chars):
+                        row_chars[cx] = f"{_ORANGE}{self.COMPACTION_MARKER}{color}"
+                row_data = "".join(row_chars)
+
             self._emit(
                 f"{label:>10} {self.colors.dim}│{self.colors.reset}"
                 f"{color}{row_data}{self.colors.reset}"
@@ -267,6 +299,8 @@ class GraphRenderer:
         mi_score: object | None = None,  # IntelligenceScore
         graph_type: str | None = None,
         cache_warm_status: tuple[bool, int] | None = None,
+        compaction_events: list[tuple[int, float]] | None = None,
+        compact_mi_warn_threshold: float = 0.6,
     ) -> None:
         """Render summary statistics.
 
@@ -276,6 +310,10 @@ class GraphRenderer:
             mi_score: Optional IntelligenceScore for MI display
             graph_type: Graph type being displayed
             cache_warm_status: Optional (active, seconds_remaining) from cache_warm module
+            compaction_events: Optional list of ``(entry_index, mi_at_compact)`` tuples
+                               for each detected compaction event.
+            compact_mi_warn_threshold: MI threshold below which a compaction is flagged
+                                       as potentially lossy (default: 0.6).
         """
         if not entries:
             return
@@ -352,6 +390,27 @@ class GraphRenderer:
                 f"  {self.colors.dim}  Context: "
                 f"{mi_score.utilization * 100:.0f}% used{self.colors.reset}"
             )
+
+        # Compaction events summary
+        if compaction_events:
+            count = len(compaction_events)
+            self._emit(
+                f"  {self.colors.yellow}{'Compactions:':<20}{self.colors.reset} {count}"
+            )
+            for _idx, mi_at_compact in compaction_events:
+                if mi_at_compact < compact_mi_warn_threshold:
+                    self._emit(
+                        f"  {self.colors.red}  ⚠ Compact at low MI ({mi_at_compact:.2f}){self.colors.reset}"
+                        f"{self.colors.dim} — summary may have missed context{self.colors.reset}"
+                    )
+                    self._emit(
+                        f"  {self.colors.dim}    Tip: use /compact with a focus prompt to guide what gets preserved{self.colors.reset}"
+                    )
+                else:
+                    self._emit(
+                        f"  {self.colors.green}  ✓ Compact at healthy MI ({mi_at_compact:.2f}){self.colors.reset}"
+                        f"{self.colors.dim} — summary likely complete{self.colors.reset}"
+                    )
 
         if last.context_window_size > 0:
             self._emit()

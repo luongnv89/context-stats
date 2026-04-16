@@ -44,6 +44,12 @@ _ZONE_FLOAT_KEYS: set[str] = {
     "zone_std_dead_ratio",
 }
 
+# Compaction-related float config keys (fractions in (0, 1))
+_COMPACTION_FLOAT_KEYS: set[str] = {
+    "compaction_drop_threshold",
+    "compact_mi_warn_threshold",
+}
+
 
 # ---------------------------------------------------------------------------
 # Default config template — loaded at runtime from package data
@@ -105,6 +111,10 @@ class Config:
     zone_std_hard_limit: float = 0.0
     zone_std_dead_ratio: float = 0.0
     large_model_threshold: int = 0
+
+    # Compaction detection settings
+    compaction_drop_threshold: float = 0.5  # drop fraction to qualify as compaction
+    compact_mi_warn_threshold: float = 0.6  # MI below this at compact time → warning
 
     # Custom color overrides (slot_name -> ANSI code)
     color_overrides: dict[str, str] = field(default_factory=dict)
@@ -212,6 +222,20 @@ class Config:
                         sys.stderr.write(
                             f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
                         )
+                elif key in _COMPACTION_FLOAT_KEYS:
+                    try:
+                        v = float(raw_value)
+                        if 0.0 < v < 1.0:
+                            setattr(self, key, v)
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: {key} must be between 0 and 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
+                        )
                 elif key in _COLOR_KEYS:
                     slot = _COLOR_KEYS[key]
                     ansi = parse_color(raw_value)
@@ -248,4 +272,6 @@ class Config:
             "zone_std_dead_ratio": self.zone_std_dead_ratio,
             "large_model_threshold": self.large_model_threshold,
             "color_overrides": dict(self.color_overrides),
+            "compaction_drop_threshold": self.compaction_drop_threshold,
+            "compact_mi_warn_threshold": self.compact_mi_warn_threshold,
         }

@@ -66,6 +66,10 @@ ZONE_STD_WARN_BUFFER = 30_000
 ZONE_STD_HARD_LIMIT = 0.70
 ZONE_STD_DEAD_ZONE = 0.75
 
+# Compaction detection defaults
+COMPACTION_DROP_THRESHOLD = 0.5   # fraction of context that must be lost to count as compaction
+COMPACT_MI_WARN_THRESHOLD = 0.6   # MI below this at compact time → warning
+
 # Zone recommendation strings — one-line action guidance per zone
 _ZONE_RECOMMENDATIONS = {
     "Plan": "Safe to plan and code",
@@ -161,6 +165,33 @@ def get_context_zone(used_tokens, context_window_size, zone_config=None):
     if used_tokens < dead_zone_tokens:
         return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
     return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
+
+
+def detect_compaction_events(values, drop_threshold=None):
+    """Detect compaction events in a list of token counts.
+
+    A compaction event is identified when ``values[i] < values[i-1] * (1 - drop_threshold)``,
+    i.e., the context dropped by more than *drop_threshold* fraction in a single step.
+
+    Args:
+        values: Sequence of token counts (e.g., current_used_tokens over time).
+        drop_threshold: Fraction of context that must be lost to qualify as compaction
+                        (default: COMPACTION_DROP_THRESHOLD = 0.5).
+
+    Returns:
+        List of indices i (into values) where a compaction was detected.
+    """
+    if drop_threshold is None:
+        drop_threshold = COMPACTION_DROP_THRESHOLD
+    if len(values) < 2:
+        return []
+    events = []
+    for i in range(1, len(values)):
+        prev = values[i - 1]
+        curr = values[i]
+        if prev > 0 and curr < prev * (1.0 - drop_threshold):
+            events.append(i)
+    return events
 
 
 def _zone_ansi_color(color_name):
@@ -390,6 +421,8 @@ def read_config():
         "mi_curve_beta": 0.0,
         "colors": {},
         "zone_config": {},
+        "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
+        "compact_mi_warn_threshold": COMPACT_MI_WARN_THRESHOLD,
     }
     config_path = os.path.expanduser("~/.claude/statusline.conf")
 
@@ -664,6 +697,20 @@ color_separator=dim
                         v = float(raw_value)
                         if 0.0 < v < 1.0:
                             config["zone_config"][key] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: {key} must be between 0 and 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
+                        )
+                elif key in ("compaction_drop_threshold", "compact_mi_warn_threshold"):
+                    try:
+                        v = float(raw_value)
+                        if 0.0 < v < 1.0:
+                            config[key] = v
                         else:
                             sys.stderr.write(
                                 f"[statusline] warning: {key} must be between 0 and 1, "
