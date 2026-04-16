@@ -963,13 +963,13 @@
       <img src="assets/logo/logo-full.svg" alt="context-stats" />
     </div>
     <ul class="nav-links">
+      <li><a href="#whats-new">v1.19.0</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#cache-warm">Cache Warm</a></li>
       <li><a href="#how-it-works">Install</a></li>
       <li><a href="#examples">Examples</a></li>
       <li><a href="#zones">Zones</a></li>
-      <li><a href="#statusline-preview">Statusline</a></li>
-<li><a href="#faq">FAQ</a></li>
+      <li><a href="#faq">FAQ</a></li>
       <li><a href="https://github.com/luongnv89/context-stats" class="nav-cta">GitHub</a></li>
     </ul>
   </div>
@@ -1035,9 +1035,9 @@
           <div class="t-green">  1│ ██                       </div>
           <div class="t-green">  2│ ████                     </div>
           <div class="t-yellow">  3│ ████████                 </div>
-          <div class="t-yellow">  4│ ████████████             </div>
-          <div class="t-orange">  5│ ████████████████         </div>
-          <div class="t-red">  6│ ████████████████████     </div>
+          <div class="t-red">  4│ <span style="color:#EF4444;">▼</span><span class="t-muted"> compact (MI 0.61 ⚠ lossy)</span>  </div>
+          <div class="t-green">  5│ ██                       </div>
+          <div class="t-yellow">  6│ ████████████             </div>
           <br/>
           <div><span class="t-prompt">$ </span><span class="t-cursor">█</span></div>
         </div>
@@ -1134,6 +1134,50 @@
         <h3>Silent cache expiry</h3>
         <p>Claude's prompt cache has a 5-minute TTL. Every pause — a review, a coffee, a long think — silently evicts it. Your next request pays full token price again, with no warning and no way to tell.</p>
       </div>
+      <div class="pain-card">
+        <div class="pain-icon">🗜️</div>
+        <h3>Lossy compaction, no warning</h3>
+        <p>When Claude compacts its context at low model intelligence, the summary is lossy — key details get lost. You have no idea when it happened or how degraded the model was at the time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHAT'S NEW ─────────────────────────────────────────────── -->
+<section id="whats-new">
+  <div class="container">
+    <span class="section-label">What's New</span>
+    <h2>v1.19.0 — Compaction visibility<br/>& smarter zone guidance.</h2>
+    <p class="lead">Four new features that make context degradation visible and actionable, shipped April 2026.</p>
+
+    <div class="problem-grid">
+      <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
+        <div class="pain-icon">▼</div>
+        <h3 style="color:var(--green);">Compaction event detection</h3>
+        <p>Detect <code>/compact</code> events automatically — a <code>▼</code> marker appears in your graphs at the exact step where Claude compacted, so you can see session history at a glance.</p>
+      </div>
+      <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
+        <div class="pain-icon">⚠</div>
+        <h3 style="color:var(--yellow);">MI quality flag at compaction</h3>
+        <p>When compaction happens at low model intelligence (&lt;0.6 MI), the summary is flagged as <em>potentially lossy</em>. Now you always know if you can trust the compacted context.</p>
+      </div>
+      <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
+        <div class="pain-icon">💡</div>
+        <h3 style="color:var(--cyan);">Actionable zone recommendations</h3>
+        <p>Every zone now ships with a brief recommended action — "Avoid new file reads; complete what's in progress" — so you always know what to do next without consulting docs.</p>
+      </div>
+      <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
+        <div class="pain-icon">🎯</div>
+        <h3 style="color:var(--indigo);">Recalibrated 1M zone thresholds</h3>
+        <p>Zone boundaries for 1M-context models have been recalibrated to match real-world degradation onset (300–400k tokens), eliminating a 25–120k false-alarm window.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="https://github.com/luongnv89/context-stats/releases/tag/v1.19.0" class="btn-secondary" style="display:inline-flex;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Full changelog on GitHub
+      </a>
     </div>
   </div>
 </section>
@@ -1156,7 +1200,7 @@
         <ul class="level-features">
           <li>
             <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
-            Context zone with color-coded action signal
+            Context zone with color-coded action signal + recommendation
           </li>
           <li>
             <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
@@ -1173,6 +1217,14 @@
           <li>
             <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
             Live ASCII graph dashboard (<code>context-stats graph</code>)
+          </li>
+          <li>
+            <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+            Compaction event detection — <code>▼</code> markers show when &amp; where Claude compacted
+          </li>
+          <li>
+            <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+            MI quality flag at compaction — warns if summary was created at low intelligence
           </li>
         </ul>
       </div>
@@ -1387,10 +1439,12 @@
 <div class="t-muted">   0.90 │  <span class="t-bar-g">●●●</span></div>
 <div class="t-muted">   0.80 │     <span class="t-bar-g">●●●</span></div>
 <div class="t-muted">   0.70 │        <span class="t-bar-y">●●●</span></div>
-<div class="t-muted">   0.60 │           <span class="t-bar-y">●●</span></div>
-<div class="t-muted">   0.50 │             <span class="t-bar-o">●</span></div>
+<div class="t-muted">   0.61 │           <span class="t-bar-y">●</span><span style="color:#EF4444;">▼</span><span class="t-muted" style="font-size:11px;"> compact (⚠ lossy)</span></div>
+<div class="t-muted">   1.00 │             <span class="t-bar-g">●●</span></div>
+<div class="t-muted">   0.80 │               <span class="t-bar-g">●●●</span></div>
+<div class="t-muted">   0.70 │                  <span class="t-bar-y">●●</span></div>
 <div class="t-muted">        └──────────────────────────────────────────</div>
-<div class="t-muted">         step 1                          step 14</div>
+<div class="t-muted">         step 1              ▼ compact       step 14</div>
 <br/>
 <div class="t-h2">  Cache Activity</div>
 <div class="t-muted">  Creation ░  Read ▓</div>
@@ -1574,31 +1628,31 @@ function switchTab(e, panelId) {
       <div class="zone-row">
         <span class="zone-dot" style="background:#10B981;box-shadow:0 0 8px #10B981;"></span>
         <span class="zone-name" style="color:#10B981;">Planning</span>
-        <span class="zone-action">Plenty of room — keep planning and coding freely</span>
+        <span class="zone-action">Plenty of room — keep planning and coding freely<br/><span style="font-size:12px;color:var(--text-muted);font-style:italic;">→ Plan ahead, explore options, read large files freely</span></span>
         <span class="zone-pct" style="background:rgba(16,185,129,0.12);color:#10B981;">&lt;25%</span>
       </div>
       <div class="zone-row">
         <span class="zone-dot" style="background:#F59E0B;box-shadow:0 0 8px #F59E0B;"></span>
         <span class="zone-name" style="color:#F59E0B;">Code-only</span>
-        <span class="zone-action">Context tightening — finish current task, skip exploration</span>
+        <span class="zone-action">Context tightening — finish current task, skip exploration<br/><span style="font-size:12px;color:var(--text-muted);font-style:italic;">→ Avoid new file reads; complete what's in progress</span></span>
         <span class="zone-pct" style="background:rgba(245,158,11,0.12);color:#F59E0B;">25–40%</span>
       </div>
       <div class="zone-row">
         <span class="zone-dot" style="background:#F97316;box-shadow:0 0 8px #F97316;"></span>
         <span class="zone-name" style="color:#F97316;">Dump</span>
-        <span class="zone-action">Quality declining — wrap up, prepare to export context</span>
+        <span class="zone-action">Quality declining — wrap up, prepare to export context<br/><span style="font-size:12px;color:var(--text-muted);font-style:italic;">→ Wrap up task, export session, prepare new context</span></span>
         <span class="zone-pct" style="background:rgba(249,115,22,0.12);color:#F97316;">40–70%</span>
       </div>
       <div class="zone-row">
         <span class="zone-dot" style="background:#EF4444;box-shadow:0 0 8px #EF4444;"></span>
         <span class="zone-name" style="color:#EF4444;">ExDump</span>
-        <span class="zone-action">Near hard limit — start a new session immediately</span>
+        <span class="zone-action">Near hard limit — start a new session immediately<br/><span style="font-size:12px;color:var(--text-muted);font-style:italic;">→ Stop work, start a fresh session now</span></span>
         <span class="zone-pct" style="background:rgba(239,68,68,0.12);color:#EF4444;">70–75%</span>
       </div>
       <div class="zone-row">
         <span class="zone-dot" style="background:#64748B;"></span>
         <span class="zone-name" style="color:#64748B;">Dead</span>
-        <span class="zone-action">Context exhausted — stop, nothing productive remains</span>
+        <span class="zone-action">Context exhausted — stop, nothing productive remains<br/><span style="font-size:12px;color:var(--text-muted);font-style:italic;">→ Start a new session immediately</span></span>
         <span class="zone-pct" style="background:rgba(100,116,139,0.12);color:#64748B;">&gt;75%</span>
       </div>
     </div>
@@ -1809,6 +1863,16 @@ context-stats explain</code>
       <details>
         <summary>What is cache keep-warm and why do I need it?</summary>
         <p>Claude's prompt cache has a 5-minute TTL. Any pause longer than 5 minutes — a code review, a coffee break, a long think before replying — silently evicts the cache. Your next request then pays full token price instead of the cached rate (roughly 10× cheaper for large contexts). <code>cache-warm</code> solves this by running a lightweight background heartbeat every 4 minutes, keeping the cache alive for up to 30 minutes (or a custom duration you specify). Start it with <code>context-stats &lt;session_id&gt; cache-warm on</code> from a separate terminal, and stop it with <code>cache-warm off</code>. The savings show up automatically in your <code>context-stats export</code> report.</p>
+      </details>
+
+      <details>
+        <summary>What is compaction detection and what does the ▼ marker mean?</summary>
+        <p>When Claude Code compacts its context (a &gt;50% drop in token count between interactions), context-stats detects it automatically and marks the point with a <code>▼</code> symbol in your graphs. This tells you exactly when and where compaction occurred during a session. More importantly, it also captures the MI (Model Intelligence) score at that moment — if MI was below 0.6 when compaction happened, it flags the event as <em>potentially lossy</em>. A lossy compaction means Claude was already degraded when it summarized, so the summary may have dropped important details. You'll see this as <code>▼ compact (MI 0.61 ⚠ lossy)</code> in the graph output.</p>
+      </details>
+
+      <details>
+        <summary>What are zone recommendations?</summary>
+        <p>Each context zone (Planning, Code, Dump, ExDump, Dead) now comes with a brief actionable recommendation so you always know what to do next — no need to look anything up. For example, in the Dump zone you'll see <em>"Wrap up task, export session, prepare new context"</em>. These appear inline in the statusline output and in graph annotations.</p>
       </details>
     </div>
   </div>
