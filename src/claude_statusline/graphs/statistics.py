@@ -71,9 +71,7 @@ def detect_spike(deltas: list[int], context_window_size: int, window: int = 5) -
     return False
 
 
-def detect_compaction_events(
-    values: list[int], drop_threshold: float = 0.5
-) -> list[int]:
+def detect_compaction_events(values: list[int], drop_threshold: float = 0.5) -> list[int]:
     """Detect compaction events in a list of token counts.
 
     A compaction event is identified when ``values[i] < values[i-1] * (1 - drop_threshold)``,

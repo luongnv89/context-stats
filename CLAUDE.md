@@ -54,6 +54,8 @@ The following logic is duplicated between the installable package (`src/`) and t
 | Zone indicator | `graphs/intelligence.py:get_context_zone()` | `get_context_zone()` |
 | Zone constants | `ZONE_1M_*`, `ZONE_STD_*`, `LARGE_MODEL_THRESHOLD` | same |
 | Per-property colors | `colors.py:ColorManager` props, `config.py:_COLOR_KEYS` | `_COLOR_KEYS`, per-property vars |
+| Compaction detection | `graphs/statistics.py:detect_compaction_events()` | `detect_compaction_events()` |
+| Compaction constants | `core/config.py:compaction_drop_threshold`, `compact_mi_warn_threshold` | `COMPACTION_DROP_THRESHOLD`, `COMPACT_MI_WARN_THRESHOLD` |
 
 ## Cross-References
 

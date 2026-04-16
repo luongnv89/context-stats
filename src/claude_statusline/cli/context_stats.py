@@ -380,9 +380,7 @@ def render_once(
     mi_config = config if config else Config.load()
 
     # Detect compaction events upfront so markers are available for graph rendering
-    compaction_indices = detect_compaction_events(
-        context_used, mi_config.compaction_drop_threshold
-    )
+    compaction_indices = detect_compaction_events(context_used, mi_config.compaction_drop_threshold)
 
     # Render requested graphs
     if graph_type in ("cumulative", "both", "all"):

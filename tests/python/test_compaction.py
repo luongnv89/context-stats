@@ -11,7 +11,6 @@ from claude_statusline.graphs.intelligence import calculate_intelligence
 from claude_statusline.graphs.renderer import GraphDimensions, GraphRenderer
 from claude_statusline.graphs.statistics import detect_compaction_events
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -116,11 +115,11 @@ class TestDetectCompactionEvents:
     def test_multiple_compactions(self):
         """Multiple compaction events in a session are all detected."""
         values = [
-            100_000,   # index 0: baseline
-            120_000,   # index 1: growth
-            40_000,    # index 2: first compaction (40k < 120k * 0.5 = 60k)
-            60_000,    # index 3: growth
-            10_000,    # index 4: second compaction (10k < 60k * 0.5 = 30k)
+            100_000,  # index 0: baseline
+            120_000,  # index 1: growth
+            40_000,  # index 2: first compaction (40k < 120k * 0.5 = 60k)
+            60_000,  # index 3: growth
+            10_000,  # index 4: second compaction (10k < 60k * 0.5 = 30k)
         ]
         events = detect_compaction_events(values)
         assert 2 in events

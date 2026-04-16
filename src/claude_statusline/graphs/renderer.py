@@ -112,7 +112,7 @@ class GraphRenderer:
             compaction_indices: Optional list of indices (into *data*) where a compaction
                                 event was detected. A ``▼`` marker is drawn at those
                                 x-positions using the orange color.
-"""
+        """
         n = len(data)
         if n == 0:
             return
@@ -394,9 +394,7 @@ class GraphRenderer:
         # Compaction events summary
         if compaction_events:
             count = len(compaction_events)
-            self._emit(
-                f"  {self.colors.yellow}{'Compactions:':<20}{self.colors.reset} {count}"
-            )
+            self._emit(f"  {self.colors.yellow}{'Compactions:':<20}{self.colors.reset} {count}")
             for _idx, mi_at_compact in compaction_events:
                 if mi_at_compact < compact_mi_warn_threshold:
                     self._emit(

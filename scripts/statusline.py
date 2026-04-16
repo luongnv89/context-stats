@@ -67,8 +67,8 @@ ZONE_STD_HARD_LIMIT = 0.70
 ZONE_STD_DEAD_ZONE = 0.75
 
 # Compaction detection defaults
-COMPACTION_DROP_THRESHOLD = 0.5   # fraction of context that must be lost to count as compaction
-COMPACT_MI_WARN_THRESHOLD = 0.6   # MI below this at compact time → warning
+COMPACTION_DROP_THRESHOLD = 0.5  # fraction of context that must be lost to count as compaction
+COMPACT_MI_WARN_THRESHOLD = 0.6  # MI below this at compact time → warning
 
 # Zone recommendation strings — one-line action guidance per zone
 _ZONE_RECOMMENDATIONS = {
