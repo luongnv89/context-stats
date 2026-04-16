@@ -70,6 +70,7 @@ class ZoneInfo:
     label: str  # Human-readable label
     recommendation: str  # One-line action guidance for the user
 
+
 # Zone recommendation strings — one per zone
 _ZONE_RECOMMENDATIONS: dict[str, str] = {
     "Plan": "Safe to plan and code",
@@ -202,7 +203,9 @@ def get_context_zone(
     """
     if context_window_size == 0:
         return ZoneInfo(
-            zone="Plan", color="green", label="Planning",
+            zone="Plan",
+            color="green",
+            label="Planning",
             recommendation=_ZONE_RECOMMENDATIONS["Plan"],
         )
 
@@ -218,26 +221,36 @@ def get_context_zone(
 
         if used_tokens < p_max:
             return ZoneInfo(
-                zone="Plan", color="green", label="Planning",
+                zone="Plan",
+                color="green",
+                label="Planning",
                 recommendation=_ZONE_RECOMMENDATIONS["Plan"],
             )
         if used_tokens < c_max:
             return ZoneInfo(
-                zone="Code", color="yellow", label="Code-only",
+                zone="Code",
+                color="yellow",
+                label="Code-only",
                 recommendation=_ZONE_RECOMMENDATIONS["Code"],
             )
         if used_tokens < d_max:
             return ZoneInfo(
-                zone="Dump", color="orange", label="Dump zone",
+                zone="Dump",
+                color="orange",
+                label="Dump zone",
                 recommendation=_ZONE_RECOMMENDATIONS["Dump"],
             )
         if used_tokens < x_max:
             return ZoneInfo(
-                zone="ExDump", color="dark_red", label="Hard limit",
+                zone="ExDump",
+                color="dark_red",
+                label="Hard limit",
                 recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
             )
         return ZoneInfo(
-            zone="Dead", color="gray", label="Dead zone",
+            zone="Dead",
+            color="gray",
+            label="Dead zone",
             recommendation=_ZONE_RECOMMENDATIONS["Dead"],
         )
 
@@ -254,26 +267,36 @@ def get_context_zone(
 
     if used_tokens < warn_start:
         return ZoneInfo(
-            zone="Plan", color="green", label="Planning",
+            zone="Plan",
+            color="green",
+            label="Planning",
             recommendation=_ZONE_RECOMMENDATIONS["Plan"],
         )
     if used_tokens < dump_zone_tokens:
         return ZoneInfo(
-            zone="Code", color="yellow", label="Code-only",
+            zone="Code",
+            color="yellow",
+            label="Code-only",
             recommendation=_ZONE_RECOMMENDATIONS["Code"],
         )
     if used_tokens < hard_limit_tokens:
         return ZoneInfo(
-            zone="Dump", color="orange", label="Dump zone",
+            zone="Dump",
+            color="orange",
+            label="Dump zone",
             recommendation=_ZONE_RECOMMENDATIONS["Dump"],
         )
     if used_tokens < dead_zone_tokens:
         return ZoneInfo(
-            zone="ExDump", color="dark_red", label="Hard limit",
+            zone="ExDump",
+            color="dark_red",
+            label="Hard limit",
             recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
         )
     return ZoneInfo(
-        zone="Dead", color="gray", label="Dead zone",
+        zone="Dead",
+        color="gray",
+        label="Dead zone",
         recommendation=_ZONE_RECOMMENDATIONS["Dead"],
     )
 

@@ -33,7 +33,7 @@ from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.state import StateFile, _validate_session_id
 from claude_statusline.graphs.renderer import GraphDimensions, GraphRenderer
-from claude_statusline.graphs.statistics import calculate_deltas
+from claude_statusline.graphs.statistics import calculate_deltas, detect_compaction_events
 from claude_statusline.ui.icons import get_activity_tier, get_tier_label
 from claude_statusline.ui.waiting import get_waiting_text, is_active
 
@@ -376,10 +376,20 @@ def render_once(
     if watch_mode:
         renderer.begin_buffering()
 
+    # Load config for compaction and MI settings
+    mi_config = config if config else Config.load()
+
+    # Detect compaction events upfront so markers are available for graph rendering
+    compaction_indices = detect_compaction_events(context_used, mi_config.compaction_drop_threshold)
+
     # Render requested graphs
     if graph_type in ("cumulative", "both", "all"):
         renderer.render_timeseries(
-            context_used, timestamps, "Context Usage Over Time", colors.green
+            context_used,
+            timestamps,
+            "Context Usage Over Time",
+            colors.green,
+            compaction_indices=compaction_indices if compaction_indices else None,
         )
 
     if graph_type in ("delta", "both", "all"):
@@ -408,7 +418,6 @@ def render_once(
     if entries:
         from claude_statusline.graphs.intelligence import calculate_intelligence
 
-        mi_config = config if config else Config.load()
         beta = mi_config.mi_curve_beta
 
         if graph_type in ("mi", "all"):
@@ -435,6 +444,20 @@ def render_once(
             last = entries[-1]
             mi_score = calculate_intelligence(last, last.context_window_size, last.model_id, beta)
 
+    # Compute MI at each compaction point for quality assessment (#65)
+    compaction_events: list[tuple[int, float]] = []
+    if compaction_indices and entries:
+        from claude_statusline.graphs.intelligence import calculate_intelligence
+
+        beta = mi_config.mi_curve_beta
+        for ci in compaction_indices:
+            if ci < len(entries):
+                entry = entries[ci]
+                score = calculate_intelligence(
+                    entry, entry.context_window_size, entry.model_id, beta
+                )
+                compaction_events.append((ci, score.mi))
+
     # Summary and footer
     from claude_statusline.cli.cache_warm import _warm_state_path, is_cache_warm_active
 
@@ -451,6 +474,8 @@ def render_once(
         mi_score=mi_score,
         graph_type=graph_type,
         cache_warm_status=cache_warm_status,
+        compaction_events=compaction_events or None,
+        compact_mi_warn_threshold=mi_config.compact_mi_warn_threshold,
     )
     renderer.render_footer(__version__)
 

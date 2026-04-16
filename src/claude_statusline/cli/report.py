@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from claude_statusline import __version__
@@ -117,8 +117,16 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
         scope_from = cutoff.strftime("%Y-%m-%d")
     else:
         all_start_times = [s.start_time for s in all_sessions if s.start_time > 0]
-        scope_from = datetime.fromtimestamp(min(all_start_times)).strftime("%Y-%m-%d") if all_start_times else "unknown"
-    scope_to = datetime.fromtimestamp(max(all_end_times)).strftime("%Y-%m-%d") if all_end_times else "unknown"
+        scope_from = (
+            datetime.fromtimestamp(min(all_start_times)).strftime("%Y-%m-%d")
+            if all_start_times
+            else "unknown"
+        )
+    scope_to = (
+        datetime.fromtimestamp(max(all_end_times)).strftime("%Y-%m-%d")
+        if all_end_times
+        else "unknown"
+    )
     time_scope = f"{scope_from} → {scope_to}"
 
     # Header
@@ -167,7 +175,7 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
 
     # Mermaid pie chart: model cost distribution
     lines.append("```mermaid")
-    lines.append('pie title Model Cost Distribution')
+    lines.append("pie title Model Cost Distribution")
     for fam in ("opus", "sonnet", "haiku", "other"):
         if fam not in model_stats:
             continue
@@ -212,10 +220,7 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     real_cache_read = sum(s.total_cache_read for s in real_sessions)
     real_total_tokens = sum(s.total_tokens() for s in real_sessions)
     real_cache_pct = real_cache_read / real_total_tokens * 100 if real_total_tokens > 0 else 0
-    lines.append(
-        f"- **Cache Hit Ratio**: {real_cache_pct:.1f}% "
-        f"(room for improvement if <70%)"
-    )
+    lines.append(f"- **Cache Hit Ratio**: {real_cache_pct:.1f}% (room for improvement if <70%)")
 
     cost_per_1k = total_cost / (total_tokens / 1000) if total_tokens > 0 else 0
     lines.append(f"\n- **Cost per 1k tokens**: ${cost_per_1k:.3f}")
@@ -241,10 +246,7 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append("")
 
     # Low cache sessions (cache < 10%, non-fake, min cost threshold)
-    low_cache = [
-        s for s in real_sessions
-        if s.cache_hit_ratio() < 10 and s.total_tokens() > 10000
-    ]
+    low_cache = [s for s in real_sessions if s.cache_hit_ratio() < 10 and s.total_tokens() > 10000]
     low_cache_sorted = sorted(low_cache, key=lambda s: s.cache_hit_ratio())[:5]
     if low_cache_sorted:
         lines.append(
@@ -254,7 +256,9 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
         lines.append("")
         for s in low_cache_sorted:
             proj_name = s.project_dir.split("/")[-1] if "/" in s.project_dir else s.project_dir
-            lines.append(f"     - {s.session_id[:8]}... ({proj_name}): {int(s.cache_hit_ratio())}% cache hit")
+            lines.append(
+                f"     - {s.session_id[:8]}... ({proj_name}): {int(s.cache_hit_ratio())}% cache hit"
+            )
         lines.append("")
 
     # Model efficiency
@@ -286,8 +290,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     top5_proj = sorted(projects_stats, key=lambda p: p.cost_usd, reverse=True)[:5]
     proj_labels = [f'"{p.project_name()[:8]}"' for p in top5_proj]
     proj_costs = [f"{p.cost_usd:.2f}" for p in top5_proj]
-    lines.append(f'    x-axis [{", ".join(proj_labels)}]')
-    lines.append(f'    bar [{", ".join(proj_costs)}]')
+    lines.append(f"    x-axis [{', '.join(proj_labels)}]")
+    lines.append(f"    bar [{', '.join(proj_costs)}]")
     lines.append("```")
     lines.append("")
 
@@ -301,13 +305,15 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
 
     # Mermaid pie chart: cache vs fresh tokens
     lines.append("```mermaid")
-    lines.append('pie title Token Serving: Cache vs Fresh')
+    lines.append("pie title Token Serving: Cache vs Fresh")
     lines.append(f'    "Cache Hit" : {cache_tokens_pct:.1f}')
     lines.append(f'    "Fresh (non-cached)" : {fresh_tokens_pct:.1f}')
     lines.append("```")
     lines.append("")
 
-    lines.append(f"- **Overall cache efficiency**: {cache_tokens_pct:.1f}% of tokens served from cache")
+    lines.append(
+        f"- **Overall cache efficiency**: {cache_tokens_pct:.1f}% of tokens served from cache"
+    )
     lines.append(f"- **Average tokens per dollar**: {int(avg_tokens_per_dollar)} tokens/$")
     lines.append("")
 
@@ -365,8 +371,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append('    title "Sessions by Day of Week"')
     dow_labels = [f'"{d}"' for d in day_names]
     dow_values = [str(dow_counts.get(i, 0)) for i in range(7)]
-    lines.append(f'    x-axis [{", ".join(dow_labels)}]')
-    lines.append(f'    bar [{", ".join(dow_values)}]')
+    lines.append(f"    x-axis [{', '.join(dow_labels)}]")
+    lines.append(f"    bar [{', '.join(dow_values)}]")
     lines.append("```")
     lines.append("")
 
@@ -385,8 +391,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append('    title "Sessions by Hour of Day"')
     hour_labels = [f'"{h:02d}h"' for h in range(24)]
     hour_values = [str(hour_counts.get(h, 0)) for h in range(24)]
-    lines.append(f'    x-axis [{", ".join(hour_labels)}]')
-    lines.append(f'    bar [{", ".join(hour_values)}]')
+    lines.append(f"    x-axis [{', '.join(hour_labels)}]")
+    lines.append(f"    bar [{', '.join(hour_values)}]")
     lines.append("```")
     lines.append("")
 
@@ -421,8 +427,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append("```mermaid")
     lines.append("xychart-beta")
     lines.append('    title "Weekly Spend ($)"')
-    lines.append(f'    x-axis [{", ".join(short_week_labels)}]')
-    lines.append(f'    line [{", ".join(week_costs)}]')
+    lines.append(f"    x-axis [{', '.join(short_week_labels)}]")
+    lines.append(f"    line [{', '.join(week_costs)}]")
     lines.append("```")
     lines.append("")
 
@@ -430,8 +436,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append("```mermaid")
     lines.append("xychart-beta")
     lines.append('    title "Weekly Sessions Count"')
-    lines.append(f'    x-axis [{", ".join(short_week_labels)}]')
-    lines.append(f'    bar [{", ".join(week_session_counts)}]')
+    lines.append(f"    x-axis [{', '.join(short_week_labels)}]")
+    lines.append(f"    bar [{', '.join(week_session_counts)}]")
     lines.append("```")
     lines.append("")
 
@@ -484,9 +490,7 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
         for proj_dir, pd in top_efficient_proj:
             proj_name = proj_dir.split("/")[-1] if "/" in proj_dir else proj_dir
             eff = int(pd["lines"] / pd["cost"]) if pd["cost"] > 0 else 0
-            lines.append(
-                f"| {proj_name} | {pd['lines']:,} | ${pd['cost']:.2f} | {eff} |"
-            )
+            lines.append(f"| {proj_name} | {pd['lines']:,} | ${pd['cost']:.2f} | {eff} |")
         lines.append("")
 
     # Projects summary table
@@ -495,7 +499,9 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     lines.append(
         "| # | Project | Sessions | Cost | % Total | Tokens | Cache Hit % | Avg Cost | Dominant Model |"
     )
-    lines.append("|---|---------|----------|------|---------|--------|-------------|----------|----------------|")
+    lines.append(
+        "|---|---------|----------|------|---------|--------|-------------|----------|----------------|"
+    )
     for idx, p in enumerate(projects_stats, 1):
         pct = p.cost_usd / total_cost * 100 if total_cost > 0 else 0
         avg_cost = p.cost_usd / p.session_count if p.session_count > 0 else 0

@@ -2,13 +2,17 @@
 
 from datetime import datetime, timedelta
 
-import pytest
-
-from claude_statusline.analytics import ProjectStats, SessionStats, load_all_projects, _group_sessions_by_project
+from claude_statusline.analytics import (
+    ProjectStats,
+    SessionStats,
+    _group_sessions_by_project,
+)
 from claude_statusline.cli.report import generate_report
 
 
-def _make_session(session_id, start_offset_days=0, end_offset_days=0, project_dir="/home/user/proj"):
+def _make_session(
+    session_id, start_offset_days=0, end_offset_days=0, project_dir="/home/user/proj"
+):
     """Return a SessionStats with start/end times relative to now."""
     now = int(datetime.now().timestamp())
     start = now - int(start_offset_days * 86400)
@@ -108,7 +112,7 @@ def test_report_period_without_since_days():
         total_cache_read=0,
         cost_usd=0.01,
         start_time=1700000000,  # 2023-11-14
-        end_time=1700100000,    # ~1 day later
+        end_time=1700100000,  # ~1 day later
         entry_count=1,
     )
     project = ProjectStats(

@@ -9,6 +9,7 @@ import pytest
 
 from claude_statusline.core.state import StateEntry
 from claude_statusline.graphs.intelligence import (
+    _ZONE_RECOMMENDATIONS,
     MI_GREEN_THRESHOLD,
     MI_YELLOW_THRESHOLD,
     MODEL_PROFILES,
@@ -16,7 +17,6 @@ from claude_statusline.graphs.intelligence import (
     ZONE_1M_D_MAX,
     ZONE_1M_P_MAX,
     ZONE_1M_X_MAX,
-    _ZONE_RECOMMENDATIONS,
     calculate_context_pressure,
     calculate_intelligence,
     format_mi_score,

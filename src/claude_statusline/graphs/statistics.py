@@ -71,6 +71,39 @@ def detect_spike(deltas: list[int], context_window_size: int, window: int = 5) -
     return False
 
 
+def detect_compaction_events(values: list[int], drop_threshold: float = 0.5) -> list[int]:
+    """Detect compaction events in a list of token counts.
+
+    A compaction event is identified when ``values[i] < values[i-1] * (1 - drop_threshold)``,
+    i.e., the context dropped by more than *drop_threshold* fraction in a single step.
+    With the default threshold of 0.5 this means the new value is less than half the old value.
+
+    The parameter ``drop_threshold`` controls what fraction of context must be lost to count
+    as a compaction.  Increasing it makes detection stricter (only very large drops qualify);
+    decreasing it makes it more sensitive.
+
+    Args:
+        values: Sequence of token counts (e.g., ``current_used_tokens`` over time).
+        drop_threshold: Fraction of context that must be lost to qualify as compaction
+                        (default: 0.5, i.e., > 50 % drop).
+
+    Returns:
+        List of indices *i* (into *values*) where a compaction was detected.
+        Indices are 1-based (the earliest possible index is 1).
+    """
+    if len(values) < 2:
+        return []
+
+    events: list[int] = []
+    for i in range(1, len(values)):
+        prev = values[i - 1]
+        curr = values[i]
+        # Guard against zero-division; if prev == 0 there is nothing to compare
+        if prev > 0 and curr < prev * (1.0 - drop_threshold):
+            events.append(i)
+    return events
+
+
 def calculate_deltas(values: list[int]) -> list[int]:
     """Calculate deltas between consecutive values.
 
