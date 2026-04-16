@@ -70,6 +70,23 @@ assert_exits_ok() {
     fi
 }
 
+# Run a command, assert exit 0, and check output contains a substring.
+# Usage: assert_output_contains "label" "substring" cmd [args...]
+assert_output_contains() {
+    local label="$1"
+    local needle="$2"
+    shift 2
+    local output exit_code
+    output=$("$@" 2>&1) && exit_code=$? || exit_code=$?
+    if [ "$exit_code" -ne 0 ]; then
+        fail "$label (exit=$exit_code)"
+    elif echo "$output" | grep -qF "$needle"; then
+        pass "$label"
+    else
+        fail "$label (output missing '$needle': '${output:0:120}')"
+    fi
+}
+
 # Pipe JSON through a command and assert exit 0 with non-empty output.
 # Usage: assert_statusline_ok "label" cmd [args...]
 assert_statusline_ok() {
@@ -158,6 +175,56 @@ run_python_e2e() {
     else
         info "scripts/statusline.py not found — skipping standalone script test"
     fi
+
+    # ── Session commands E2E ──────────────────────────────────────────────────
+    section "Python — Session Commands"
+
+    # Assert: context-stats sessions exits 0 when no state files exist
+    assert_exits_ok "context-stats sessions exits 0 (no data)" "$venv_bin/context-stats" sessions
+
+    # Assert: context-stats sessions --minutes flag is accepted
+    assert_exits_ok "context-stats sessions --minutes 30" "$venv_bin/context-stats" sessions --minutes 30
+
+    # Assert: context-stats with no args + --no-watch exits 0 (defaults to latest session graph)
+    assert_exits_ok "context-stats --no-watch exits 0 (no data)" "$venv_bin/context-stats" graph --no-watch
+
+    # Create a fake state file to test sessions listing with real data
+    local state_dir="$HOME/.claude/statusline"
+    local fake_session_id="e2e-smoke-test-$$"
+    local fake_state_file="$state_dir/statusline.${fake_session_id}.state"
+    mkdir -p "$state_dir"
+    local ts
+    ts=$(date +%s)
+    local ts_prev=$((ts - 10))
+    # Write 2 entries (graph needs at least 2 data points)
+    echo "${ts_prev},2000,1000,200,100,500,400,0.02,10,5,${fake_session_id},claude-sonnet-4-20250514,/tmp/e2e-project,200000" > "$fake_state_file"
+    echo "${ts},5000,2000,500,200,1000,800,0.05,20,10,${fake_session_id},claude-sonnet-4-20250514,/tmp/e2e-project,200000" >> "$fake_state_file"
+
+    # Assert: sessions command lists the fake session
+    assert_output_contains \
+        "context-stats sessions lists fake session" \
+        "$fake_session_id" \
+        "$venv_bin/context-stats" sessions --minutes 5
+
+    # Assert: sessions output includes project name from state file
+    assert_output_contains \
+        "context-stats sessions shows project name" \
+        "e2e-project" \
+        "$venv_bin/context-stats" sessions --minutes 5
+
+    # Assert: sessions output includes model name
+    assert_output_contains \
+        "context-stats sessions shows model" \
+        "claude-sonnet-4-20250514" \
+        "$venv_bin/context-stats" sessions --minutes 5
+
+    # Assert: graph --no-watch picks up latest session automatically
+    assert_cmd_ok \
+        "context-stats graph --no-watch auto-detects latest session" \
+        "$venv_bin/context-stats" graph --no-watch
+
+    # Clean up fake state file
+    rm -f "$fake_state_file"
 
     rm -rf "$venv_dir"
 }

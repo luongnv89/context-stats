@@ -1226,6 +1226,14 @@
             <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
             MI quality flag at compaction — warns if summary was created at low intelligence
           </li>
+          <li>
+            <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+            Session listing — <code>context-stats sessions</code> shows recent sessions with metadata
+          </li>
+          <li>
+            <svg class="check green" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+            Auto-detect latest session — no session ID needed for any command
+          </li>
         </ul>
       </div>
 
@@ -1361,8 +1369,8 @@
             <span class="terminal-title">cache-warm — keep the 5-min TTL alive</span>
           </div>
           <div class="terminal-body">
-<div class="t-muted"># Activate keep-warm for the current session</div>
-<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm on</span></div>
+<div class="t-muted"># Activate keep-warm for the latest session (no ID needed)</div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats cache-warm on</span></div>
 <div class="t-green">  Cache keep-warm started</div>
 <div><span class="t-key">  Session:  </span><span class="t-cyan">abc-1234</span></div>
 <div><span class="t-key">  Interval: </span><span class="t-cyan">every 4 min</span></div>
@@ -1370,11 +1378,11 @@
 <div><span class="t-key">  PID:      </span><span class="t-indigo">12845</span></div>
 <br/>
 <div class="t-muted"># Use a custom duration</div>
-<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm on 1h</span></div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats cache-warm on 1h</span></div>
 <div class="t-green">  Cache keep-warm started <span class="t-muted">(1h)</span></div>
 <br/>
 <div class="t-muted"># Stop the heartbeat early</div>
-<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats &lt;session_id&gt; cache-warm off</span></div>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats cache-warm off</span></div>
 <div class="t-green">  Cache keep-warm stopped</div>
 <br/>
 <div class="t-muted"># Verify savings in your session report</div>
@@ -1393,10 +1401,11 @@
   <div class="container">
     <span class="section-label">Real Output</span>
     <h2>What you actually see<br/>in the terminal.</h2>
-    <p class="lead">Three commands — each level of analytics, shown in full.</p>
+    <p class="lead">Four commands — each level of analytics, shown in full.</p>
 
     <div class="examples-tabs">
       <button class="tab-btn active green" onclick="switchTab(event,'tab-graph')">context-stats graph</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-sessions')">context-stats sessions</button>
       <button class="tab-btn" onclick="switchTab(event,'tab-export')">context-stats export</button>
       <button class="tab-btn" onclick="switchTab(event,'tab-report')">context-stats report</button>
     </div>
@@ -1452,6 +1461,40 @@
 <div class="t-muted">   3│ <span class="t-cyan">░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span></div>
 <div class="t-muted">   2│ <span class="t-cyan">░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span></div>
 <div class="t-muted">   1│ <span class="t-cyan">░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessions tab -->
+    <div id="tab-sessions" class="tab-panel">
+      <div class="example-terminal">
+        <div class="example-terminal-body">
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats sessions</span></div>
+<br/>
+<div class="t-h1">  Recent Sessions <span class="t-muted">(last 5 min)</span></div>
+<br/>
+<div>  <span class="t-cyan">43b5ed93-e7a3-44d9-9d58-bd35911f17e9</span></div>
+<div>    <span class="t-green">my-project</span> <span class="t-muted">·</span> <span class="t-muted">claude-opus-4-6[1m]</span> <span class="t-muted">·</span> 59K tokens <span class="t-muted">· 1m 55s ago</span></div>
+<br/>
+<div>  <span class="t-cyan">66c00dcb-ebf6-4ed0-872e-23a60d715d60</span></div>
+<div>    <span class="t-green">api-server</span> <span class="t-muted">·</span> <span class="t-muted">claude-opus-4-6[1m]</span> <span class="t-muted">·</span> 83K tokens <span class="t-muted">· 4m 52s ago</span></div>
+<br/>
+<div class="t-muted">  Tip: context-stats 43b5ed93-e7a3-44d9-9d58-bd35911f17e9 graph</div>
+<br/>
+<div><span class="t-prompt">$ </span><span class="t-cmd">context-stats sessions --minutes 30</span></div>
+<br/>
+<div class="t-h1">  Recent Sessions <span class="t-muted">(last 30 min)</span></div>
+<br/>
+<div>  <span class="t-cyan">43b5ed93-e7a3-44d9-9d58-bd35911f17e9</span></div>
+<div>    <span class="t-green">my-project</span> <span class="t-muted">·</span> <span class="t-muted">claude-opus-4-6[1m]</span> <span class="t-muted">·</span> 59K tokens <span class="t-muted">· 1m 55s ago</span></div>
+<br/>
+<div>  <span class="t-cyan">66c00dcb-ebf6-4ed0-872e-23a60d715d60</span></div>
+<div>    <span class="t-green">api-server</span> <span class="t-muted">·</span> <span class="t-muted">claude-opus-4-6[1m]</span> <span class="t-muted">·</span> 83K tokens <span class="t-muted">· 4m 52s ago</span></div>
+<br/>
+<div>  <span class="t-cyan">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span></div>
+<div>    <span class="t-green">docs-site</span> <span class="t-muted">·</span> <span class="t-muted">claude-sonnet-4-6</span> <span class="t-muted">·</span> 142K tokens <span class="t-muted">· 18m ago</span></div>
+<br/>
+<div class="t-muted">  Tip: context-stats 43b5ed93-e7a3-44d9-9d58-bd35911f17e9 graph</div>
         </div>
       </div>
     </div>
@@ -1582,6 +1625,7 @@ function switchTab(e, panelId) {
   section.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   e.target.classList.add('active');
   if (panelId === 'tab-graph') { e.target.classList.add('green'); }
+  else if (panelId === 'tab-sessions') { e.target.style.color = 'var(--cyan)'; e.target.style.borderBottomColor = 'var(--cyan)'; }
   else if (panelId === 'tab-report') { e.target.style.color = 'var(--indigo)'; e.target.style.borderBottomColor = 'var(--indigo)'; }
   document.getElementById(panelId).classList.add('active');
 }
@@ -1799,11 +1843,15 @@ function switchTab(e, panelId) {
           <code style="white-space:pre;"># Live ASCII dashboard — context, MI, cache, delta
 context-stats graph
 
+# List recent sessions (last 5 min by default)
+context-stats sessions
+context-stats sessions --minutes 30
+
 # Keep the prompt cache alive during idle gaps
-context-stats &lt;session_id&gt; cache-warm on
+context-stats cache-warm on
 
 # Export full session report to Markdown
-context-stats export &lt;session_id&gt;
+context-stats export
 
 # Multi-project analytics (last 30 days)
 context-stats report --since-days 30

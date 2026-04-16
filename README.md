@@ -26,10 +26,12 @@ graph TD
     C --> E["context-stats graph"]
     C --> F["context-stats export"]
     C --> G["context-stats report"]
+    C --> H["context-stats sessions"]
 
     subgraph L1["Level 1 — Live"]
         D
         E
+        H
     end
 
     subgraph L2["Level 2 — Session"]
@@ -43,7 +45,7 @@ graph TD
 
 | Level | Tool | What you learn |
 |---|---|---|
-| **Live** | Status line + graph dashboard | Context zone, MI score, token delta — act now, not after it's too late |
+| **Live** | Status line + graph dashboard + sessions list | Context zone, MI score, token delta — act now, not after it's too late |
 | **Session** | `context-stats export` | Cache efficiency, interaction timeline, zone history for one session |
 | **Report** | `context-stats report` | Cost breakdown, cache analysis, cross-project patterns across weeks or months |
 
@@ -106,11 +108,23 @@ MI(u) = max(0, 1 - u^β)
 
 Color-coded: **green** (>0.70), **yellow** (0.40–0.70), **red** (<0.40 — start a new session). Override with `mi_curve_beta=1.5` in config.
 
+### Session Listing
+
+Find and switch between active sessions:
+
+```bash
+context-stats sessions                  # Sessions from the last 5 minutes
+context-stats sessions --minutes 30     # Widen the search window
+```
+
+Each session shows the project name, model, token count, and how recently it was active.
+
 ### Live Graph Dashboard
 
 ```bash
-context-stats <session_id> graph               # Context growth per interaction
-context-stats <session_id> graph --type all    # All graphs
+context-stats graph                     # Context growth for the latest session
+context-stats graph --type all          # All graphs
+context-stats <session_id> graph        # Specific session
 ```
 
 | Graph | What it answers |
@@ -138,7 +152,8 @@ Auto-refreshes every 2 seconds. Pass `-w 5` to slow down or `--no-watch` to show
 Export a full deep-dive when you need to understand what happened in a specific session:
 
 ```bash
-context-stats <session_id> export --output report.md
+context-stats export --output report.md              # Latest session
+context-stats <session_id> export --output report.md  # Specific session
 ```
 
 | Section | What you learn |
@@ -169,11 +184,12 @@ See the full example in [`context-stats-export-output.md`](context-stats-export-
 Claude's prompt cache has a ~5 minute TTL. Keep it alive during pauses to avoid expensive cache misses:
 
 ```bash
-context-stats <session_id> cache-warm on 30m
+context-stats cache-warm on 30m              # Latest session
+context-stats <session_id> cache-warm on 30m  # Specific session
 ```
 
 ```bash
-context-stats <session_id> cache-warm off
+context-stats cache-warm off
 ```
 
 Heartbeats fire every 4 minutes. Runs as a detached background process.

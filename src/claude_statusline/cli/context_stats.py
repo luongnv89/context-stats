@@ -4,11 +4,15 @@
 Displays ASCII graphs of token consumption over time.
 
 Usage:
-    context-stats <session_id> <action> [parameters]
+    context-stats [session_id] [action] [parameters]
+
+When session_id is omitted, the most recent session is used automatically.
+When action is omitted, defaults to 'graph'.
 
 Actions:
     graph       Live ASCII graphs of context usage (default)
     export      Export session stats as a markdown report
+    sessions    List recent sessions
     explain     Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
     cache-warm  Keep session prompt cache alive via a background heartbeat
 
@@ -51,18 +55,25 @@ def show_help() -> None:
         """Context Stats Visualizer for Claude Code
 
 USAGE:
-    context-stats <session_id> <action> [parameters]
+    context-stats [session_id] [action] [parameters]
+
+    When session_id is omitted, the most recent session is used automatically.
+    When action is omitted, defaults to 'graph'.
 
 ARGUMENTS:
-    session_id    Required. The session ID to operate on.
-    action        Required. The action to perform.
+    session_id    Optional. The session ID to operate on (default: latest).
+    action        Optional. The action to perform (default: graph).
 
 ACTIONS:
     graph         Show live ASCII graphs of context usage
     export        Export session stats as a markdown report
+    sessions      List recent sessions (default: last 5 minutes)
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
     cache-warm    Keep session prompt cache alive via a background heartbeat
     report        Generate comprehensive token usage analytics across all projects
+
+SESSIONS OPTIONS:
+    --minutes N    Show sessions from the last N minutes (default: 5)
 
 CACHE-WARM OPTIONS:
     on [duration]  Start heartbeat for the given duration (e.g. 30m, 1h). Default: 30m
@@ -93,8 +104,20 @@ NOTE:
     Press Ctrl+C to exit. Use --no-watch to display graphs once and exit.
 
 EXAMPLES:
-    # Show live graphs (refreshes every 2s)
+    # Show live graphs for the latest session (no session ID needed)
+    context-stats graph
+
+    # Show live graphs for a specific session
     context-stats abc123def graph
+
+    # Shorthand: just run with no arguments for latest session graphs
+    context-stats
+
+    # List recent sessions (last 5 minutes)
+    context-stats sessions
+
+    # List sessions from the last 30 minutes
+    context-stats sessions --minutes 30
 
     # Show graphs once and exit
     context-stats abc123def graph --no-watch
@@ -107,6 +130,9 @@ EXAMPLES:
 
     # Export session stats as markdown
     context-stats abc123def export --output report.md
+
+    # Export latest session stats
+    context-stats export
 
     # Diagnostic dump (pipe Claude Code JSON context)
     echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
@@ -136,48 +162,57 @@ DATA SOURCE:
 
 
 # Known action names — used to distinguish actions from session IDs in argv
-_KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm", "report"}
+_KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm", "report", "sessions"}
 
 
-def _normalize_argv(argv: list[str]) -> tuple[str, str, list[str]]:
+def _normalize_argv(argv: list[str]) -> tuple[str, str | None, list[str]]:
     """Determine action, session_id, and remaining args from raw argv.
 
-    Requires the explicit pattern:
-      context-stats <session_id> <action> [parameters]
+    Supported patterns:
+      context-stats                           → graph, latest session
+      context-stats <action> [parameters]     → action, latest session
+      context-stats <session_id>              → graph, specific session
+      context-stats <session_id> <action>     → action, specific session
 
-    Special cases: explain and report can be called as 'context-stats <action>' (without session_id).
-    When session_id is missing and action is 'explain' or 'report', uses '-' as placeholder.
+    Session_id is None when omitted (auto-detect latest).
+    Explain uses '-' as a placeholder session_id.
 
     Args:
         argv: sys.argv[1:] (arguments after the program name).
 
     Returns:
-        Tuple of (action, session_id, remaining_args).
+        Tuple of (action, session_id | None, remaining_args).
 
     Raises:
-        SystemExit: If session_id or action are missing (except for explain/report).
+        SystemExit: If an unknown action is specified.
     """
     # Strip out global flags so they don't interfere with positional detection
     positionals = [a for a in argv if not a.startswith("-")]
 
     if not positionals:
-        sys.stderr.write("Error: Missing required arguments.\n\n")
-        show_help()
-        sys.exit(1)
+        # No arguments at all: default to graph with latest session
+        remaining = [a for a in argv if a.startswith("-")]
+        return "graph", None, remaining
 
-    # Special case: explain and report can be called with just the action (no session_id)
-    if positionals[0] in {"explain", "report"}:
+    # First positional is a known action: no session_id provided
+    if positionals[0] in _KNOWN_ACTIONS:
+        action = positionals[0]
         remaining = list(argv)
-        remaining.remove(positionals[0])
-        return positionals[0], "-", remaining
+        remaining.remove(action)
+        # explain historically used "-" placeholder; keep for explain
+        if action == "explain":
+            return action, "-", remaining
+        return action, None, remaining
 
-    # Standard case: <session_id> <action> [parameters]
-    if len(positionals) < 2:
-        sys.stderr.write("Error: Missing required arguments.\n\n")
-        show_help()
-        sys.exit(1)
-
+    # First positional is not a known action: treat as session_id
     session_id = positionals[0]
+
+    if len(positionals) < 2:
+        # Single positional that is not a known action: treat as session_id, default to graph
+        remaining = list(argv)
+        remaining.remove(session_id)
+        return "graph", session_id, remaining
+
     action = positionals[1]
 
     if action not in _KNOWN_ACTIONS:
@@ -252,8 +287,8 @@ def parse_args() -> argparse.Namespace:
     # Parse required session_id and action
     action, session_id, remaining = _normalize_argv(raw_argv)
 
-    # Validate session_id format (skip for "-" placeholder used by explain)
-    if session_id != "-":
+    # Validate session_id format (skip for "-" placeholder and None/auto-detect)
+    if session_id is not None and session_id != "-":
         try:
             _validate_session_id(session_id)
         except ValueError as e:
@@ -261,8 +296,8 @@ def parse_args() -> argparse.Namespace:
             sys.exit(1)
 
     if action == "graph":
-        # Inject session_id into remaining for graph parser
-        remaining = [session_id] + remaining
+        # Inject session_id into remaining for graph parser (skip if None/auto-detect)
+        remaining = ([session_id] if session_id is not None else []) + remaining
         parser = _build_graph_parser()
         args = parser.parse_args(remaining)
         if args.help:
@@ -627,6 +662,89 @@ def show_waiting_message(
     print(_format_waiting_message(colors, session_id, message))
 
 
+def run_sessions(minutes: int, colors: ColorManager) -> None:
+    """List recent sessions within the given time window.
+
+    Args:
+        minutes: Show sessions active within the last N minutes
+        colors: ColorManager instance
+    """
+    state_file = StateFile(None)
+    cutoff = time.time() - (minutes * 60)
+
+    sessions: list[tuple[float, str, Path]] = []
+    for file_path in state_file.STATE_DIR.glob("statusline.*.state"):
+        try:
+            mtime = file_path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime >= cutoff:
+            name = file_path.stem
+            if name.startswith("statusline."):
+                session_id = name[11:]
+                if session_id:
+                    sessions.append((mtime, session_id, file_path))
+
+    # Sort by most recent first
+    sessions.sort(key=lambda x: x[0], reverse=True)
+
+    if not sessions:
+        print(f"{colors.yellow}No sessions found in the last {minutes} minute(s).{colors.reset}")
+        print(f"{colors.dim}Tip: Use --minutes N to widen the search window.{colors.reset}")
+        return
+
+    now = time.time()
+    print(
+        f"\n{colors.bold}{colors.magenta}Recent Sessions{colors.reset} "
+        f"{colors.dim}(last {minutes} min){colors.reset}\n"
+    )
+
+    for mtime, session_id, _file_path in sessions:
+        # Read last entry for metadata
+        sf = StateFile(session_id)
+        last_entry = sf.read_last_entry()
+
+        # Format time ago
+        ago = now - mtime
+        if ago < 60:
+            ago_str = f"{int(ago)}s ago"
+        else:
+            mins = int(ago // 60)
+            secs = int(ago % 60)
+            ago_str = f"{mins}m {secs}s ago" if secs else f"{mins}m ago"
+
+        # Extract metadata
+        project = ""
+        model = ""
+        tokens = ""
+        if last_entry:
+            if last_entry.workspace_project_dir:
+                project = Path(last_entry.workspace_project_dir).name
+            model = last_entry.model_id or ""
+            total = last_entry.current_used_tokens
+            if total >= 1_000_000:
+                tokens = f"{total / 1_000_000:.1f}M tokens"
+            elif total >= 1_000:
+                tokens = f"{total / 1_000:.0f}K tokens"
+            else:
+                tokens = f"{total} tokens"
+
+        # Display
+        print(f"  {colors.cyan}{session_id}{colors.reset}")
+        details = []
+        if project:
+            details.append(f"{colors.green}{project}{colors.reset}")
+        if model:
+            details.append(f"{colors.dim}{model}{colors.reset}")
+        if tokens:
+            details.append(tokens)
+        details.append(f"{colors.dim}{ago_str}{colors.reset}")
+        print(f"    {' · '.join(details)}")
+        print()
+
+    print(f"{colors.dim}Tip: context-stats {sessions[0][1]} graph{colors.reset}")
+
+
 def _ensure_utf8_stdout() -> None:
     """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default."""
     if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") != "utf8":
@@ -670,9 +788,40 @@ def main() -> None:
     if args.action == "cache-warm":
         from claude_statusline.cli.cache_warm import run_cache_warm
 
+        session_id = args.session_id
+        if session_id is None:
+            # Resolve latest session for cache-warm (requires a real session_id)
+            sf = StateFile(None)
+            latest = sf.find_latest_state_file()
+            if latest:
+                session_id = latest.stem.replace("statusline.", "")
+            else:
+                sys.stderr.write("Error: No session data found. Cannot start cache-warm.\n")
+                sys.exit(1)
+
         color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
         colors = ColorManager(enabled=color_enabled)
-        run_cache_warm(args.session_id, args.remaining, colors)
+        run_cache_warm(session_id, args.remaining, colors)
+        return
+
+    if args.action == "sessions":
+        color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
+        colors = ColorManager(enabled=color_enabled)
+        # Parse --minutes flag from remaining args
+        minutes = 5
+        remaining = args.remaining if hasattr(args, "remaining") else []
+        i = 0
+        while i < len(remaining):
+            if remaining[i] == "--minutes" and i + 1 < len(remaining):
+                try:
+                    minutes = int(remaining[i + 1])
+                except ValueError:
+                    sys.stderr.write(f"Error: Invalid value for --minutes: '{remaining[i + 1]}'\n")
+                    sys.exit(1)
+                i += 2
+            else:
+                i += 1
+        run_sessions(minutes, colors)
         return
 
     if args.action == "report":
