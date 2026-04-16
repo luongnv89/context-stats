@@ -9,12 +9,15 @@ Formula: MI(u) = max(0, 1 - u^beta)
 Where u = utilization ratio, beta is model-specific.
 Higher beta = quality retained longer (degradation happens later).
 
-Zone indicators provide a quick signal for session state:
-  Plan   = Planning mode (green)   — safe to plan and code
-  Code   = Code-only mode (yellow) — avoid starting new plans
-  Dump   = Dump zone (orange)      — quality declining, finish up
-  ExDump = Hard limit (dark red)   — start a new session
-  Dead   = Dead zone (gray)        — nothing productive here
+Zone indicators provide a quick signal for session state and recommended action:
+  Plan   = Planning mode (green)    — safe to plan and code
+  Code   = Code-only mode (yellow)  — avoid starting new tasks; finish current one
+  Dump   = Dump zone (orange)       — consider /compact or delegate to subagent
+  ExDump = Hard limit (dark red)    — run /compact now before quality degrades further
+  Dead   = Dead zone (gray)         — start a new session with /clear
+
+1M model thresholds calibrated from observed context rot onset at 300-400k tokens.
+Source: x.com/trq212/status/2044548257058328723 ("Every Turn Is a Branching Point")
 """
 
 from __future__ import annotations
@@ -34,10 +37,12 @@ MI_CONTEXT_RED_THRESHOLD = 0.80  # 80% context used
 LARGE_MODEL_THRESHOLD = 500_000
 
 # Zone thresholds for 1M models (token counts)
-ZONE_1M_P_MAX = 70_000  # P zone: < 70k used
-ZONE_1M_C_MAX = 100_000  # C zone: 70k–100k used
-ZONE_1M_D_MAX = 250_000  # D zone: 100k–250k used
-ZONE_1M_X_MAX = 275_000  # X zone: 250k–275k used; Z zone: >= 275k
+# Recalibrated to match observed context rot onset at 300-400k tokens.
+# See: x.com/trq212/status/2044548257058328723
+ZONE_1M_P_MAX = 150_000  # P zone: < 150k used
+ZONE_1M_C_MAX = 250_000  # C zone: 150k–250k used
+ZONE_1M_D_MAX = 400_000  # D zone: 250k–400k used
+ZONE_1M_X_MAX = 450_000  # X zone: 400k–450k used; Z zone: >= 450k
 
 # Zone thresholds for standard models (< 1M) — expressed as utilization ratios
 ZONE_STD_DUMP_ZONE = 0.40  # dump zone starts at 40%
@@ -58,11 +63,21 @@ MODEL_PROFILES: dict[str, float] = {
 
 @dataclass
 class ZoneInfo:
-    """Context zone indicator with color."""
+    """Context zone indicator with color and actionable recommendation."""
 
     zone: str  # "Plan", "Code", "Dump", "ExDump", or "Dead"
     color: str  # "green", "yellow", "orange", "dark_red", or "gray"
     label: str  # Human-readable label
+    recommendation: str  # One-line action guidance for the user
+
+# Zone recommendation strings — one per zone
+_ZONE_RECOMMENDATIONS: dict[str, str] = {
+    "Plan": "Safe to plan and code",
+    "Code": "Avoid starting new tasks; finish current one",
+    "Dump": "Consider `/compact focus on X` or delegate to subagent",
+    "ExDump": "Run `/compact` now before quality degrades further",
+    "Dead": "Start a new session with `/clear`",
+}
 
 
 @dataclass
@@ -153,11 +168,11 @@ def get_context_zone(
     """Determine the context zone indicator based on token usage.
 
     For 1M models (context_window >= 500k):
-      P: < 70k used
-      C: 70k–100k used
-      D: 100k–250k used
-      X: 250k–275k used
-      Z: >= 275k used
+      P: < 150k used
+      C: 150k–250k used
+      D: 250k–400k used
+      X: 400k–450k used
+      Z: >= 450k used
 
     For standard models (< 500k context):
       P: < (dump_zone - 30k)
@@ -186,7 +201,10 @@ def get_context_zone(
         ZoneInfo with zone letter, color name, and label
     """
     if context_window_size == 0:
-        return ZoneInfo(zone="Plan", color="green", label="Planning")
+        return ZoneInfo(
+            zone="Plan", color="green", label="Planning",
+            recommendation=_ZONE_RECOMMENDATIONS["Plan"],
+        )
 
     # Apply overrides (0 = use default)
     lmt = large_model_threshold or LARGE_MODEL_THRESHOLD
@@ -199,14 +217,29 @@ def get_context_zone(
         x_max = zone_1m_xdump_max or ZONE_1M_X_MAX
 
         if used_tokens < p_max:
-            return ZoneInfo(zone="Plan", color="green", label="Planning")
+            return ZoneInfo(
+                zone="Plan", color="green", label="Planning",
+                recommendation=_ZONE_RECOMMENDATIONS["Plan"],
+            )
         if used_tokens < c_max:
-            return ZoneInfo(zone="Code", color="yellow", label="Code-only")
+            return ZoneInfo(
+                zone="Code", color="yellow", label="Code-only",
+                recommendation=_ZONE_RECOMMENDATIONS["Code"],
+            )
         if used_tokens < d_max:
-            return ZoneInfo(zone="Dump", color="orange", label="Dump zone")
+            return ZoneInfo(
+                zone="Dump", color="orange", label="Dump zone",
+                recommendation=_ZONE_RECOMMENDATIONS["Dump"],
+            )
         if used_tokens < x_max:
-            return ZoneInfo(zone="ExDump", color="dark_red", label="Hard limit")
-        return ZoneInfo(zone="Dead", color="gray", label="Dead zone")
+            return ZoneInfo(
+                zone="ExDump", color="dark_red", label="Hard limit",
+                recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
+            )
+        return ZoneInfo(
+            zone="Dead", color="gray", label="Dead zone",
+            recommendation=_ZONE_RECOMMENDATIONS["Dead"],
+        )
 
     # Standard models
     dump_ratio = zone_std_dump_ratio or ZONE_STD_DUMP_ZONE
@@ -220,14 +253,29 @@ def get_context_zone(
     dead_zone_tokens = int(context_window_size * dead_rat)
 
     if used_tokens < warn_start:
-        return ZoneInfo(zone="Plan", color="green", label="Planning")
+        return ZoneInfo(
+            zone="Plan", color="green", label="Planning",
+            recommendation=_ZONE_RECOMMENDATIONS["Plan"],
+        )
     if used_tokens < dump_zone_tokens:
-        return ZoneInfo(zone="Code", color="yellow", label="Code-only")
+        return ZoneInfo(
+            zone="Code", color="yellow", label="Code-only",
+            recommendation=_ZONE_RECOMMENDATIONS["Code"],
+        )
     if used_tokens < hard_limit_tokens:
-        return ZoneInfo(zone="Dump", color="orange", label="Dump zone")
+        return ZoneInfo(
+            zone="Dump", color="orange", label="Dump zone",
+            recommendation=_ZONE_RECOMMENDATIONS["Dump"],
+        )
     if used_tokens < dead_zone_tokens:
-        return ZoneInfo(zone="ExDump", color="dark_red", label="Hard limit")
-    return ZoneInfo(zone="Dead", color="gray", label="Dead zone")
+        return ZoneInfo(
+            zone="ExDump", color="dark_red", label="Hard limit",
+            recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
+        )
+    return ZoneInfo(
+        zone="Dead", color="gray", label="Dead zone",
+        recommendation=_ZONE_RECOMMENDATIONS["Dead"],
+    )
 
 
 def get_mi_color(mi: float, utilization: float = 0.0) -> str:

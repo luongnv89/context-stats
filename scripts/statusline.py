@@ -55,14 +55,25 @@ MODEL_PROFILES = {
 
 # Zone indicator thresholds
 LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
-ZONE_1M_P_MAX = 70_000  # P zone: < 70k used
-ZONE_1M_C_MAX = 100_000  # C zone: 70k–100k used
-ZONE_1M_D_MAX = 250_000  # D zone: 100k–250k used
-ZONE_1M_X_MAX = 275_000  # X zone: 250k–275k used; Z zone: >= 275k
+# 1M thresholds recalibrated from observed context rot onset at 300-400k tokens.
+# Source: x.com/trq212/status/2044548257058328723
+ZONE_1M_P_MAX = 150_000  # P zone: < 150k used
+ZONE_1M_C_MAX = 250_000  # C zone: 150k–250k used
+ZONE_1M_D_MAX = 400_000  # D zone: 250k–400k used
+ZONE_1M_X_MAX = 450_000  # X zone: 400k–450k used; Z zone: >= 450k
 ZONE_STD_DUMP_ZONE = 0.40
 ZONE_STD_WARN_BUFFER = 30_000
 ZONE_STD_HARD_LIMIT = 0.70
 ZONE_STD_DEAD_ZONE = 0.75
+
+# Zone recommendation strings — one-line action guidance per zone
+_ZONE_RECOMMENDATIONS = {
+    "Plan": "Safe to plan and code",
+    "Code": "Avoid starting new tasks; finish current one",
+    "Dump": "Consider `/compact focus on X` or delegate to subagent",
+    "ExDump": "Run `/compact` now before quality degrades further",
+    "Dead": "Start a new session with `/clear`",
+}
 
 
 def get_model_profile(model_id):
@@ -104,11 +115,11 @@ def get_mi_color(mi, utilization=0.0):
 def get_context_zone(used_tokens, context_window_size, zone_config=None):
     """Determine context zone indicator based on token usage.
 
-    Returns (zone_word, color_name) tuple.
+    Returns (zone_word, color_name, recommendation) tuple.
     zone_config is an optional dict of threshold overrides (0 = use default).
     """
     if context_window_size == 0:
-        return ("Plan", "green")
+        return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
 
     zc = zone_config or {}
 
@@ -122,14 +133,14 @@ def get_context_zone(used_tokens, context_window_size, zone_config=None):
         x_max = zc.get("zone_1m_xdump_max") or ZONE_1M_X_MAX
 
         if used_tokens < p_max:
-            return ("Plan", "green")
+            return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
         if used_tokens < c_max:
-            return ("Code", "yellow")
+            return ("Code", "yellow", _ZONE_RECOMMENDATIONS["Code"])
         if used_tokens < d_max:
-            return ("Dump", "orange")
+            return ("Dump", "orange", _ZONE_RECOMMENDATIONS["Dump"])
         if used_tokens < x_max:
-            return ("ExDump", "dark_red")
-        return ("Dead", "gray")
+            return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
+        return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
 
     dump_ratio = zc.get("zone_std_dump_ratio") or ZONE_STD_DUMP_ZONE
     warn_buf = zc.get("zone_std_warn_buffer") or ZONE_STD_WARN_BUFFER
@@ -142,14 +153,14 @@ def get_context_zone(used_tokens, context_window_size, zone_config=None):
     dead_zone_tokens = int(context_window_size * dead_rat)
 
     if used_tokens < warn_start:
-        return ("Plan", "green")
+        return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
     if used_tokens < dump_zone_tokens:
-        return ("Code", "yellow")
+        return ("Code", "yellow", _ZONE_RECOMMENDATIONS["Code"])
     if used_tokens < hard_limit_tokens:
-        return ("Dump", "orange")
+        return ("Dump", "orange", _ZONE_RECOMMENDATIONS["Dump"])
     if used_tokens < dead_zone_tokens:
-        return ("ExDump", "dark_red")
-    return ("Dead", "gray")
+        return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
+    return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
 
 
 def _zone_ansi_color(color_name):
@@ -761,7 +772,7 @@ def main():
             free_display = f"{free_tokens / 1000:.1f}k"
 
         # Zone indicator — determines color for both context info and zone label
-        zone_word, zone_color_name = get_context_zone(
+        zone_word, zone_color_name, zone_recommendation = get_context_zone(
             used_tokens, total_size, config.get("zone_config")
         )
         zone_ansi = _zone_ansi_color(zone_color_name)

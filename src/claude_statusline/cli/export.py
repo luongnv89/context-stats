@@ -335,6 +335,7 @@ def _generate_exec_snapshot(
     start_time: str,
     end_time: str,
     interactions: int,
+    zone_recommendation: str = "",
 ) -> list[str]:
     """Generate a compact executive snapshot for the top of the report."""
     cache_total = last_entry.cache_creation + last_entry.cache_read
@@ -355,6 +356,10 @@ def _generate_exec_snapshot(
         f"| **Final usage** | **{format_tokens(final_used)}** ({final_pct:.1f}%) | Shows how close the session ended to the context limit. |",
         f"| **Final zone** | **{zone_label}** | Indicates whether the session stayed in a safe working range. |",
     ]
+    if zone_recommendation:
+        lines.append(
+            f"| **Recommendation** | {zone_recommendation} | Suggested next action based on context zone. |"
+        )
 
     if cache_total > 0:
         lines.append(
@@ -420,6 +425,7 @@ def _generate_markdown(entries: list, session_id: str, config: Config) -> str:
         start_time,
         end_time,
         len(entries),
+        zone_recommendation=zone.recommendation,
     )
     lines.extend(exec_snapshot)
 

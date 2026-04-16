@@ -12,6 +12,11 @@ from claude_statusline.graphs.intelligence import (
     MI_GREEN_THRESHOLD,
     MI_YELLOW_THRESHOLD,
     MODEL_PROFILES,
+    ZONE_1M_C_MAX,
+    ZONE_1M_D_MAX,
+    ZONE_1M_P_MAX,
+    ZONE_1M_X_MAX,
+    _ZONE_RECOMMENDATIONS,
     calculate_context_pressure,
     calculate_intelligence,
     format_mi_score,
@@ -278,66 +283,66 @@ class TestContextZone:
     # --- 1M model tests (context_window >= 500k) ---
 
     def test_1m_planning_zone(self):
-        """1M model, 50k used → P (green)."""
-        zone = get_context_zone(50_000, 1_000_000)
+        """1M model, 100k used → P (green). New threshold: < 150k."""
+        zone = get_context_zone(100_000, 1_000_000)
         assert zone.zone == "Plan"
         assert zone.color == "green"
 
     def test_1m_code_only_zone(self):
-        """1M model, 85k used → C (yellow)."""
-        zone = get_context_zone(85_000, 1_000_000)
+        """1M model, 200k used → C (yellow). New range: 150k–250k."""
+        zone = get_context_zone(200_000, 1_000_000)
         assert zone.zone == "Code"
         assert zone.color == "yellow"
 
     def test_1m_dump_zone(self):
-        """1M model, 150k used → D (orange)."""
-        zone = get_context_zone(150_000, 1_000_000)
+        """1M model, 300k used → D (orange). New range: 250k–400k."""
+        zone = get_context_zone(300_000, 1_000_000)
         assert zone.zone == "Dump"
         assert zone.color == "orange"
 
     def test_1m_hard_limit(self):
-        """1M model, 250k used → X (dark_red)."""
-        zone = get_context_zone(250_000, 1_000_000)
+        """1M model, 420k used → X (dark_red). New range: 400k–450k."""
+        zone = get_context_zone(420_000, 1_000_000)
         assert zone.zone == "ExDump"
         assert zone.color == "dark_red"
 
     def test_1m_dead_zone(self):
-        """1M model, 300k used → Z (gray)."""
-        zone = get_context_zone(300_000, 1_000_000)
+        """1M model, 460k used → Z (gray). New threshold: >= 450k."""
+        zone = get_context_zone(460_000, 1_000_000)
         assert zone.zone == "Dead"
         assert zone.color == "gray"
 
     # --- 1M boundary tests ---
 
     def test_1m_p_c_boundary(self):
-        """Boundary: exactly 70k → C (not P)."""
-        zone = get_context_zone(70_000, 1_000_000)
+        """Boundary: exactly 150k → C (not P)."""
+        zone = get_context_zone(ZONE_1M_P_MAX, 1_000_000)
         assert zone.zone == "Code"
-        zone_below = get_context_zone(69_999, 1_000_000)
+        zone_below = get_context_zone(ZONE_1M_P_MAX - 1, 1_000_000)
         assert zone_below.zone == "Plan"
 
     def test_1m_c_d_boundary(self):
-        """Boundary: exactly 100k → D (not C)."""
-        zone = get_context_zone(100_000, 1_000_000)
+        """Boundary: exactly 250k → D (not C)."""
+        zone = get_context_zone(ZONE_1M_C_MAX, 1_000_000)
         assert zone.zone == "Dump"
-        zone_below = get_context_zone(99_999, 1_000_000)
+        zone_below = get_context_zone(ZONE_1M_C_MAX - 1, 1_000_000)
         assert zone_below.zone == "Code"
 
     def test_1m_d_x_boundary(self):
-        """Boundary: exactly 250k → X."""
-        zone = get_context_zone(250_000, 1_000_000)
+        """Boundary: exactly 400k → X."""
+        zone = get_context_zone(ZONE_1M_D_MAX, 1_000_000)
         assert zone.zone == "ExDump"
-        zone_below = get_context_zone(249_999, 1_000_000)
+        zone_below = get_context_zone(ZONE_1M_D_MAX - 1, 1_000_000)
         assert zone_below.zone == "Dump"
 
     def test_1m_x_z_boundary(self):
-        """Boundary: 275k → Z (past X). X is 250k–275k range."""
-        zone = get_context_zone(275_000, 1_000_000)
+        """Boundary: exactly 450k → Z (past X). X is 400k–450k range."""
+        zone = get_context_zone(ZONE_1M_X_MAX, 1_000_000)
         assert zone.zone == "Dead"
-        zone_below = get_context_zone(274_999, 1_000_000)
+        zone_below = get_context_zone(ZONE_1M_X_MAX - 1, 1_000_000)
         assert zone_below.zone == "ExDump"
-        # 250001 is now within the X range (not Z)
-        zone_just_past_d = get_context_zone(250_001, 1_000_000)
+        # A token count just past D boundary is within X range
+        zone_just_past_d = get_context_zone(ZONE_1M_D_MAX + 1, 1_000_000)
         assert zone_just_past_d.zone == "ExDump"
 
     # --- Standard model tests (< 500k context) ---
@@ -380,27 +385,27 @@ class TestContextZone:
         assert zone.zone == "Plan"
         assert zone.color == "green"
 
-    # --- Use cases from issue ---
+    # --- Use cases from issue (updated for recalibrated 1M thresholds) ---
 
     def test_use_case_1(self):
-        """UC1: 1M model, 50k used → P."""
-        assert get_context_zone(50_000, 1_000_000).zone == "Plan"
+        """UC1: 1M model, 100k used → P (< 150k threshold)."""
+        assert get_context_zone(100_000, 1_000_000).zone == "Plan"
 
     def test_use_case_2(self):
-        """UC2: 1M model, 85k used → C."""
-        assert get_context_zone(85_000, 1_000_000).zone == "Code"
+        """UC2: 1M model, 200k used → C (150k–250k range)."""
+        assert get_context_zone(200_000, 1_000_000).zone == "Code"
 
     def test_use_case_3(self):
-        """UC3: 1M model, 150k used → D."""
-        assert get_context_zone(150_000, 1_000_000).zone == "Dump"
+        """UC3: 1M model, 300k used → D (250k–400k range)."""
+        assert get_context_zone(300_000, 1_000_000).zone == "Dump"
 
     def test_use_case_4(self):
-        """UC4: 1M model, 250k used → X."""
-        assert get_context_zone(250_000, 1_000_000).zone == "ExDump"
+        """UC4: 1M model, 420k used → X (400k–450k range)."""
+        assert get_context_zone(420_000, 1_000_000).zone == "ExDump"
 
     def test_use_case_5(self):
-        """UC5: 1M model, 300k used → Z."""
-        assert get_context_zone(300_000, 1_000_000).zone == "Dead"
+        """UC5: 1M model, 460k used → Z (>= 450k threshold)."""
+        assert get_context_zone(460_000, 1_000_000).zone == "Dead"
 
     def test_use_case_6(self):
         """UC6: 200k model, 50% used → D."""
@@ -430,35 +435,39 @@ class TestConfigurableZoneThresholds:
 
     def test_1m_custom_plan_max(self):
         """Custom zone_1m_plan_max shifts P→C boundary."""
-        # Default: 70k → Code. With plan_max=90k → still Plan.
-        zone = get_context_zone(80_000, 1_000_000, zone_1m_plan_max=90_000)
+        # Default: 200k → Plan (< 150k P_MAX is for 150k, so 200k → Code with default).
+        # With plan_max=210k → still Plan.
+        zone = get_context_zone(200_000, 1_000_000, zone_1m_plan_max=210_000)
         assert zone.zone == "Plan"
-        # Default would be Code
-        zone_default = get_context_zone(80_000, 1_000_000)
+        # Default: 200k → Code (150k–250k range)
+        zone_default = get_context_zone(200_000, 1_000_000)
         assert zone_default.zone == "Code"
 
     def test_1m_custom_code_max(self):
         """Custom zone_1m_code_max shifts C→D boundary."""
-        zone = get_context_zone(95_000, 1_000_000, zone_1m_code_max=80_000)
+        # 180k is within default C range (150k–250k). With code_max=160k → Dump.
+        zone = get_context_zone(180_000, 1_000_000, zone_1m_code_max=160_000)
         assert zone.zone == "Dump"
         # Default would be Code
-        zone_default = get_context_zone(95_000, 1_000_000)
+        zone_default = get_context_zone(180_000, 1_000_000)
         assert zone_default.zone == "Code"
 
     def test_1m_custom_dump_max(self):
         """Custom zone_1m_dump_max shifts D→X boundary."""
-        zone = get_context_zone(200_000, 1_000_000, zone_1m_dump_max=180_000)
+        # 350k is within default D range (250k–400k). With dump_max=300k → ExDump.
+        zone = get_context_zone(350_000, 1_000_000, zone_1m_dump_max=300_000)
         assert zone.zone == "ExDump"
         # Default would be Dump
-        zone_default = get_context_zone(200_000, 1_000_000)
+        zone_default = get_context_zone(350_000, 1_000_000)
         assert zone_default.zone == "Dump"
 
     def test_1m_custom_xdump_max(self):
         """Custom zone_1m_xdump_max shifts X→Z boundary."""
-        zone = get_context_zone(260_000, 1_000_000, zone_1m_xdump_max=255_000)
+        # 430k is within default X range (400k–450k). With xdump_max=420k → Dead.
+        zone = get_context_zone(430_000, 1_000_000, zone_1m_xdump_max=420_000)
         assert zone.zone == "Dead"
         # Default would be ExDump
-        zone_default = get_context_zone(260_000, 1_000_000)
+        zone_default = get_context_zone(430_000, 1_000_000)
         assert zone_default.zone == "ExDump"
 
     # --- Standard model overrides ---
@@ -495,14 +504,135 @@ class TestConfigurableZoneThresholds:
         """Custom large_model_threshold changes which model set is used."""
         # 400k context. Default threshold=500k → standard model.
         # With threshold=300k → treated as 1M model.
-        zone = get_context_zone(50_000, 400_000, large_model_threshold=300_000)
-        assert zone.zone == "Plan"  # Uses 1M thresholds (< 70k)
-        zone2 = get_context_zone(80_000, 400_000, large_model_threshold=300_000)
-        assert zone2.zone == "Code"  # 1M: 70k–100k
+        zone = get_context_zone(100_000, 400_000, large_model_threshold=300_000)
+        assert zone.zone == "Plan"  # Uses 1M thresholds (< 150k)
+        zone2 = get_context_zone(200_000, 400_000, large_model_threshold=300_000)
+        assert zone2.zone == "Code"  # 1M: 150k–250k
 
     # --- Zero override = use default ---
 
     def test_zero_override_uses_default(self):
         """Override of 0 falls back to module-level default."""
-        zone = get_context_zone(80_000, 1_000_000, zone_1m_plan_max=0)
-        assert zone.zone == "Code"  # Same as default (70k boundary)
+        # 200k is in the Code zone (150k–250k) with default thresholds.
+        zone = get_context_zone(200_000, 1_000_000, zone_1m_plan_max=0)
+        assert zone.zone == "Code"  # Same as default (150k boundary)
+
+
+class TestZoneRecommendations:
+    """Test that every ZoneInfo includes the correct recommendation string."""
+
+    def test_plan_recommendation(self):
+        """Plan zone has actionable recommendation."""
+        zone = get_context_zone(100_000, 1_000_000)
+        assert zone.zone == "Plan"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Plan"]
+        assert "plan" in zone.recommendation.lower()
+
+    def test_code_recommendation(self):
+        """Code zone recommendation advises against new tasks."""
+        zone = get_context_zone(200_000, 1_000_000)
+        assert zone.zone == "Code"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Code"]
+        assert "task" in zone.recommendation.lower()
+
+    def test_dump_recommendation(self):
+        """Dump zone recommendation mentions /compact or subagent."""
+        zone = get_context_zone(300_000, 1_000_000)
+        assert zone.zone == "Dump"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Dump"]
+        assert "compact" in zone.recommendation.lower()
+
+    def test_exdump_recommendation(self):
+        """ExDump zone recommendation urges immediate /compact."""
+        zone = get_context_zone(420_000, 1_000_000)
+        assert zone.zone == "ExDump"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["ExDump"]
+        assert "compact" in zone.recommendation.lower()
+
+    def test_dead_recommendation(self):
+        """Dead zone recommendation urges /clear."""
+        zone = get_context_zone(460_000, 1_000_000)
+        assert zone.zone == "Dead"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Dead"]
+        assert "clear" in zone.recommendation.lower()
+
+    def test_standard_model_plan_has_recommendation(self):
+        """Standard-model Plan zone also has a recommendation."""
+        zone = get_context_zone(20_000, 200_000)
+        assert zone.zone == "Plan"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Plan"]
+
+    def test_standard_model_dead_has_recommendation(self):
+        """Standard-model Dead zone also has a recommendation."""
+        zone = get_context_zone(150_000, 200_000)
+        assert zone.zone == "Dead"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Dead"]
+
+    def test_zero_context_has_recommendation(self):
+        """Guard clause (zero context window) returns a recommendation."""
+        zone = get_context_zone(0, 0)
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Plan"]
+
+    def test_all_zones_have_non_empty_recommendations(self):
+        """All five zones produce non-empty recommendation strings."""
+        # Sample one token value per zone for 1M model
+        test_cases = [
+            (100_000, 1_000_000, "Plan"),
+            (200_000, 1_000_000, "Code"),
+            (300_000, 1_000_000, "Dump"),
+            (420_000, 1_000_000, "ExDump"),
+            (460_000, 1_000_000, "Dead"),
+        ]
+        for used, window, expected_zone in test_cases:
+            zone = get_context_zone(used, window)
+            assert zone.zone == expected_zone
+            assert zone.recommendation, f"Zone {expected_zone} has empty recommendation"
+            assert len(zone.recommendation) > 5, f"Zone {expected_zone} recommendation too short"
+
+    def test_recommendations_match_zone_map(self):
+        """Recommendation strings in ZoneInfo match the module-level map."""
+        for used, window, expected_zone in [
+            (100_000, 1_000_000, "Plan"),
+            (200_000, 1_000_000, "Code"),
+            (300_000, 1_000_000, "Dump"),
+            (420_000, 1_000_000, "ExDump"),
+            (460_000, 1_000_000, "Dead"),
+        ]:
+            zone = get_context_zone(used, window)
+            assert zone.recommendation == _ZONE_RECOMMENDATIONS[expected_zone]
+
+
+class TestZone1MRecalibration:
+    """Verify recalibrated 1M thresholds match observed context rot boundary."""
+
+    def test_280k_is_still_dump_not_dead(self):
+        """280k tokens: old thresholds → Dead, new thresholds → Dump.
+        The Claude Code team observes rot at 300-400k, so 280k should not be Dead.
+        """
+        zone = get_context_zone(280_000, 1_000_000)
+        assert zone.zone == "Dump", (
+            f"280k should be Dump zone, not {zone.zone}. "
+            "Observed rot starts at 300-400k per Thariq's article."
+        )
+
+    def test_350k_is_still_dump_not_dead(self):
+        """350k tokens: at the observed rot boundary, should be Dump (not Dead)."""
+        zone = get_context_zone(350_000, 1_000_000)
+        assert zone.zone == "Dump"
+
+    def test_410k_enters_exdump(self):
+        """410k: past the 400k rot onset threshold, should be ExDump."""
+        zone = get_context_zone(410_000, 1_000_000)
+        assert zone.zone == "ExDump"
+
+    def test_460k_is_dead(self):
+        """460k: well past rot onset, Dead zone."""
+        zone = get_context_zone(460_000, 1_000_000)
+        assert zone.zone == "Dead"
+
+    def test_old_dead_threshold_now_dump(self):
+        """275k was old Dead threshold. Under new thresholds it should be Dump."""
+        zone = get_context_zone(275_000, 1_000_000)
+        assert zone.zone == "Dump", (
+            f"275k should be Dump with recalibrated thresholds, got {zone.zone}"
+        )
