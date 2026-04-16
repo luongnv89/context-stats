@@ -95,10 +95,13 @@ class TestNormalizeArgv:
 class TestRunSessions:
     """Test run_sessions listing."""
 
-    def test_no_sessions_found(self, tmp_path):
+    def test_no_sessions_found(self, tmp_path, capsys):
         colors = ColorManager(enabled=False)
         with patch.object(StateFile, "STATE_DIR", tmp_path):
             run_sessions(5, colors)
+        output = capsys.readouterr().out
+        assert "No sessions found" in output
+        assert "5 minute" in output
 
     def test_lists_recent_sessions(self, tmp_path):
         colors = ColorManager(enabled=False)
@@ -127,7 +130,7 @@ class TestRunSessions:
         with patch.object(StateFile, "STATE_DIR", tmp_path):
             run_sessions(5, colors)
 
-    def test_filters_old_sessions(self, tmp_path):
+    def test_filters_old_sessions(self, tmp_path, capsys):
         colors = ColorManager(enabled=False)
 
         # Create a state file and set its mtime to 10 minutes ago
@@ -159,6 +162,9 @@ class TestRunSessions:
         with patch.object(StateFile, "STATE_DIR", tmp_path):
             # With 5-minute window, the 10-minute-old session should not appear
             run_sessions(5, colors)
+        output = capsys.readouterr().out
+        assert "old-session" not in output
+        assert "No sessions found" in output
 
     def test_sorts_by_most_recent(self, tmp_path, capsys):
         colors = ColorManager(enabled=False)

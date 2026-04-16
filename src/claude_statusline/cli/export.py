@@ -600,7 +600,7 @@ def run_export(argv: list[str]) -> None:
     session_id = args.session_id
     if not session_id:
         name = file_path.stem  # statusline.{session_id}
-        session_id = name[11:] if name.startswith("statusline.") else name
+        session_id = name.removeprefix("statusline.")
 
     # Generate markdown
     markdown = _generate_markdown(entries, session_id, config)

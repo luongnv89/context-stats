@@ -372,7 +372,7 @@ def render_once(
 
     # Get session name and project from entries
     file_path = state_file.find_latest_state_file()
-    session_name = file_path.stem.replace("statusline.", "") if file_path else "unknown"
+    session_name = file_path.stem.removeprefix("statusline.") if file_path else "unknown"
 
     # Get project name from the last entry (most recent)
     last_entry = entries[-1]
@@ -681,7 +681,7 @@ def run_sessions(minutes: int, colors: ColorManager) -> None:
         if mtime >= cutoff:
             name = file_path.stem
             if name.startswith("statusline."):
-                session_id = name[11:]
+                session_id = name.removeprefix("statusline.")
                 if session_id:
                     sessions.append((mtime, session_id, file_path))
 
@@ -794,7 +794,7 @@ def main() -> None:
             sf = StateFile(None)
             latest = sf.find_latest_state_file()
             if latest:
-                session_id = latest.stem.replace("statusline.", "")
+                session_id = latest.stem.removeprefix("statusline.")
             else:
                 sys.stderr.write("Error: No session data found. Cannot start cache-warm.\n")
                 sys.exit(1)
@@ -807,20 +807,40 @@ def main() -> None:
     if args.action == "sessions":
         color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
         colors = ColorManager(enabled=color_enabled)
+        if args.session_id is not None:
+            sys.stderr.write(
+                f"Error: 'sessions' does not accept a session_id (got '{args.session_id}')\n"
+            )
+            sys.exit(1)
         # Parse --minutes flag from remaining args
         minutes = 5
         remaining = args.remaining if hasattr(args, "remaining") else []
         i = 0
         while i < len(remaining):
-            if remaining[i] == "--minutes" and i + 1 < len(remaining):
+            arg = remaining[i]
+            if arg == "--minutes":
+                if i + 1 >= len(remaining):
+                    sys.stderr.write("Error: --minutes requires a value\n")
+                    sys.exit(1)
                 try:
                     minutes = int(remaining[i + 1])
                 except ValueError:
                     sys.stderr.write(f"Error: Invalid value for --minutes: '{remaining[i + 1]}'\n")
                     sys.exit(1)
+                if minutes <= 0:
+                    sys.stderr.write(
+                        f"Error: --minutes must be a positive integer (got {minutes})\n"
+                    )
+                    sys.exit(1)
                 i += 2
-            else:
+            elif arg == "--no-color":
                 i += 1
+            elif arg.startswith("-"):
+                sys.stderr.write(f"Error: Unknown flag for sessions: '{arg}'\n")
+                sys.exit(1)
+            else:
+                sys.stderr.write(f"Error: Unexpected argument for sessions: '{arg}'\n")
+                sys.exit(1)
         run_sessions(minutes, colors)
         return
 

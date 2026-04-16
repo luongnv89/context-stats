@@ -321,7 +321,7 @@ class StateFile:
         for file_path in self.STATE_DIR.glob("statusline.*.state"):
             name = file_path.stem  # statusline.{session_id}
             if name.startswith("statusline."):
-                session_id = name[11:]  # Remove "statusline." prefix
+                session_id = name.removeprefix("statusline.")
                 if session_id:
                     sessions.append(session_id)
         return sessions
