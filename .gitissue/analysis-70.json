@@ -1,0 +1,35 @@
+{
+  "issue": 70,
+  "title": "Add tok/s (tokens/sec) display to statusline",
+  "type": "feature",
+  "complexity": "medium",
+  "decision_record": {
+    "gating_fact": "Claude Code's statusline JSON exposes `cost.total_api_duration_ms` (\"Total time spent waiting for API responses\" — pure model generation time, excludes user idle/tool/thinking time). This is confirmed by the repo's own fixture tests/fixtures/json/valid_full.json and the official Claude Code statusline docs. The existing code never reads this field.",
+    "data_constraint": "Per official docs, as of Claude Code v2.1.132 `context_window.total_output_tokens` reflects CURRENT context usage, not cumulative session totals. Therefore total_output_tokens (cumulative-looking) cannot be paired with cumulative total_api_duration_ms. However `current_usage.output_tokens` has ALWAYS meant 'this request's output' and is version-stable.",
+    "chosen_formula": "tok/s = current_usage.output_tokens / (delta(total_api_duration_ms) / 1000), where delta is between the current row and the previous persisted CSV row. Per-response numerator matched to per-response API-time delta. Excludes idle/tool time -> genuine model throughput.",
+    "rejected_alternatives": [
+      "CSV-delta of context tokens / wall-clock time: folds user idle time into denominator, fails AC#2 'accurate current throughput', misrepresents 'speed of the model'.",
+      "Single-snapshot total_output_tokens / total_api_duration_ms: only valid pre-v2.1.132 (when output was cumulative); divides point-in-time numerator by cumulative denominator on current versions -> garbage."
+    ],
+    "csv_change": "Requires persisting total_api_duration_ms as a NEW CSV field index 14 (15th field). Backward-compatible: all readers (core/state.py from_csv_line, scripts hand-indexing) use len(parts) > N guards, so old 14-field rows parse with new field defaulting to 0, and old readers ignore the extra field. CSV_FORMAT.md bumped 14 -> 15.",
+    "config": "New keys (default OFF, like show_mi): show_tps (bool), tps_precision (int, default 1), tps_unit (str, default 'tok/s'). Added in BOTH config paths.",
+    "guards": [
+      "delta_api > 0 before dividing (avoid div-by-zero on same-response double refresh)",
+      "prev_api_duration > 0 required (skip display one cycle after upgrade so we difference two REAL readings, not 0 vs cumulative)",
+      "cost.total_api_duration_ms absent in minimal payloads / old CC versions -> hide tok/s gracefully",
+      "widen outer state read/write gate from `show_delta or show_mi` to `... or show_tps` so tok/s-alone still reads prev row and persists api_duration"
+    ]
+  },
+  "sync_points": [
+    "scripts/statusline.py: read_config dict + parse branches + inline conf template + JSON read + state_data write list + prev-row hand-index (csv_parts[14]) + render segment + outer gate",
+    "src/claude_statusline/cli/statusline.py: JSON read + StateEntry build + render segment + outer gate",
+    "src/claude_statusline/core/state.py: StateEntry dataclass field + from_csv_line (parts[14], len-guarded) + to_csv_line",
+    "src/claude_statusline/core/config.py: dataclass fields + _read_config branches + to_dict + minimal fallback + data/statusline.conf.default",
+    "shared compute helper: graphs/statistics.py (package) + compute_tps() (standalone)"
+  ],
+  "acceptance_criteria": [
+    "Statusline displays model throughput as tok/s while a model is running -> compute fn + render segment in both paths",
+    "Clear units ('tok/s') and reflects current throughput; accurate -> per-response api_duration delta, idle excluded",
+    "Config to enable/disable + formatting (unit, precision) -> show_tps + tps_unit + tps_precision in both config paths"
+  ]
+}

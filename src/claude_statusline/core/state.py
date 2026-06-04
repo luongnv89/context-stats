@@ -28,6 +28,7 @@ class StateEntry:
     model_id: str
     workspace_project_dir: str
     context_window_size: int
+    api_duration_ms: int = 0
 
     @classmethod
     def from_csv_line(cls, line: str) -> StateEntry | None:
@@ -96,6 +97,7 @@ class StateEntry:
                 model_id=parts[11] if len(parts) > 11 else "",
                 workspace_project_dir=parts[12] if len(parts) > 12 else "",
                 context_window_size=safe_int(parts[13] if len(parts) > 13 else ""),
+                api_duration_ms=safe_int(parts[14] if len(parts) > 14 else ""),
             )
 
         except (ValueError, IndexError):
@@ -120,6 +122,7 @@ class StateEntry:
                 self.model_id,
                 self.workspace_project_dir.replace(",", "_"),
                 self.context_window_size,
+                self.api_duration_ms,
             ]
         )
 

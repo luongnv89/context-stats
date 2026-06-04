@@ -68,6 +68,10 @@ show_io_tokens=true
 reduced_motion=false
 show_mi=false
 mi_curve_beta=0
+show_tps=false
+tps_precision=1
+tps_unit=tok/s
+tps_window=5
 """
 
 
@@ -100,6 +104,12 @@ class Config:
     reduced_motion: bool = False
     show_mi: bool = False
     mi_curve_beta: float = 0.0  # 0 = use model-specific profile default
+
+    # Model throughput display (tokens per second)
+    show_tps: bool = False
+    tps_precision: int = 1  # decimal places for the tok/s value
+    tps_unit: str = "tok/s"  # unit label appended to the value
+    tps_window: int = 5  # number of recent turns averaged for rolling tok/s
 
     # Zone threshold overrides (0 = use defaults from intelligence.py)
     zone_1m_plan_max: int = 0
@@ -194,6 +204,40 @@ class Config:
                         self.mi_curve_beta = float(raw_value)
                     except ValueError:
                         pass
+                elif key == "show_tps":
+                    self.show_tps = value_lower != "false"
+                elif key == "tps_precision":
+                    try:
+                        v = int(raw_value)
+                        if v >= 0:
+                            self.tps_precision = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: tps_precision must be >= 0, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for tps_precision: "
+                            f"'{raw_value}'\n"
+                        )
+                elif key == "tps_unit":
+                    if raw_value:
+                        self.tps_unit = raw_value
+                elif key == "tps_window":
+                    try:
+                        v = int(raw_value)
+                        if v >= 1:
+                            self.tps_window = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: tps_window must be >= 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for tps_window: '{raw_value}'\n"
+                        )
                 elif key in _ZONE_INT_KEYS:
                     try:
                         v = int(raw_value)
@@ -262,6 +306,10 @@ class Config:
             "reduced_motion": self.reduced_motion,
             "show_mi": self.show_mi,
             "mi_curve_beta": self.mi_curve_beta,
+            "show_tps": self.show_tps,
+            "tps_precision": self.tps_precision,
+            "tps_unit": self.tps_unit,
+            "tps_window": self.tps_window,
             "zone_1m_plan_max": self.zone_1m_plan_max,
             "zone_1m_code_max": self.zone_1m_code_max,
             "zone_1m_dump_max": self.zone_1m_dump_max,

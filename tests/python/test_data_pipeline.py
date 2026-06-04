@@ -15,22 +15,23 @@ from claude_statusline.graphs.statistics import (
 
 def _make_entry(**kwargs) -> StateEntry:
     """Factory for StateEntry with sensible defaults."""
-    defaults = dict(
-        timestamp=1710288000,
-        total_input_tokens=75000,
-        total_output_tokens=8500,
-        current_input_tokens=50000,
-        current_output_tokens=5000,
-        cache_creation=10000,
-        cache_read=20000,
-        cost_usd=0.05234,
-        lines_added=250,
-        lines_removed=45,
-        session_id="abc-123-def",
-        model_id="claude-opus-4-5",
-        workspace_project_dir="/home/user/my-project",
-        context_window_size=200000,
-    )
+    defaults = {
+        "timestamp": 1710288000,
+        "total_input_tokens": 75000,
+        "total_output_tokens": 8500,
+        "current_input_tokens": 50000,
+        "current_output_tokens": 5000,
+        "cache_creation": 10000,
+        "cache_read": 20000,
+        "cost_usd": 0.05234,
+        "lines_added": 250,
+        "lines_removed": 45,
+        "session_id": "abc-123-def",
+        "model_id": "claude-opus-4-5",
+        "workspace_project_dir": "/home/user/my-project",
+        "context_window_size": 200000,
+        "api_duration_ms": 5000,
+    }
     defaults.update(kwargs)
     return StateEntry(**defaults)
 
@@ -59,7 +60,7 @@ def _render_summary_output(entries, deltas=None, graph_type=None):
 class TestStateEntryRoundTrip:
     """Tests for StateEntry.from_csv_line and to_csv_line."""
 
-    def test_full_14_field_round_trip(self):
+    def test_full_field_round_trip(self):
         original = _make_entry()
         csv_line = original.to_csv_line()
         parsed = StateEntry.from_csv_line(csv_line)
@@ -78,6 +79,18 @@ class TestStateEntryRoundTrip:
         assert parsed.model_id == original.model_id
         assert parsed.workspace_project_dir == original.workspace_project_dir
         assert parsed.context_window_size == original.context_window_size
+        assert parsed.api_duration_ms == original.api_duration_ms
+
+    def test_legacy_14_field_row_defaults_api_duration_to_zero(self):
+        """A pre-existing 14-field row (no api_duration_ms) parses with 0."""
+        line = (
+            "1710288000,75000,8500,50000,5000,10000,20000,0.05234,250,45,"
+            "abc-123-def,claude-opus-4-5,/home/user/my-project,200000"
+        )
+        entry = StateEntry.from_csv_line(line)
+        assert entry is not None
+        assert entry.context_window_size == 200000
+        assert entry.api_duration_ms == 0
 
     def test_old_format_two_fields(self):
         entry = StateEntry.from_csv_line("1710288000,50000")
@@ -90,12 +103,12 @@ class TestStateEntryRoundTrip:
         assert entry.context_window_size == 0
 
     def test_old_format_round_trip_expands(self):
-        """Old 2-field format expands to 14 fields on serialize."""
+        """Old 2-field format expands to the full field set on serialize."""
         entry = StateEntry.from_csv_line("1710288000,50000")
         assert entry is not None
         csv_line = entry.to_csv_line()
         parts = csv_line.split(",")
-        assert len(parts) == 14
+        assert len(parts) == 15
 
     def test_empty_string_returns_none(self):
         assert StateEntry.from_csv_line("") is None
