@@ -123,3 +123,69 @@ def calculate_deltas(values: list[int]) -> list[int]:
         deltas.append(max(0, delta))
 
     return deltas
+
+
+def compute_tps(
+    current_output_tokens: int,
+    api_duration_ms: int,
+    prev_api_duration_ms: int,
+) -> float | None:
+    """Compute model throughput in tokens per second.
+
+    Throughput is measured as the most recent API response's output tokens
+    divided by the API time that response took. The API time is derived from
+    the delta of the cumulative ``cost.total_api_duration_ms`` field between
+    the current and previous state rows. ``total_api_duration_ms`` is "time
+    spent waiting for API responses", so it excludes user idle time, tool
+    execution, and thinking — yielding genuine model generation speed.
+
+    The numerator uses ``current_usage.output_tokens`` (the most recent
+    response's output) rather than a cumulative total, because as of Claude
+    Code v2.1.132 ``context_window.total_output_tokens`` reflects current
+    context usage, not a session total. ``current_usage.output_tokens`` has
+    always meant "this request", so it stays aligned with the per-response
+    API-time delta across versions.
+
+    Args:
+        current_output_tokens: Output tokens of the most recent response
+            (``current_usage.output_tokens``).
+        api_duration_ms: Cumulative API wait time so far
+            (``cost.total_api_duration_ms``).
+        prev_api_duration_ms: Cumulative API wait time from the previous
+            state row.
+
+    Returns:
+        Throughput in tokens/second, or ``None`` when it cannot be computed
+        meaningfully (no output, no prior reading, or non-positive elapsed
+        API time). ``None`` signals "hide the display this cycle".
+    """
+    # Need a real previous reading to difference against. A zero previous
+    # value means either no prior row or a legacy row without the field —
+    # differencing against it would understate throughput badly.
+    if prev_api_duration_ms <= 0:
+        return None
+
+    delta_ms = api_duration_ms - prev_api_duration_ms
+    if delta_ms <= 0:
+        # Same response refreshed twice, or no new API time elapsed.
+        return None
+
+    if current_output_tokens <= 0:
+        return None
+
+    return current_output_tokens / (delta_ms / 1000.0)
+
+
+def format_tps(tps: float, precision: int = 1, unit: str = "tok/s") -> str:
+    """Format a tokens-per-second value for display.
+
+    Args:
+        tps: Throughput in tokens per second.
+        precision: Number of decimal places (clamped to >= 0).
+        unit: Unit label appended after the value (e.g. ``"tok/s"``).
+
+    Returns:
+        Formatted string like ``"42.5 tok/s"``.
+    """
+    precision = max(0, precision)
+    return f"{tps:.{precision}f} {unit}"

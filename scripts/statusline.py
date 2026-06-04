@@ -24,7 +24,7 @@ State file format (CSV):
   timestamp,total_input_tokens,total_output_tokens,current_usage_input_tokens,
   current_usage_output_tokens,current_usage_cache_creation,current_usage_cache_read,
   total_cost_usd,total_lines_added,total_lines_removed,session_id,model_id,
-  workspace_project_dir,context_window_size
+  workspace_project_dir,context_window_size,total_api_duration_ms
 """
 
 import json
@@ -105,6 +105,44 @@ def compute_mi(used_tokens, context_window_size, model_id="", beta_override=0.0)
     if u <= 0:
         return 1.0
     return max(0.0, 1.0 - u**beta)
+
+
+def compute_tps(current_output_tokens, api_duration_ms, prev_api_duration_ms):
+    """Compute model throughput in tokens per second.
+
+    Throughput = most recent response's output tokens / the API time that
+    response took. API time comes from the delta of the cumulative
+    cost.total_api_duration_ms ("time spent waiting for API responses")
+    between the current and previous state rows, so it excludes user idle
+    time, tool execution, and thinking — genuine model generation speed.
+
+    The numerator uses current_usage.output_tokens (this response's output),
+    not a cumulative total: as of Claude Code v2.1.132,
+    context_window.total_output_tokens reflects current context usage rather
+    than a session total, while current_usage.output_tokens has always meant
+    "this request" and stays aligned with the per-response API-time delta.
+
+    Returns tokens/second, or None when it cannot be computed meaningfully
+    (no output, no prior reading, or non-positive elapsed API time) — None
+    means "hide the display this cycle".
+    """
+    # Need a real previous reading. A zero previous value means no prior row
+    # or a legacy row without the field; differencing against it understates.
+    if prev_api_duration_ms <= 0:
+        return None
+    delta_ms = api_duration_ms - prev_api_duration_ms
+    if delta_ms <= 0:
+        # Same response refreshed twice, or no new API time elapsed.
+        return None
+    if current_output_tokens <= 0:
+        return None
+    return current_output_tokens / (delta_ms / 1000.0)
+
+
+def format_tps(tps, precision=1, unit="tok/s"):
+    """Format a tokens-per-second value for display (e.g. '42.5 tok/s')."""
+    precision = max(0, precision)
+    return f"{tps:.{precision}f} {unit}"
 
 
 def get_mi_color(mi, utilization=0.0):
@@ -419,6 +457,9 @@ def read_config():
         "reduced_motion": False,
         "show_mi": False,
         "mi_curve_beta": 0.0,
+        "show_tps": False,
+        "tps_precision": 1,
+        "tps_unit": "tok/s",
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -512,6 +553,33 @@ show_mi=false
 # Set to 0 to use the model-specific profile (recommended).
 # Set a positive value (e.g., 1.5) to override for all models.
 mi_curve_beta=0
+
+
+# ─── Model Throughput (tok/s) ───────────────────────────────────────────────
+#
+# Displays the model's generation speed in tokens per second (e.g., 42.5 tok/s).
+# Speed is measured from the time spent waiting for API responses
+# (cost.total_api_duration_ms), so it reflects pure model throughput and
+# excludes your idle time, tool execution, and thinking. It updates once a new
+# API response has been received and is hidden until a reading is available.
+#
+# Like MI, this requires state file I/O for tracking across refreshes.
+
+# Show model throughput in the statusline (e.g., 42.5 tok/s).
+#   false = throughput hidden (default)
+#   true  = throughput visible
+show_tps=false
+
+# Number of decimal places for the throughput value.
+#   0 -> "42 tok/s"
+#   1 -> "42.5 tok/s" (default)
+#   2 -> "42.53 tok/s"
+tps_precision=1
+
+# Unit label appended after the throughput value.
+#   tok/s    (default)
+#   tokens/s (more explicit)
+tps_unit=tok/s
 
 
 # ─── Zone Threshold Overrides ───────────────────────────────────────────────
@@ -622,20 +690,21 @@ color_separator=dim
 #
 # The statusline elements are displayed in this order (highest priority first):
 #
-#   project_name | branch [changes] | tokens_free (%) | Zone | MI:score | +delta | Model | session_id
+#   project_name | branch [changes] | tokens_free (%) | Zone | MI:score | tok/s | +delta | Model | session_id
 #
 # Example output:
-#   my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
+#   my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | 42.5 tok/s | +2,500 | Opus 4.6 | abc-123
 #
 # If the terminal is too narrow, lower-priority elements are dropped:
 #   1. session_id   (dropped first)
 #   2. model name
 #   3. token delta
-#   4. MI score
-#   5. zone indicator
-#   6. context info
-#   7. git info
-#   8. project name  (always shown, never dropped)
+#   4. tok/s throughput
+#   5. MI score
+#   6. zone indicator
+#   7. context info
+#   8. git info
+#   9. project name  (always shown, never dropped)
 """
                 )
         except Exception as e:
@@ -674,6 +743,26 @@ color_separator=dim
                         config["mi_curve_beta"] = float(raw_value)
                     except ValueError:
                         pass
+                elif key == "show_tps":
+                    config["show_tps"] = value_lower != "false"
+                elif key == "tps_precision":
+                    try:
+                        v = int(raw_value)
+                        if v >= 0:
+                            config["tps_precision"] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: tps_precision must be >= 0, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for tps_precision: "
+                            f"'{raw_value}'\n"
+                        )
+                elif key == "tps_unit":
+                    if raw_value:
+                        config["tps_unit"] = raw_value
                 elif key in _COLOR_KEYS:
                     ansi = _parse_color(raw_value)
                     if ansi:
@@ -746,6 +835,9 @@ def main():
     show_session = config["show_session"]
     show_mi = config["show_mi"]
     mi_curve_beta = config["mi_curve_beta"]
+    show_tps = config["show_tps"]
+    tps_precision = config["tps_precision"]
+    tps_unit = config["tps_unit"]
     # Note: show_io_tokens setting is read but not yet implemented
 
     # Apply color overrides from config
@@ -776,6 +868,7 @@ def main():
     context_info = ""
     delta_info = ""
     mi_info = ""
+    tps_info = ""
     zone_info = ""
     session_info = ""
     total_size = data.get("context_window", {}).get("context_window_size", 0)
@@ -785,6 +878,7 @@ def main():
     cost_usd = data.get("cost", {}).get("total_cost_usd", 0)
     lines_added = data.get("cost", {}).get("total_lines_added", 0)
     lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
+    api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
     model_id = data.get("model", {}).get("id", "")
     workspace_project_dir = data.get("workspace", {}).get("project_dir", "")
 
@@ -833,8 +927,10 @@ def main():
         effective_zone_color = c.get("zone", zone_ansi)
         zone_info = f" | {effective_zone_color}{zone_word}{RESET}"
 
-        # Read previous entry if needed for delta OR MI
-        if show_delta or show_mi:
+        # Read previous entry if needed for delta, MI, or throughput (tok/s).
+        # tok/s needs the previous row (for the API-time delta) and persists
+        # the current api_duration for the next refresh, so it widens this gate.
+        if show_delta or show_mi or show_tps:
             import glob
             import shutil
             import time
@@ -857,6 +953,7 @@ def main():
                 state_file = os.path.join(state_dir, "statusline.state")
             has_prev = False
             prev_tokens = 0
+            prev_api_duration = 0
             try:
                 if os.path.exists(state_file):
                     has_prev = True
@@ -874,12 +971,16 @@ def main():
                                 prev_cache_creation = int(csv_parts[5]) if len(csv_parts) > 5 else 0
                                 prev_cache_read = int(csv_parts[6]) if len(csv_parts) > 6 else 0
                                 prev_tokens = prev_cur_input + prev_cache_creation + prev_cache_read
+                                # Previous cumulative API wait time (CSV index 14).
+                                # Absent on legacy rows -> 0 -> tok/s hidden one cycle.
+                                prev_api_duration = int(csv_parts[14]) if len(csv_parts) > 14 else 0
                             else:
                                 # Old format - single value
                                 prev_tokens = int(last_line or 0)
             except (OSError, ValueError) as e:
                 sys.stderr.write(f"[statusline] warning: failed to read state file: {e}\n")
                 prev_tokens = 0
+                prev_api_duration = 0
 
             # Calculate and display token delta if enabled
             if show_delta:
@@ -899,6 +1000,14 @@ def main():
                 # Use per-property mi_score color if configured, else MI-based color
                 effective_mi_color = c.get("mi_score", mi_color)
                 mi_info = f" | {effective_mi_color}MI:{mi_val:.3f}{RESET}"
+
+            # Calculate and display model throughput (tok/s) if enabled
+            if show_tps:
+                cur_output = current_usage.get("output_tokens", 0)
+                tps = compute_tps(cur_output, api_duration_ms, prev_api_duration)
+                if tps is not None:
+                    tps_display = format_tps(tps, tps_precision, tps_unit)
+                    tps_info = f" | {c_separator}{tps_display}{RESET}"
 
             # Only append if context usage changed (avoid duplicates from multiple refreshes)
             if not has_prev or used_tokens != prev_tokens:
@@ -922,6 +1031,7 @@ def main():
                             model_id,
                             workspace_project_dir.replace(",", "_"),
                             total_size,
+                            api_duration_ms,
                         ]
                     )
                     with open(state_file, "a") as f:
@@ -934,12 +1044,22 @@ def main():
     if show_session and session_id:
         session_info = f" | {c_separator}{session_id}{RESET}"
 
-    # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [session_id]
+    # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | [Model] [id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     model_info = f" | {c_separator}{model}{RESET}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, model_info, session_info]
+    parts = [
+        base,
+        git_info,
+        context_info,
+        zone_info,
+        mi_info,
+        tps_info,
+        delta_info,
+        model_info,
+        session_info,
+    ]
     print(fit_to_width(parts, max_width))
 
 

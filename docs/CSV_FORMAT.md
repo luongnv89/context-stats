@@ -1,6 +1,6 @@
 # CSV State File Format
 
-State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. Each line is a CSV record with 14 comma-separated fields.
+State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. Each line is a CSV record with 15 comma-separated fields.
 
 ## Field Specification
 
@@ -20,6 +20,7 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 | 11 | `model_id` | string | Model identifier (e.g., `claude-opus-4-5`) |
 | 12 | `workspace_project_dir` | string | Project directory path (commas replaced with underscores) |
 | 13 | `context_window_size` | integer | Context window size in tokens |
+| 14 | `api_duration_ms` | integer | Cumulative API wait time in milliseconds (`cost.total_api_duration_ms`); powers the tok/s throughput display |
 
 ## Constraints
 
@@ -35,8 +36,10 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 
 Older state files may contain 2-field lines: `timestamp,total_input_tokens`. The reader defaults all other fields to zero/empty for these lines.
 
+State files written before the `api_duration_ms` field was added contain 14 fields (through `context_window_size`). The reader defaults `api_duration_ms` to `0` for these lines, and field access is length-guarded so both 14- and 15-field rows parse correctly. Conversely, older readers ignore the extra trailing field, so the change is backward-compatible in both directions.
+
 ## Example
 
 ```
-1710288000,75000,8500,50000,5000,10000,20000,0.05234,250,45,abc-123-def,claude-opus-4-5,/home/user/my-project,200000
+1710288000,75000,8500,50000,5000,10000,20000,0.05234,250,45,abc-123-def,claude-opus-4-5,/home/user/my-project,200000,5000
 ```

@@ -70,6 +70,7 @@ def main() -> None:
     context_info = ""
     delta_info = ""
     mi_info = ""
+    tps_info = ""
     zone_info = ""
     session_info = ""
 
@@ -80,6 +81,7 @@ def main() -> None:
     cost_usd = data.get("cost", {}).get("total_cost_usd", 0)
     lines_added = data.get("cost", {}).get("total_lines_added", 0)
     lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
+    api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
     model_id = data.get("model", {}).get("id", "")
     workspace_project_dir = data.get("workspace", {}).get("project_dir", "")
 
@@ -140,12 +142,16 @@ def main() -> None:
         effective_zone_color = prop_zone_color if prop_zone_color else zone_color
         zone_info = f" | {effective_zone_color}{zone_result.zone}{colors.reset}"
 
-        # State file management for delta display and history recording
-        if config.show_delta or config.show_mi:
+        # State file management for delta/MI/throughput display and history.
+        # tok/s also needs the previous row (for the API-time delta) and must
+        # persist the current api_duration for the next refresh, so it widens
+        # this gate alongside show_delta / show_mi.
+        if config.show_delta or config.show_mi or config.show_tps:
             state_file = StateFile(session_id)
             prev_entry = state_file.read_last_entry()
             has_prev = prev_entry is not None
             prev_tokens = prev_entry.current_used_tokens if prev_entry else 0
+            prev_api_duration = prev_entry.api_duration_ms if prev_entry else 0
 
             # Build current entry
             cur_input_tokens = current_usage.get("input_tokens", 0)
@@ -166,6 +172,7 @@ def main() -> None:
                 model_id=model_id,
                 workspace_project_dir=workspace_project_dir,
                 context_window_size=total_size,
+                api_duration_ms=api_duration_ms,
             )
 
             # Calculate and display token delta if enabled
@@ -191,6 +198,15 @@ def main() -> None:
                 effective_mi_color = prop_mi_color if prop_mi_color else mi_color
                 mi_info = f" | {effective_mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
 
+            # Calculate model throughput (tok/s) from the API-time delta
+            if config.show_tps:
+                from claude_statusline.graphs.statistics import compute_tps, format_tps
+
+                tps = compute_tps(cur_output_tokens, api_duration_ms, prev_api_duration)
+                if tps is not None:
+                    tps_display = format_tps(tps, config.tps_precision, config.tps_unit)
+                    tps_info = f" | {colors.separator}{tps_display}{colors.reset}"
+
             # Only append if context usage changed (avoid duplicates)
             if not has_prev or used_tokens != prev_tokens:
                 state_file.append_entry(entry)
@@ -204,7 +220,17 @@ def main() -> None:
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     model_info = f" | {colors.separator}{model}{colors.reset}"
     max_width = get_terminal_width()
-    parts = [base, git_info, context_info, zone_info, mi_info, delta_info, model_info, session_info]
+    parts = [
+        base,
+        git_info,
+        context_info,
+        zone_info,
+        mi_info,
+        tps_info,
+        delta_info,
+        model_info,
+        session_info,
+    ]
     print(fit_to_width(parts, max_width))
 
 
