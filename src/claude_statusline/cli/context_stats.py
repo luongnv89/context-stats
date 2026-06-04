@@ -17,7 +17,8 @@ Actions:
     cache-warm  Keep session prompt cache alive via a background heartbeat
 
 Options:
-    --type <cumulative|delta|io|both|all>  Graph type to display (default: delta)
+    --type <cumulative|delta|io|cache|mi|tps|both|all>  Graph type (default: delta)
+    --minutes N                             Limit --type tps trend to last N minutes
     --watch, -w [interval]                  Real-time monitoring mode (default: 2s)
     --no-color                              Disable color output
     --version, -V                           Show version and exit
@@ -37,7 +38,13 @@ from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.state import StateFile, _validate_session_id
 from claude_statusline.graphs.renderer import GraphDimensions, GraphRenderer
-from claude_statusline.graphs.statistics import calculate_deltas, detect_compaction_events
+from claude_statusline.graphs.statistics import (
+    calculate_deltas,
+    compute_tps,
+    compute_tps_series,
+    detect_compaction_events,
+    format_tps,
+)
 from claude_statusline.ui.icons import get_activity_tier, get_tier_label
 from claude_statusline.ui.waiting import get_waiting_text, is_active
 
@@ -86,8 +93,10 @@ GRAPH OPTIONS:
                    - io: Input/output tokens over time
                    - cache: Cache creation/read tokens over time
                    - mi: Model Intelligence score over time
+                   - tps: Throughput (tokens/s) trend over time
                    - both: Show cumulative and delta graphs
-                   - all: Show all graphs including I/O, cache, and MI
+                   - all: Show all graphs including I/O, cache, MI, and tps
+    --minutes N    For --type tps: limit the trend to the last N minutes
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
 
@@ -124,6 +133,12 @@ EXAMPLES:
 
     # Show only cumulative graph
     context-stats abc123def graph --type cumulative
+
+    # Show the throughput (tokens/s) trend graph
+    context-stats graph --type tps
+
+    # Throughput trend limited to the last 5 minutes
+    context-stats graph --type tps --minutes 5
 
     # Show graphs with custom refresh interval
     context-stats abc123def graph -w 5
@@ -239,9 +254,18 @@ def _build_graph_parser() -> argparse.ArgumentParser:
     parser.add_argument("session_id", nargs="?", default=None, help="Session ID")
     parser.add_argument(
         "--type",
-        choices=["cumulative", "delta", "io", "cache", "mi", "both", "all"],
+        choices=["cumulative", "delta", "io", "cache", "mi", "tps", "both", "all"],
         default="delta",
         help="Graph type (default: delta)",
+    )
+    parser.add_argument(
+        "--minutes",
+        type=int,
+        default=None,
+        help=(
+            "For --type tps: limit the throughput trend to the last N minutes "
+            "of history (default: all available history)"
+        ),
     )
     parser.add_argument(
         "--watch",
@@ -311,6 +335,109 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+# Scale factor for rendering fractional tok/s values through the integer-based
+# timeseries renderer (mirrors the MI graph's int(mi * 10000) trick). Two
+# decimal places of throughput precision survive the round-trip.
+_TPS_RENDER_SCALE = 100
+
+
+def _filter_entries_by_minutes(entries: list, minutes: int | None) -> list:
+    """Return entries within the last ``minutes`` of recorded history.
+
+    The window is anchored to the *latest entry's* timestamp rather than
+    wall-clock time, so it works identically on a live session and on a
+    historical one being inspected after the fact. ``minutes`` of ``None`` (or
+    non-positive) means "no filtering — use the full history".
+
+    Args:
+        entries: Chronological list of StateEntry objects (oldest first).
+        minutes: Window size in minutes, or None for the full history.
+
+    Returns:
+        The trailing slice of *entries* whose timestamps fall within the
+        window. Always preserves chronological order.
+    """
+    if not entries or minutes is None or minutes <= 0:
+        return entries
+    cutoff = entries[-1].timestamp - minutes * 60
+    return [e for e in entries if e.timestamp >= cutoff]
+
+
+def _render_tps_graph(
+    entries: list,
+    renderer: GraphRenderer,
+    colors: ColorManager,
+    config: Config,
+    minutes: int | None = None,
+) -> None:
+    """Render the throughput (tokens/s) trend graph plus current + average.
+
+    Plots one instantaneous throughput point per valid turn over the selected
+    time window, then prints the current (latest-turn) speed and the average
+    computed across the *displayed* window. Reuses
+    :func:`compute_tps_series` / :func:`compute_tps` for the math and
+    ``render_timeseries`` for the drawing — no new graph engine.
+
+    Args:
+        entries: Chronological StateEntry list (oldest first).
+        renderer: GraphRenderer used to draw the timeseries.
+        colors: ColorManager for styling the current/average summary lines.
+        config: Config supplying tok/s display precision and unit.
+        minutes: Optional time window (last N minutes of history) to inspect.
+    """
+    windowed = _filter_entries_by_minutes(entries, minutes)
+    samples = [(e.current_output_tokens, e.api_duration_ms) for e in windowed]
+    series = compute_tps_series(samples)
+
+    range_label = f" (last {minutes}m)" if minutes else ""
+
+    if not series:
+        renderer._emit()
+        renderer._emit(f"{colors.bold}Throughput Trend (tokens/s){range_label}{colors.reset}")
+        renderer._emit(
+            f"  {colors.dim}No throughput data yet — keep using Claude Code to "
+            f"accumulate timing samples.{colors.reset}"
+        )
+        return
+
+    # Align each plotted value with the timestamp of its turn's later sample,
+    # building both lists in lockstep so dropped turns never desynchronise the
+    # value series from the x-axis labels.
+    tps_values = [tps for _, tps in series]
+    tps_times = [windowed[idx].timestamp for idx, _ in series]
+
+    # Scale fractional tok/s into integers for the int-based renderer, then
+    # format back to the real value on the Y-axis (same pattern as the MI graph).
+    scaled = [int(round(v * _TPS_RENDER_SCALE)) for v in tps_values]
+    precision = config.tps_precision
+    unit = config.tps_unit
+    renderer.render_timeseries(
+        scaled,
+        tps_times,
+        f"Throughput Trend (tokens/s){range_label}",
+        colors.green,
+        label_fn=lambda v: f"{v / _TPS_RENDER_SCALE:.{min(10, max(0, precision))}f}",
+    )
+
+    # Current = the latest valid turn's instantaneous speed.
+    # Average = token-weighted average across the entire displayed window.
+    current = tps_values[-1]
+    average = compute_tps(samples, window=len(samples))
+
+    renderer._emit()
+    renderer._emit(
+        f"  {colors.cyan}{'Current:':<12}{colors.reset} "
+        f"{format_tps(current, precision, unit)}"
+    )
+    if average is not None:
+        renderer._emit(
+            f"  {colors.magenta}{'Average:':<12}{colors.reset} "
+            f"{format_tps(average, precision, unit)}"
+            f"  {colors.dim}(over {len(tps_values)} turn"
+            f"{'s' if len(tps_values) != 1 else ''}{range_label}){colors.reset}"
+        )
+
+
 def render_once(
     state_file: StateFile,
     graph_type: str,
@@ -319,6 +446,7 @@ def render_once(
     watch_mode: bool = False,
     config: Config | None = None,
     cycle_index: int = 0,
+    minutes: int | None = None,
 ) -> bool | str:
     """Render graphs once.
 
@@ -330,6 +458,7 @@ def render_once(
         watch_mode: Whether running in watch mode
         config: Config instance for motion settings
         cycle_index: Watch mode refresh counter for rotating text
+        minutes: Optional time window (last N minutes) for the tps trend graph
 
     Returns:
         True if rendering was successful (non-watch mode),
@@ -479,6 +608,10 @@ def render_once(
             last = entries[-1]
             mi_score = calculate_intelligence(last, last.context_window_size, last.model_id, beta)
 
+    # Throughput (tokens/s) trend graph (#72)
+    if graph_type in ("tps", "all"):
+        _render_tps_graph(entries, renderer, colors, mi_config, minutes=minutes)
+
     # Compute MI at each compaction point for quality assessment (#65)
     compaction_events: list[tuple[int, float]] = []
     if compaction_indices and entries:
@@ -530,6 +663,7 @@ def run_watch_mode(
     renderer: GraphRenderer,
     colors: ColorManager,
     config: Config | None = None,
+    minutes: int | None = None,
 ) -> None:
     """Run in watch mode with continuous refresh.
 
@@ -540,6 +674,7 @@ def run_watch_mode(
         renderer: GraphRenderer instance
         colors: ColorManager instance
         config: Config instance for motion settings
+        minutes: Optional time window (last N minutes) for the tps trend graph
     """
 
     # Signal handler for clean exit
@@ -595,6 +730,7 @@ def run_watch_mode(
                     watch_mode=True,
                     config=config,
                     cycle_index=cycle_counter,
+                    minutes=minutes,
                 )
                 if isinstance(result, str):
                     buf_lines.append(result)
@@ -885,12 +1021,17 @@ def main() -> None:
     )
 
     # Run
+    minutes = getattr(args, "minutes", None)
     if args.no_watch:
-        success = render_once(state_file, args.type, renderer, colors, config=config)
+        success = render_once(
+            state_file, args.type, renderer, colors, config=config, minutes=minutes
+        )
         if not success:
             sys.exit(1)
     else:
-        run_watch_mode(state_file, args.type, args.watch, renderer, colors, config=config)
+        run_watch_mode(
+            state_file, args.type, args.watch, renderer, colors, config=config, minutes=minutes
+        )
 
 
 if __name__ == "__main__":
