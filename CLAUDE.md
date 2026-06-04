@@ -59,7 +59,8 @@ The following logic is duplicated between the installable package (`src/`) and t
 | tok/s compute (rolling, token-weighted avg over N turns) | `graphs/statistics.py:compute_tps(samples, window)`, `format_tps()` | `compute_tps(samples, window)`, `format_tps()` |
 | tok/s config | `core/config.py:show_tps`, `tps_precision`, `tps_unit`, `tps_window` | `read_config()` `show_tps`/`tps_precision`/`tps_unit`/`tps_window` |
 | tok/s state field | `core/state.py:StateEntry.api_duration_ms` (CSV index 14) | `state_data` list + `csv_parts[14]` |
-| tok/s rolling read | `cli/statusline.py` `read_history()` → `(output, api_duration_ms)` samples | full-file read building `tps_samples` from index 4 + 14 |
+| tok/s rolling read (bounded tail) | `cli/statusline.py` calls `core/state.py:StateFile.read_tail(_tps_tail_size(tps_window))` → `(output, api_duration_ms)` samples (NOT `read_history()`, which stays full for the CLI graph/export consumers) | tail-bounded loop over `file_lines[-_tps_tail_size(tps_window):]` building `tps_samples` from index 4 + 14 |
+| tok/s tail size helper | `cli/statusline.py:_tps_tail_size()`, `_TPS_TAIL_BUFFER` | `_tps_tail_size()`, `_TPS_TAIL_BUFFER` |
 
 ## Cross-References
 

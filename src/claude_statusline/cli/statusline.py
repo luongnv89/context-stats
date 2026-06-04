@@ -34,6 +34,27 @@ from claude_statusline.formatters.layout import fit_to_width, get_terminal_width
 from claude_statusline.formatters.time import get_current_timestamp
 from claude_statusline.formatters.tokens import calculate_context_usage, format_tokens
 
+# Extra rows read beyond ``tps_window`` when tail-reading state history for
+# tok/s. compute_tps needs the last ``tps_window`` valid *turns* (=
+# ``tps_window + 1`` valid rows); this headroom absorbs the sparse, isolated
+# dropped rows real histories contain (non-positive API-time delta, zero
+# output) plus any legacy/blank rows, so the rendered value matches a
+# full-history read. Kept small so each refresh still parses only a bounded
+# tail. (A pathological run of >~``tps_window + 7`` consecutive dropped rows
+# at the tail boundary cannot occur once tok/s is enabled: every appended row
+# carries the api_duration field, so legacy rows can only be a leading prefix.)
+_TPS_TAIL_BUFFER = 8
+
+
+def _tps_tail_size(tps_window: int) -> int:
+    """Number of trailing state rows to read for the tok/s rolling average.
+
+    ``tps_window`` valid turns need ``tps_window + 1`` valid rows; doubling the
+    window plus a fixed buffer leaves ample room for interleaved dropped rows
+    while staying bounded (independent of total file size).
+    """
+    return max(1, tps_window) * 2 + _TPS_TAIL_BUFFER
+
 
 def main() -> None:
     """Main entry point for claude-statusline CLI."""
@@ -149,9 +170,18 @@ def main() -> None:
         if config.show_delta or config.show_mi or config.show_tps:
             state_file = StateFile(session_id)
             # tok/s needs a rolling window of recent rows; delta/MI only need
-            # the last row. Read full history when tok/s is on, else last only.
+            # the last row. For tok/s, read a bounded *tail* rather than the
+            # whole file: compute_tps only needs the last ``tps_window`` valid
+            # turns (i.e. ``tps_window + 1`` valid rows). We read a slightly
+            # larger tail so the sparse, isolated dropped/legacy/blank rows seen
+            # in real histories don't starve the window, while parsing at most a
+            # bounded number of rows per refresh (independent of file size).
+            # Legacy rows (no api_duration field) only ever form a historical
+            # prefix, so on any file the writer produces the rendered tok/s is
+            # identical to a full-history read.
             if config.show_tps:
-                history = state_file.read_history()
+                tail_n = _tps_tail_size(config.tps_window)
+                history = state_file.read_tail(tail_n)
                 prev_entry = history[-1] if history else None
             else:
                 history = []

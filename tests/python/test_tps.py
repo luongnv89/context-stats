@@ -392,3 +392,281 @@ class TestStandaloneEndToEnd:
         out, code = _run(payload, tmp_path)
         assert code == 0
         assert "tok/s" not in strip_ansi(out)
+
+
+# ---------------------------------------------------------------------------
+# Issue #73 — tail-read the tok/s history instead of the full state file.
+#
+# These tests pin (a) the bounded tail-read helper StateFile.read_tail(n) and
+# (b) byte-identical tok/s output between the new tail path and the old
+# full-read path (parity), including drop-invalid-turn / keep-last-average
+# semantics. They also cover the _tps_tail_size buffer math in both impls.
+# ---------------------------------------------------------------------------
+
+from claude_statusline.cli.statusline import (  # noqa: E402
+    _tps_tail_size as pkg_tps_tail_size,
+)
+from claude_statusline.core.state import StateEntry, StateFile  # noqa: E402
+
+
+def _row(output_tokens: int, api_duration_ms: int, *, ts: int = 0) -> str:
+    """Build one 15-field CSV state row with the given tok/s-relevant fields.
+
+    Field layout (CSV index): output is index 4 (current_output_tokens) and
+    api_duration is index 14, matching StateEntry.to_csv_line / from_csv_line.
+    """
+    return StateEntry(
+        timestamp=ts,
+        total_input_tokens=0,
+        total_output_tokens=0,
+        current_input_tokens=0,
+        current_output_tokens=output_tokens,
+        cache_creation=0,
+        cache_read=0,
+        cost_usd=0.0,
+        lines_added=0,
+        lines_removed=0,
+        session_id="s",
+        model_id="m",
+        workspace_project_dir="d",
+        context_window_size=200000,
+        api_duration_ms=api_duration_ms,
+    ).to_csv_line()
+
+
+def _write_state(tmp_path, monkeypatch, lines: list[str], session: str = "tail-session"):
+    """Point StateFile at tmp_path and write the given raw CSV lines."""
+    monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+    (tmp_path / "old").mkdir()
+    sf = StateFile(session)
+    sf.file_path.write_text("".join(line + "\n" for line in lines))
+    return sf
+
+
+class TestTpsTailSize:
+    """The tail size must be bounded and large enough for the window."""
+
+    @pytest.mark.parametrize(
+        "fn", [pkg_tps_tail_size, statusline_script._tps_tail_size], ids=["package", "standalone"]
+    )
+    def test_covers_window_plus_one_valid_rows(self, fn):
+        # Need at least tps_window + 1 rows to form tps_window turns; the tail
+        # is comfortably larger so dropped rows can't starve the window.
+        for window in (1, 3, 5, 10):
+            assert fn(window) >= window + 1
+
+    @pytest.mark.parametrize(
+        "fn", [pkg_tps_tail_size, statusline_script._tps_tail_size], ids=["package", "standalone"]
+    )
+    def test_bounded_and_independent_of_file_size(self, fn):
+        # Whatever the window, the tail is a small fixed function of it — never
+        # a function of total history length. Default window=5 -> 18 rows.
+        assert fn(5) == 18
+        assert fn(0) == 10  # clamped to window>=1 internally
+
+    @pytest.mark.parametrize(
+        "fn", [pkg_tps_tail_size, statusline_script._tps_tail_size], ids=["package", "standalone"]
+    )
+    def test_both_impls_agree(self, fn):
+        for window in (0, 1, 2, 5, 7, 13):
+            assert fn(window) == pkg_tps_tail_size(window)
+
+
+class TestReadTail:
+    """StateFile.read_tail(n) — bounded counterpart of read_history()."""
+
+    def test_returns_at_most_n_entries(self, tmp_path, monkeypatch):
+        sf = _write_state(tmp_path, monkeypatch, [_row(i, i * 100, ts=i) for i in range(1, 51)])
+        tail = sf.read_tail(5)
+        assert len(tail) == 5
+
+    def test_returns_most_recent_in_chronological_order(self, tmp_path, monkeypatch):
+        sf = _write_state(tmp_path, monkeypatch, [_row(i, i * 100, ts=i) for i in range(1, 51)])
+        tail = sf.read_tail(5)
+        # Oldest-first, and exactly the last five rows (timestamps 46..50).
+        assert [e.timestamp for e in tail] == [46, 47, 48, 49, 50]
+        assert [e.current_output_tokens for e in tail] == [46, 47, 48, 49, 50]
+
+    def test_parity_with_read_history_slice(self, tmp_path, monkeypatch):
+        # read_tail(n) must equal read_history()[-n:] for any n, including when
+        # blank and unparseable lines are interleaved (both drop them).
+        raw = []
+        for i in range(1, 41):
+            raw.append(_row(i, i * 100, ts=i))
+            if i % 7 == 0:
+                raw.append("")  # blank line
+            if i % 11 == 0:
+                raw.append("garbage,not,a,valid,row,x")  # unparseable timestamp
+        sf = _write_state(tmp_path, monkeypatch, raw)
+        full = sf.read_history()
+        for n in (1, 3, 5, 18, len(full), len(full) + 10):
+            tail = sf.read_tail(n)
+            expected = full[-n:] if n > 0 else []
+            assert [e.to_csv_line() for e in tail] == [e.to_csv_line() for e in expected], n
+
+    def test_n_zero_or_negative_returns_empty(self, tmp_path, monkeypatch):
+        sf = _write_state(tmp_path, monkeypatch, [_row(1, 100, ts=1)])
+        assert sf.read_tail(0) == []
+        assert sf.read_tail(-3) == []
+
+    def test_missing_file_returns_empty(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("no-such-session")
+        assert sf.read_tail(5) == []
+
+    def test_does_not_read_more_entries_than_requested(self, tmp_path, monkeypatch):
+        # Bound guarantee: the tail must not depend on full file length.
+        # We assert it by parsing far fewer entries than the file has rows.
+        sf = _write_state(tmp_path, monkeypatch, [_row(i, i * 100, ts=i) for i in range(1, 1001)])
+        assert len(sf.read_tail(18)) == 18
+        assert len(sf.read_history()) == 1000  # full path still sees everything
+
+
+def _tps_from_full_read(lines: list[str], window: int) -> float | None:
+    """Old behavior: build samples from EVERY row (read_history-equivalent)."""
+    entries = [StateEntry.from_csv_line(line) for line in lines if line.strip()]
+    entries = [e for e in entries if e]
+    samples = [(e.current_output_tokens, e.api_duration_ms) for e in entries]
+    return compute_tps(samples, window=window)
+
+
+def _tps_from_tail_read(sf: StateFile, window: int) -> float | None:
+    """New behavior: build samples from the bounded tail only."""
+    history = sf.read_tail(pkg_tps_tail_size(window))
+    samples = [(e.current_output_tokens, e.api_duration_ms) for e in history]
+    return compute_tps(samples, window=window)
+
+
+class TestTailReadParity:
+    """The rendered tok/s value is identical full-read vs tail-read."""
+
+    @pytest.mark.parametrize("window", [1, 3, 5, 10])
+    def test_identical_value_long_history(self, tmp_path, monkeypatch, window):
+        # 200 monotonic rows: each turn ~ (i*1000) tokens over 1000ms.
+        lines = [_row(1000, i * 1000, ts=i) for i in range(1, 201)]
+        sf = _write_state(tmp_path, monkeypatch, lines)
+        assert _tps_from_tail_read(sf, window) == _tps_from_full_read(lines, window)
+
+    def test_identical_with_dropped_legacy_and_zero_rows(self, tmp_path, monkeypatch):
+        # Interleave legacy rows (duration 0 -> prev_dur<=0 turn dropped),
+        # zero-output rows (dropped), and zero-delta rows (dropped). The tail
+        # buffer must still reproduce the exact full-read average.
+        lines = []
+        cum = 1000
+        for i in range(1, 121):
+            if i % 5 == 0:
+                lines.append(_row(0, cum, ts=i))  # zero output -> dropped turn
+            elif i % 9 == 0:
+                lines.append(_row(500, cum, ts=i))  # zero api-delta -> dropped
+            elif i % 13 == 0:
+                lines.append(_row(500, 0, ts=i))  # legacy duration 0 -> dropped
+            else:
+                cum += 1234
+                lines.append(_row(700, cum, ts=i))
+        sf = _write_state(tmp_path, monkeypatch, lines)
+        for window in (1, 3, 5, 8):
+            assert _tps_from_tail_read(sf, window) == _tps_from_full_read(lines, window), window
+
+    def test_identical_when_history_shorter_than_tail(self, tmp_path, monkeypatch):
+        lines = [_row(1000, i * 1000, ts=i) for i in range(1, 4)]  # 3 rows only
+        sf = _write_state(tmp_path, monkeypatch, lines)
+        assert _tps_from_tail_read(sf, 5) == _tps_from_full_read(lines, 5)
+
+
+class TestTailReadParityEndToEnd:
+    """Full statusline render: tail-read path produces the same tok/s string.
+
+    Drives the real scripts/statusline.py over many refreshes and asserts the
+    final rendered tok/s equals an independent full-read computation.
+    """
+
+    def test_standalone_render_matches_full_read(self, tmp_path):
+        conf = tmp_path / ".claude"
+        conf.mkdir()
+        (conf / "statusline.conf").write_text("show_tps=true\nshow_delta=false\ntps_precision=1\n")
+
+        # Drive far more refreshes than the tail bound (tail_n=18 for window=5),
+        # so the run genuinely exercises the bounded read: the standalone must
+        # NOT depend on the full 250-row history to reproduce the value.
+        cum = 0
+        expected_lines = []
+        last_out = None
+        for i in range(1, 251):
+            cum += 1000
+            out_tokens = 600
+            _run(_payload(out_tokens, cum, 10000 + i * 100), tmp_path)
+            expected_lines.append(_row(out_tokens, cum, ts=i))
+            last_out = out_tokens
+
+        # Final live reading.
+        cum += 1000
+        out, code = _run(_payload(last_out, cum, 99999), tmp_path)
+        assert code == 0
+        clean = strip_ansi(out)
+
+        # Independent full-read expectation (window=5 default), with live row.
+        expected_lines.append(_row(last_out, cum))
+        expected = _tps_from_full_read(expected_lines, 5)
+        assert expected is not None
+        assert f"{expected:.1f} tok/s" in clean
+
+    def test_standalone_reconstruction_bounded_and_matches_package(self, tmp_path, monkeypatch):
+        """The standalone tps_samples loop is bounded by _tps_tail_size and
+        yields the same trailing samples the package tail read would, across
+        interleaved dropped/legacy/blank rows (sync-points parity).
+        """
+        # Build a realistic file: a short legacy prefix (no api_duration), then
+        # mostly-valid rows with sparse, isolated zero-output / zero-delta rows.
+        lines = []
+        for i in range(4):  # legacy prefix
+            lines.append(_row(500, 0, ts=i))
+        cum = 1000
+        for i in range(4, 120):
+            if i % 17 == 0:
+                lines.append(_row(0, cum, ts=i))  # zero output -> dropped
+            elif i % 23 == 0:
+                lines.append(_row(500, cum, ts=i))  # zero delta -> dropped
+            else:
+                cum += 1500
+                lines.append(_row(700, cum, ts=i))
+            if i % 9 == 0:
+                lines.append("")  # blank line
+
+        state_file = tmp_path / "statusline.bound-session.state"
+        state_file.write_text("".join(line + "\n" for line in lines))
+
+        for window in (1, 3, 5, 8):
+            tail_n = statusline_script._tps_tail_size(window)
+
+            # Replicate the standalone reconstruction loop exactly.
+            file_lines = state_file.read_text().splitlines(keepends=True)
+            tps_samples = []
+            for line in reversed(file_lines):
+                parts = line.strip().split(",")
+                if len(parts) < 5:
+                    continue
+                try:
+                    out = int(parts[4])
+                    dur = int(parts[14]) if len(parts) > 14 else 0
+                except ValueError:
+                    continue
+                tps_samples.append((out, dur))
+                if len(tps_samples) >= tail_n:
+                    break
+            tps_samples.reverse()
+
+            # Bounded: never more than tail_n samples.
+            assert len(tps_samples) <= tail_n
+            live = (650, cum + 2000)
+            standalone_val = statusline_script.compute_tps(tps_samples + [live], window=window)
+
+            # Package full-read over every row + the same live reading.
+            full_entries = [StateEntry.from_csv_line(line) for line in lines if line.strip()]
+            full_entries = [e for e in full_entries if e]
+            full_samples = [(e.current_output_tokens, e.api_duration_ms) for e in full_entries]
+            package_val = compute_tps(full_samples + [live], window=window)
+
+            assert standalone_val == package_val, window

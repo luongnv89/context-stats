@@ -107,6 +107,28 @@ def compute_mi(used_tokens, context_window_size, model_id="", beta_override=0.0)
     return max(0.0, 1.0 - u**beta)
 
 
+# Extra rows read beyond ``tps_window`` when tail-reading state history for
+# tok/s. compute_tps needs the last ``tps_window`` valid *turns* (=
+# ``tps_window + 1`` valid rows); this headroom absorbs the sparse, isolated
+# dropped rows real histories contain (non-positive API-time delta, zero
+# output) plus any legacy/blank rows, so the rendered value matches a
+# full-history read. Kept small so each refresh still parses only a bounded
+# tail. Legacy rows (no api_duration) can only be a leading prefix once tok/s
+# is enabled. Mirrors cli/statusline.py:_TPS_TAIL_BUFFER.
+_TPS_TAIL_BUFFER = 8
+
+
+def _tps_tail_size(tps_window):
+    """Number of trailing state rows to read for the tok/s rolling average.
+
+    ``tps_window`` valid turns need ``tps_window + 1`` valid rows; doubling the
+    window plus a fixed buffer leaves ample room for interleaved dropped rows
+    while staying bounded (independent of total file size). Mirrors the package
+    helper cli/statusline.py:_tps_tail_size.
+    """
+    return max(1, tps_window) * 2 + _TPS_TAIL_BUFFER
+
+
 def compute_tps(samples, window=5):
     """Compute a smoothed, session-rolling model throughput in tokens/second.
 
@@ -1008,8 +1030,12 @@ def main():
             try:
                 if os.path.exists(state_file):
                     has_prev = True
-                    # Read all lines: last line drives delta/dedup; full history
-                    # (when show_tps) feeds the rolling-average reconstruction.
+                    # Read all lines: last line drives delta/dedup; a bounded
+                    # *tail* (when show_tps) feeds the rolling-average
+                    # reconstruction. compute_tps only needs the last
+                    # ``tps_window`` valid turns, so we parse at most the last
+                    # ``_tps_tail_size(tps_window)`` rows instead of the whole
+                    # file — matching the full-read value while bounding work.
                     with open(state_file) as f:
                         file_lines = f.readlines()
                         if file_lines:
@@ -1028,9 +1054,13 @@ def main():
                                 prev_tokens = int(last_line or 0)
                             if show_tps:
                                 # Reconstruct (output[4], api_duration[14]) for
-                                # every row. Legacy rows lack index 14 -> 0, which
-                                # compute_tps treats as "no prior reading".
-                                for line in file_lines:
+                                # each tail row. Legacy rows lack index 14 -> 0,
+                                # which compute_tps treats as "no prior reading".
+                                # Walk backward collecting up to tail_n parseable
+                                # rows (mirrors StateFile.read_tail's by-entry
+                                # bound), then restore chronological order.
+                                tail_n = _tps_tail_size(tps_window)
+                                for line in reversed(file_lines):
                                     parts = line.strip().split(",")
                                     if len(parts) < 5:
                                         continue
@@ -1040,6 +1070,9 @@ def main():
                                     except ValueError:
                                         continue
                                     tps_samples.append((out, dur))
+                                    if len(tps_samples) >= tail_n:
+                                        break
+                                tps_samples.reverse()
             except (OSError, ValueError) as e:
                 sys.stderr.write(f"[statusline] warning: failed to read state file: {e}\n")
                 prev_tokens = 0

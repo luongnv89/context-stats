@@ -245,6 +245,58 @@ class StateFile:
 
         return entries
 
+    def read_tail(self, n: int) -> list[StateEntry]:
+        """Read only the last ``n`` parseable entries from the state file.
+
+        This is the bounded counterpart to :meth:`read_history` used by the
+        statusline hot path (tok/s rolling average) so that every refresh
+        parses at most ``n`` rows instead of the whole file. State files are
+        append-only and chronological, so the tail is the most recent history.
+
+        Parity: the result is byte-for-byte identical to ``read_history()[-n:]``
+        — blank lines are skipped and unparseable lines are dropped exactly as
+        in :meth:`read_history`, the kept entries are in the same chronological
+        order, and exactly the last ``n`` *parseable* entries are returned.
+        ``read_history`` itself is intentionally left unchanged because the CLI
+        graph/export consumers need the full series.
+
+        Args:
+            n: Maximum number of most-recent parseable entries to return.
+                Values ``<= 0`` yield an empty list.
+
+        Returns:
+            Up to ``n`` of the most recent StateEntry objects, oldest first.
+        """
+        if n <= 0:
+            return []
+
+        file_path = self.find_latest_state_file()
+        if not file_path or not file_path.exists():
+            return []
+
+        try:
+            content = file_path.read_text()
+        except OSError as e:
+            sys.stderr.write(f"[statusline] warning: failed to read state tail {file_path}: {e}\n")
+            return []
+
+        # Walk the file from the end, parsing lines until ``n`` parseable
+        # entries are collected. Bounding the parse (one StateEntry build per
+        # kept line) is the win here: the full read built an entry for every
+        # line in the file. Skipping/dropping mirrors read_history exactly, so
+        # the tail equals read_history()[-n:].
+        entries: list[StateEntry] = []
+        for line in reversed(content.splitlines()):
+            if not line.strip():
+                continue
+            entry = StateEntry.from_csv_line(line)
+            if entry:
+                entries.append(entry)
+                if len(entries) >= n:
+                    break
+        entries.reverse()  # restore chronological (oldest-first) order
+        return entries
+
     def read_last_entry(self) -> StateEntry | None:
         """Read only the last entry from the state file.
 
