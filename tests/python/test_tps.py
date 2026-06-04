@@ -158,6 +158,13 @@ class TestFormatTps:
         # Defensive: a negative precision must not raise.
         assert fn(42.5, precision=-2) == "42 tok/s"
 
+    @_FMT_IMPLS
+    def test_huge_precision_clamped(self, fn):
+        # Defensive: an absurd precision must not emit a megabyte-long field.
+        result = fn(42.5, precision=1_000_000)
+        assert result == "42.5000000000 tok/s"  # clamped to 10 decimals
+        assert len(result) < 30
+
 
 # ---------------------------------------------------------------------------
 # Config parsing — package Config and standalone read_config

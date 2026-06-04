@@ -163,7 +163,7 @@ def compute_tps(samples, window=5):
 
 def format_tps(tps, precision=1, unit="tok/s"):
     """Format a tokens-per-second value for display (e.g. '42.5 tok/s')."""
-    precision = max(0, precision)
+    precision = min(10, max(0, precision))
     return f"{tps:.{precision}f} {unit}"
 
 

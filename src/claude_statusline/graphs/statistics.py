@@ -200,11 +200,11 @@ def format_tps(tps: float, precision: int = 1, unit: str = "tok/s") -> str:
 
     Args:
         tps: Throughput in tokens per second.
-        precision: Number of decimal places (clamped to >= 0).
+        precision: Number of decimal places (clamped to the range 0..10).
         unit: Unit label appended after the value (e.g. ``"tok/s"``).
 
     Returns:
         Formatted string like ``"42.5 tok/s"``.
     """
-    precision = max(0, precision)
+    precision = min(10, max(0, precision))
     return f"{tps:.{precision}f} {unit}"
