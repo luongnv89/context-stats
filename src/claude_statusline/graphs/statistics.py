@@ -195,6 +195,53 @@ def compute_tps(
     return total_output / (total_ms / 1000.0)
 
 
+def compute_tps_series(
+    samples: list[tuple[int, int]],
+) -> list[tuple[int, float]]:
+    """Build a per-turn instantaneous throughput series for trend plotting.
+
+    Where :func:`compute_tps` collapses the recent turns into a single rolling
+    number for the live statusline, this returns *one throughput point per
+    valid turn* so the trend can be graphed over time. Each point is the
+    instantaneous tok/s of a single turn, which is exactly what surfaces
+    regressions and spikes (the motivation in issue #72).
+
+    A *turn* is the transition between two consecutive ``samples``. The
+    per-turn speed is computed by delegating to ``compute_tps(pair, 1)``, so
+    the drop rules stay in one place: turns against a legacy/first row
+    (cumulative duration ``<= 0``), with a non-positive API-time delta (same
+    response refreshed twice), or with non-positive output are dropped and
+    simply omitted from the series — never plotted as a zero.
+
+    Each returned tuple is ``(sample_index, tokens_per_second)`` where
+    ``sample_index`` is the index *into ``samples``* of the turn's *later*
+    sample (i.e. the row whose output was produced). Callers use that index to
+    line up the matching timestamp for the x-axis, which is why the index is
+    returned alongside the value rather than discarded — a dropped turn must
+    not desynchronise values from their timestamps.
+
+    Args:
+        samples: Chronological ``(output_tokens, api_duration_ms)`` pairs, one
+            per state row, oldest first. ``api_duration_ms`` is the cumulative
+            API wait time at that row (CSV index 14).
+
+    Returns:
+        Chronological list of ``(sample_index, tok_per_second)`` for every
+        valid turn. Empty when no valid turn exists (first row, all-legacy
+        history, or no real API time elapsed).
+    """
+    series: list[tuple[int, float]] = []
+    for i in range(1, len(samples)):
+        # Reuse the single-turn path so the legacy/zero-delta/zero-output drop
+        # semantics are inherited verbatim from compute_tps rather than
+        # re-implemented here.
+        tps = compute_tps([samples[i - 1], samples[i]], window=1)
+        if tps is None:
+            continue
+        series.append((i, tps))
+    return series
+
+
 def format_tps(tps: float, precision: int = 1, unit: str = "tok/s") -> str:
     """Format a tokens-per-second value for display.
 
