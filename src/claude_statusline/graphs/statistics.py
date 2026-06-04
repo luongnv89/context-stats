@@ -126,54 +126,73 @@ def calculate_deltas(values: list[int]) -> list[int]:
 
 
 def compute_tps(
-    current_output_tokens: int,
-    api_duration_ms: int,
-    prev_api_duration_ms: int,
+    samples: list[tuple[int, int]],
+    window: int = 5,
 ) -> float | None:
-    """Compute model throughput in tokens per second.
+    """Compute a smoothed, session-rolling model throughput in tokens/second.
 
-    Throughput is measured as the most recent API response's output tokens
-    divided by the API time that response took. The API time is derived from
-    the delta of the cumulative ``cost.total_api_duration_ms`` field between
-    the current and previous state rows. ``total_api_duration_ms`` is "time
-    spent waiting for API responses", so it excludes user idle time, tool
-    execution, and thinking — yielding genuine model generation speed.
+    Rather than the jumpy per-turn instantaneous speed (which swings between,
+    say, 1.5 and 80 tok/s depending on how many tokens a single turn happened
+    to emit), this returns a **rolling, token-weighted average** over the most
+    recent turns. The average is weighted by output tokens, so a tiny 3-token
+    turn cannot drag the number down the way a plain mean-of-ratios would —
+    the result tracks the genuine "speed of the model" across the session.
 
-    The numerator uses ``current_usage.output_tokens`` (the most recent
-    response's output) rather than a cumulative total, because as of Claude
-    Code v2.1.132 ``context_window.total_output_tokens`` reflects current
-    context usage, not a session total. ``current_usage.output_tokens`` has
-    always meant "this request", so it stays aligned with the per-response
-    API-time delta across versions.
+    Each ``sample`` is an ``(output_tokens, api_duration_ms)`` pair taken from
+    a state row (plus the live reading), where ``api_duration_ms`` is the
+    cumulative ``cost.total_api_duration_ms`` ("time spent waiting for API
+    responses" — it excludes user idle time, tool execution, and thinking).
+    A *turn* is the transition between two consecutive samples: its output is
+    that row's ``current_usage.output_tokens`` and its API time is the delta
+    of the cumulative durations. Turns with a non-positive API-time delta
+    (same response refreshed twice) or non-positive output are dropped.
+
+    The average over the last ``window`` valid turns is token-weighted:
+
+        tok/s = Σ output_tokens / (Σ api_time_ms / 1000)
+
+    Because both sums accumulate over the kept turns, a turn that contributes
+    no valid sample simply isn't in the sums — the previously established
+    average persists ("keep last average" on missing data) as long as at least
+    one valid turn remains in the window.
 
     Args:
-        current_output_tokens: Output tokens of the most recent response
-            (``current_usage.output_tokens``).
-        api_duration_ms: Cumulative API wait time so far
-            (``cost.total_api_duration_ms``).
-        prev_api_duration_ms: Cumulative API wait time from the previous
-            state row.
+        samples: Chronological ``(output_tokens, api_duration_ms)`` pairs, one
+            per state row, with the live reading last. ``api_duration_ms`` is
+            the cumulative API wait time at that row.
+        window: Number of most-recent valid turns to average over (>= 1).
 
     Returns:
-        Throughput in tokens/second, or ``None`` when it cannot be computed
-        meaningfully (no output, no prior reading, or non-positive elapsed
-        API time). ``None`` signals "hide the display this cycle".
+        Rolling throughput in tokens/second, or ``None`` when no valid turn
+        exists yet (first row, all legacy rows, or no real API time elapsed).
+        ``None`` signals "hide the display".
     """
-    # Need a real previous reading to difference against. A zero previous
-    # value means either no prior row or a legacy row without the field —
-    # differencing against it would understate throughput badly.
-    if prev_api_duration_ms <= 0:
+    if window < 1:
+        window = 1
+
+    # Reconstruct per-turn (output, api_time_ms) from consecutive samples,
+    # keeping only turns with real elapsed API time and real output.
+    turns: list[tuple[int, int]] = []
+    for (_, prev_dur), (out, cur_dur) in zip(samples, samples[1:]):
+        # A zero/negative previous cumulative means a legacy row without the
+        # field — differencing against it would understate throughput badly.
+        if prev_dur <= 0:
+            continue
+        delta_ms = cur_dur - prev_dur
+        if delta_ms <= 0 or out <= 0:
+            continue
+        turns.append((out, delta_ms))
+
+    if not turns:
         return None
 
-    delta_ms = api_duration_ms - prev_api_duration_ms
-    if delta_ms <= 0:
-        # Same response refreshed twice, or no new API time elapsed.
+    recent = turns[-window:]
+    total_output = sum(out for out, _ in recent)
+    total_ms = sum(ms for _, ms in recent)
+    if total_ms <= 0:
         return None
 
-    if current_output_tokens <= 0:
-        return None
-
-    return current_output_tokens / (delta_ms / 1000.0)
+    return total_output / (total_ms / 1000.0)
 
 
 def format_tps(tps: float, precision: int = 1, unit: str = "tok/s") -> str:

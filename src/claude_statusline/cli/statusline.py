@@ -148,10 +148,16 @@ def main() -> None:
         # this gate alongside show_delta / show_mi.
         if config.show_delta or config.show_mi or config.show_tps:
             state_file = StateFile(session_id)
-            prev_entry = state_file.read_last_entry()
+            # tok/s needs a rolling window of recent rows; delta/MI only need
+            # the last row. Read full history when tok/s is on, else last only.
+            if config.show_tps:
+                history = state_file.read_history()
+                prev_entry = history[-1] if history else None
+            else:
+                history = []
+                prev_entry = state_file.read_last_entry()
             has_prev = prev_entry is not None
             prev_tokens = prev_entry.current_used_tokens if prev_entry else 0
-            prev_api_duration = prev_entry.api_duration_ms if prev_entry else 0
 
             # Build current entry
             cur_input_tokens = current_usage.get("input_tokens", 0)
@@ -198,11 +204,15 @@ def main() -> None:
                 effective_mi_color = prop_mi_color if prop_mi_color else mi_color
                 mi_info = f" | {effective_mi_color}MI:{format_mi_score(mi_score.mi)}{colors.reset}"
 
-            # Calculate model throughput (tok/s) from the API-time delta
+            # Calculate model throughput (tok/s) as a rolling, token-weighted
+            # average over the last N turns reconstructed from state history
+            # plus the live reading.
             if config.show_tps:
                 from claude_statusline.graphs.statistics import compute_tps, format_tps
 
-                tps = compute_tps(cur_output_tokens, api_duration_ms, prev_api_duration)
+                samples = [(e.current_output_tokens, e.api_duration_ms) for e in history]
+                samples.append((cur_output_tokens, api_duration_ms))
+                tps = compute_tps(samples, window=config.tps_window)
                 if tps is not None:
                     tps_display = format_tps(tps, config.tps_precision, config.tps_unit)
                     tps_info = f" | {colors.separator}{tps_display}{colors.reset}"

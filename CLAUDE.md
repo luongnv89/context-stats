@@ -56,9 +56,10 @@ The following logic is duplicated between the installable package (`src/`) and t
 | Per-property colors | `colors.py:ColorManager` props, `config.py:_COLOR_KEYS` | `_COLOR_KEYS`, per-property vars |
 | Compaction detection | `graphs/statistics.py:detect_compaction_events()` | `detect_compaction_events()` |
 | Compaction constants | `core/config.py:compaction_drop_threshold`, `compact_mi_warn_threshold` | `COMPACTION_DROP_THRESHOLD`, `COMPACT_MI_WARN_THRESHOLD` |
-| tok/s compute | `graphs/statistics.py:compute_tps()`, `format_tps()` | `compute_tps()`, `format_tps()` |
-| tok/s config | `core/config.py:show_tps`, `tps_precision`, `tps_unit` | `read_config()` `show_tps`/`tps_precision`/`tps_unit` |
-| tok/s state field | `core/state.py:StateEntry.api_duration_ms` (CSV index 14) | `state_data` list + `csv_parts[14]` prev-read |
+| tok/s compute (rolling, token-weighted avg over N turns) | `graphs/statistics.py:compute_tps(samples, window)`, `format_tps()` | `compute_tps(samples, window)`, `format_tps()` |
+| tok/s config | `core/config.py:show_tps`, `tps_precision`, `tps_unit`, `tps_window` | `read_config()` `show_tps`/`tps_precision`/`tps_unit`/`tps_window` |
+| tok/s state field | `core/state.py:StateEntry.api_duration_ms` (CSV index 14) | `state_data` list + `csv_parts[14]` |
+| tok/s rolling read | `cli/statusline.py` `read_history()` → `(output, api_duration_ms)` samples | full-file read building `tps_samples` from index 4 + 14 |
 
 ## Cross-References
 
