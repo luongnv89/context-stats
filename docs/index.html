@@ -963,7 +963,7 @@
       <img src="assets/logo/logo-full.svg" alt="context-stats" />
     </div>
     <ul class="nav-links">
-      <li><a href="#whats-new">v1.20.0</a></li>
+      <li><a href="#whats-new">v1.21.0</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#cache-warm">Cache Warm</a></li>
       <li><a href="#how-it-works">Install</a></li>
@@ -980,7 +980,7 @@
   <div class="container">
     <div class="hero-badge">
       <span class="dot"></span>
-      v1.20.0 — One-command session discovery & smarter defaults
+      v1.21.0 — Real-time tokens/s throughput monitoring
     </div>
 
     <h1>
@@ -1017,7 +1017,7 @@
         </div>
         <div class="terminal-body">
           <div><span class="t-prompt">$ </span><span class="t-cmd">pip install context-stats</span></div>
-          <div class="t-muted">Successfully installed context-stats-1.20.0</div>
+          <div class="t-muted">Successfully installed context-stats-1.21.0</div>
           <br/>
           <div><span class="t-prompt">$ </span><span class="t-cmd">context-stats graph</span></div>
           <br/>
@@ -1147,34 +1147,34 @@
 <section id="whats-new">
   <div class="container">
     <span class="section-label">What's New</span>
-    <h2>v1.20.0 — Session discovery<br/>& smarter defaults.</h2>
-    <p class="lead">Stop hunting for session IDs. Three improvements that make the CLI feel instant, shipped April 2026.</p>
+    <h2>v1.21.0 — Tokens/s throughput,<br/>at a glance.</h2>
+    <p class="lead">See how fast Claude is actually generating — live in your statusline and as a trend over time. Four improvements that surface model throughput, shipped June 2026.</p>
 
     <div class="problem-grid">
       <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
         <div class="pain-icon">📋</div>
-        <h3 style="color:var(--green);">New <code>sessions</code> command</h3>
-        <p>Run <code>context-stats sessions</code> to list recent sessions with project, model, token count, and last-activity time. Use <code>--minutes N</code> to widen the window.</p>
+        <h3 style="color:var(--green);">Live tok/s in your statusline</h3>
+        <p>An optional tokens-per-second readout shows Claude's generation speed in real time — a smoothed, token-weighted rolling average over the last few turns, so one tiny reply can't crater the number. Toggle it with <code>show_tps</code>, tune the smoothing with <code>tps_window</code>.</p>
       </div>
       <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
         <div class="pain-icon">⚡</div>
-        <h3 style="color:var(--cyan);">Session ID is now optional</h3>
-        <p>Every command — <code>graph</code>, <code>report</code>, <code>export</code>, <code>cache-warm</code> — auto-detects the most recent session when you omit the ID. Just run <code>context-stats</code> and go.</p>
+        <h3 style="color:var(--cyan);">tok/s trend graph</h3>
+        <p>Run <code>context-stats graph --type tps</code> for an ASCII trend of throughput over time with tokens/s axis labels, current speed, and a windowed average. Scope it with <code>--minutes N</code>. Included in <code>--type all</code> and live in watch mode.</p>
       </div>
       <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
         <div class="pain-icon">🛡</div>
-        <h3 style="color:var(--yellow);">Stricter <code>sessions</code> validation</h3>
-        <p>Missing, zero, or negative <code>--minutes</code> values now fail fast with a clear error instead of silently falling back to the default. Stray positionals are rejected too.</p>
+        <h3 style="color:var(--yellow);">Spot regressions &amp; spikes</h3>
+        <p>The trend lets you watch the model slow down or speed up across a whole session — catch throughput regressions, sudden spikes, and long-term drift before they cost you.</p>
       </div>
       <div class="pain-card" style="border-color:rgba(0,255,65,0.2);">
         <div class="pain-icon">🧹</div>
-        <h3 style="color:var(--indigo);">Modernized internals</h3>
-        <p>Swapped legacy <code>.replace("statusline.", "")</code> and slice-based prefix stripping for Python 3.9+ <code>removeprefix()</code> across the CLI and state modules.</p>
+        <h3 style="color:var(--indigo);">Lean &amp; fast</h3>
+        <p>The statusline now tail-reads only the last few state rows to compute tok/s instead of re-parsing the entire history on every refresh — same output, less work per render.</p>
       </div>
     </div>
 
     <div style="text-align:center;margin-top:32px;">
-      <a href="https://github.com/luongnv89/context-stats/releases/tag/v1.20.0" class="btn-secondary" style="display:inline-flex;">
+      <a href="https://github.com/luongnv89/context-stats/releases/tag/v1.21.0" class="btn-secondary" style="display:inline-flex;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
         Full changelog on GitHub
       </a>
@@ -1507,7 +1507,7 @@
 <div class="t-green">  Exported → session-abc-1234-2026-04-07.md</div>
 <br/>
 <div class="t-h1">  # Session Export — abc-1234</div>
-<div class="t-muted">  Generated: 2026-04-07 12:30:15  |  context-stats v1.20.0</div>
+<div class="t-muted">  Generated: 2026-04-07 12:30:15  |  context-stats v1.21.0</div>
 <br/>
 <div class="t-h2">  ## Executive Summary</div>
 <br/>
@@ -1557,7 +1557,7 @@
 <div class="t-green">  Analyzing 312 sessions across 18 projects...</div>
 <br/>
 <div class="t-h1">  # Token Usage Analytics Report</div>
-<div class="t-muted">  Generated: 2026-04-07 12:00:00  |  context-stats v1.20.0</div>
+<div class="t-muted">  Generated: 2026-04-07 12:00:00  |  context-stats v1.21.0</div>
 <br/>
 <div class="t-h2">  ## Executive Summary (last 30 days)</div>
 <br/>

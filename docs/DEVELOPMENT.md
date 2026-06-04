@@ -110,7 +110,7 @@ The standalone `scripts/statusline.py` duplicates core logic from the `src/` pac
 # View current state files
 ls -la ~/.claude/statusline/statusline.*.state
 
-# Inspect state content (14 CSV fields per line)
+# Inspect state content (15 CSV fields per line)
 cat ~/.claude/statusline/statusline.<session_id>.state
 
 # Watch state file updates in real-time

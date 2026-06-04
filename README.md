@@ -67,6 +67,7 @@ my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.
 | `Code` | Context zone — color-coded action signal |
 | `MI:0.918` | Model Intelligence score — how sharp the model still is |
 | `+2,500` | Tokens consumed since last refresh |
+| `tok/s` | Model generation throughput (optional — enable with `show_tps=true`) |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 
@@ -124,6 +125,7 @@ Each session shows the project name, model, token count, and how recently it was
 ```bash
 context-stats graph                     # Context growth for the latest session
 context-stats graph --type all          # All graphs
+context-stats graph --type tps          # Throughput (tokens/s) trend
 context-stats <session_id> graph        # Specific session
 ```
 
@@ -134,6 +136,7 @@ context-stats <session_id> graph        # Specific session
 | `cache` | Cache creation and read tokens, with 5-min TTL countdown |
 | `mi` | How MI degraded across the session |
 | `io` | Input/output token breakdown |
+| `tps` | Model generation throughput (tokens/s) over the session |
 
 Auto-refreshes every 2 seconds. Pass `-w 5` to slow down or `--no-watch` to show once.
 
@@ -272,6 +275,7 @@ color_branch_name=bright_magenta
 color_mi_score=#ff9e64
 show_mi=true
 show_delta=true
+show_tps=true
 token_detail=true
 ```
 

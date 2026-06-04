@@ -10,7 +10,7 @@ The statusline is implemented in Python. Claude Code invokes the statusline scri
 
 ## CSV Format Contract
 
-State files are append-only CSV at `~/.claude/statusline/statusline.<session_id>.state` with 14 comma-separated fields. See [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md) for the full field specification. Key constraint: `workspace_project_dir` has commas replaced with underscores before writing.
+State files are append-only CSV at `~/.claude/statusline/statusline.<session_id>.state` with 15 comma-separated fields. See [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md) for the full field specification. Key constraint: `workspace_project_dir` has commas replaced with underscores before writing.
 
 ## Statusline Script
 

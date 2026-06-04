@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-06-04
+
+### Added
+
+- **tok/s throughput display** — Optional tokens-per-second indicator showing real-time model generation speed as a smoothed, rolling, token-weighted average (Σ output_tokens / Σ api_time) over the last `tps_window` turns (default 5), so a tiny outlier turn can't crater the number. Configurable via `show_tps`, `tps_precision`, `tps_unit`, `tps_window` (#70, #71)
+- **tok/s trend graph** — New `context-stats graph --type tps` renders an ASCII trend of per-turn throughput over time with tokens/s axis labels, printing the current instantaneous speed plus a token-weighted average over the displayed window. Supports `--minutes N`, is included in `--type all`, and updates live in watch mode (#72, #75)
+
+### Changed
+
+- **Tail-read tok/s history** — When `show_tps` is enabled, the statusline now tail-reads only the last `tps_window + 1` rows via a new bounded `read_tail(n)` helper instead of parsing the entire append-only state file on every refresh. Rendered output is byte-identical; applied to both the installable package and the standalone script (#73, #74)
+
+[1.21.0]: https://github.com/luongnv89/context-stats/compare/v1.20.0...v1.21.0
+
 ## [1.20.0] - 2026-04-16
 
 ### Added

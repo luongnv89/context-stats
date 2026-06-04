@@ -99,7 +99,7 @@ State files persist token history between statusline refreshes:
 ~/.claude/statusline/statusline.<session_id>.state
 ```
 
-Each line is a CSV record with 14 comma-separated fields (timestamp, token counts, cost, session metadata, and context metrics). See [CSV_FORMAT.md](CSV_FORMAT.md) for the full field specification. The context-stats CLI reads these files to render graphs.
+Each line is a CSV record with 15 comma-separated fields (timestamp, token counts, cost, session metadata, context metrics, and cumulative API duration). See [CSV_FORMAT.md](CSV_FORMAT.md) for the full field specification. The context-stats CLI reads these files to render graphs.
 
 **Rotation:** Files are automatically rotated at 10,000 lines, keeping the most recent 5,000 entries. This prevents unbounded file growth during long sessions.
 
