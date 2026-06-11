@@ -2,10 +2,70 @@
 
 from __future__ import annotations
 
+import json
+import shutil
 import subprocess
 from pathlib import Path
 
 from claude_statusline.core.colors import CYAN, MAGENTA, RESET, ColorManager
+
+
+def _get_pr_number(project_dir: Path) -> str:
+    """Look up the PR number for the current branch via gh CLI.
+
+    Returns a formatted string like ``#42`` when an open PR exists,
+    or an empty string when no PR is associated or gh CLI is unavailable.
+    """
+    if shutil.which("gh") is None:
+        return ""
+
+    try:
+        branch = subprocess.run(
+            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if branch.returncode != 0:
+            return ""
+        branch_name = branch.stdout.strip()
+        if not branch_name:
+            return ""
+
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head", branch_name,
+                "--state",
+                "open",
+                "--json",
+                "number",
+                "--limit",
+                "1",
+            ],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return ""
+
+        try:
+            data = json.loads(result.stdout.strip())
+        except (json.JSONDecodeError, ValueError):
+            return ""
+
+        if data and len(data) > 0:
+            pr_num = data[0].get("number", "")
+            if pr_num:
+                return f"#{pr_num}"
+        return ""
+    except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
+        return ""
 
 
 def get_git_info(
