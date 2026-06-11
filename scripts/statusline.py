@@ -955,6 +955,32 @@ color_separator=dim
     return config
 
 
+def _format_thinking_info(budget):
+    """Format thinking budget for display next to model name.
+
+    Returns an empty string when budget is None or zero.
+    Small budgets (< 1000) are shown exactly.
+    Medium budgets (1000–9999) are shown as "Nk" only when rounding is reasonable (>= 5k).
+    Large budgets (>= 1M) are shown as "NM" tokens thinking.
+    """
+    if budget is None or budget == 0:
+        return ""
+    try:
+        tokens = int(budget)
+    except (ValueError, TypeError):
+        return ""
+    if tokens <= 0:
+        return ""
+    if tokens >= 1_000_000:
+        return f"{tokens // 1_000_000}M tokens thinking"
+    if tokens >= 10_000:
+        k = round(tokens / 1_000)
+        return f"{k}k tokens thinking"
+    if tokens >= 5_000:
+        return f"{tokens // 1_000}k tokens thinking"
+    return f"{tokens} tokens thinking"
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -966,6 +992,13 @@ def main():
     cwd = data.get("workspace", {}).get("current_dir", "~")
     project_dir = data.get("workspace", {}).get("project_dir", cwd)
     model = data.get("model", {}).get("display_name", "Claude")
+    # Extract thinking budget if present (forward-compatible: Claude Code may send this)
+    model_data = data.get("model", {})
+    thinking_budget = model_data.get("thinking_budget") or (
+        model_data.get("thinking", {}).get("budget")
+        if isinstance(model_data.get("thinking"), dict)
+        else None
+    )
     dir_name = os.path.basename(cwd) or "~"
 
     # Read settings from config file
@@ -1224,7 +1257,11 @@ def main():
     # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | [Model] [id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{c_project_name}{dir_name}{RESET}"
-    model_info = f" | {c_separator}{model}{RESET}"
+    thinking_text = _format_thinking_info(thinking_budget)
+    if thinking_text:
+        model_info = f" | {c_separator}{model} · {thinking_text}{RESET}"
+    else:
+        model_info = f" | {c_separator}{model}{RESET}"
     max_width = get_terminal_width()
     parts = [
         base,
