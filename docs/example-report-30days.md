@@ -1,7 +1,7 @@
 # Token Usage Analytics Report
 
 Generated: 2026-04-07 12:00:00
-Source: cc-context-stats v1.21.0
+Source: cc-context-stats v1.22.0
 
 > **Note:** This is a sample report for the last 30 days (2026-03-08 → 2026-04-07).
 > All project names and session IDs have been anonymized.

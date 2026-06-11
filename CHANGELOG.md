@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-06-11
+
+### Added
+
+- **Thinking level display** — Show Claude Code thinking level next to the model name in the statusline for better session visibility (#78, #80)
+- **Pull request indicator** — Display the current PR number in the statusline, controlled by the new `show_pr` toggle (#77, #79)
+
+[1.22.0]: https://github.com/luongnv89/context-stats/compare/v1.21.0...v1.22.0
+
 ## [1.21.0] - 2026-06-04
 
 ### Added

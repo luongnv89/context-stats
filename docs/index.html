@@ -1178,7 +1178,7 @@
                     <img src="assets/logo/logo-full.svg" alt="context-stats" />
                 </div>
                 <ul class="nav-links">
-                    <li><a href="#whats-new">v1.21.0</a></li>
+                    <li><a href="#whats-new">v1.22.0</a></li>
                     <li><a href="#features">Features</a></li>
                     <li><a href="#cache-warm">Cache Warm</a></li>
                     <li><a href="#how-it-works">Install</a></li>
@@ -1199,7 +1199,7 @@
             <div class="container">
                 <div class="hero-badge">
                     <span class="dot"></span>
-                    v1.21.0 — Real-time tokens/s throughput monitoring
+                    v1.22.0 — Thinking level and PR context in your statusline
                 </div>
 
                 <h1>
@@ -1254,7 +1254,7 @@
                                 <span class="t-prompt">$ </span
                                 ><span class="t-cmd">pip install context-stats</span>
                             </div>
-                            <div class="t-muted">Successfully installed context-stats-1.21.0</div>
+                            <div class="t-muted">Successfully installed context-stats-1.22.0</div>
                             <br />
                             <div>
                                 <span class="t-prompt">$ </span
@@ -1426,57 +1426,51 @@
         <section id="whats-new">
             <div class="container">
                 <span class="section-label">What's New</span>
-                <h2>v1.21.0 — Tokens/s throughput,<br />at a glance.</h2>
+                <h2>v1.22.0 — Session context,<br />right where you work.</h2>
                 <p class="lead">
-                    See how fast Claude is actually generating — live in your statusline and as a
-                    trend over time. Four improvements that surface model throughput, shipped June
-                    2026.
+                    See more of the context that matters while you work: Claude's thinking level
+                    beside the model name, plus the active pull request number when enabled.
                 </p>
 
                 <div class="problem-grid">
                     <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
                         <div class="pain-icon">📋</div>
-                        <h3 style="color: var(--green)">Live tok/s in your statusline</h3>
+                        <h3 style="color: var(--green)">Thinking level in your statusline</h3>
                         <p>
-                            An optional tokens-per-second readout shows Claude's generation speed in
-                            real time — a smoothed, token-weighted rolling average over the last few
-                            turns, so one tiny reply can't crater the number. Toggle it with
-                            <code>show_tps</code>, tune the smoothing with <code>tps_window</code>.
+                            Claude's thinking level now appears next to the model name, making it easier
+                            to understand the current session mode without leaving your terminal.
                         </p>
                     </div>
                     <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
                         <div class="pain-icon">⚡</div>
-                        <h3 style="color: var(--cyan)">tok/s trend graph</h3>
+                        <h3 style="color: var(--cyan)">PR number indicator</h3>
                         <p>
-                            Run <code>context-stats graph --type tps</code> for an ASCII trend of
-                            throughput over time with tokens/s axis labels, current speed, and a
-                            windowed average. Scope it with <code>--minutes N</code>. Included in
-                            <code>--type all</code> and live in watch mode.
+                            When you are working on a GitHub pull request, the statusline can show the
+                            current PR number alongside branch context. Enable or disable it with
+                            the <code>show_pr</code> toggle.
                         </p>
                     </div>
                     <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
                         <div class="pain-icon">🛡</div>
-                        <h3 style="color: var(--yellow)">Spot regressions &amp; spikes</h3>
+                        <h3 style="color: var(--yellow)">Less context switching</h3>
                         <p>
-                            The trend lets you watch the model slow down or speed up across a whole
-                            session — catch throughput regressions, sudden spikes, and long-term
-                            drift before they cost you.
+                            Model, branch, PR, and thinking-level cues stay visible in one compact line,
+                            so you can keep coding without checking separate commands or browser tabs.
                         </p>
                     </div>
                     <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
                         <div class="pain-icon">🧹</div>
-                        <h3 style="color: var(--indigo)">Lean &amp; fast</h3>
+                        <h3 style="color: var(--indigo)">Still lightweight</h3>
                         <p>
-                            The statusline now tail-reads only the last few state rows to compute
-                            tok/s instead of re-parsing the entire history on every refresh — same
-                            output, less work per render.
+                            The new indicators extend the existing local-only statusline flow while
+                            preserving the project’s zero-network, append-only state-file design.
                         </p>
                     </div>
                 </div>
 
                 <div style="text-align: center; margin-top: 32px">
                     <a
-                        href="https://github.com/luongnv89/context-stats/releases/tag/v1.21.0"
+                        href="https://github.com/luongnv89/context-stats/releases/tag/v1.22.0"
                         class="btn-secondary"
                         style="display: inline-flex"
                     >
@@ -2151,7 +2145,7 @@
                             <br />
                             <div class="t-h1"># Session Export — abc-1234</div>
                             <div class="t-muted">
-                                Generated: 2026-04-07 12:30:15 | context-stats v1.21.0
+                                Generated: 2026-04-07 12:30:15 | context-stats v1.22.0
                             </div>
                             <br />
                             <div class="t-h2">## Executive Summary</div>
@@ -2298,7 +2292,7 @@
                             <br />
                             <div class="t-h1"># Token Usage Analytics Report</div>
                             <div class="t-muted">
-                                Generated: 2026-04-07 12:00:00 | context-stats v1.21.0
+                                Generated: 2026-04-07 12:00:00 | context-stats v1.22.0
                             </div>
                             <br />
                             <div class="t-h2">## Executive Summary (last 30 days)</div>

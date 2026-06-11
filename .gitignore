@@ -44,6 +44,7 @@ blogs/
 # dev tools
 openspec
 .claude
+.gitissue/
 repo-insights.md
 coverage/
 context-stats-report-*.md
