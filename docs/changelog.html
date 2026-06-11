@@ -1,0 +1,1462 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Changelog — context-stats</title>
+        <meta name="description" content="Full release history and changelog for context-stats. Track every feature, fix, and breaking change." />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://luongnv89.github.io/context-stats/changelog.html" />
+        <link rel="icon" type="image/svg+xml" href="../assets/logo/favicon.svg" />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+
+        <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            :root {
+                --bg: #0f172a;
+                --bg-deep: #0b1120;
+                --bg-card: #131c30;
+                --bg-subtle: #1c2740;
+                --bg-row: #0f1a2e;
+                --border: #243049;
+                --border-hover: #334155;
+                --text: #f1f5f9;
+                --text-muted: #94a3b8;
+                --text-dim: #64748b;
+                --green: #10b981;
+                --cyan: #06b6d4;
+                --indigo: #818cf8;
+                --yellow: #f59e0b;
+                --red: #ef4444;
+                --glow: rgba(16, 185, 129, 0.18);
+                --radius: 14px;
+                --maxw: 860px;
+            }
+
+            html { scroll-behavior: smooth; }
+
+            body {
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                line-height: 1.6;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            .container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+            code, .mono { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; }
+
+            /* ── Nav ─────────────────────────────────────── */
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgba(15, 23, 42, 0.82);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+            }
+            .nav-inner {
+                max-width: var(--maxw);
+                margin: 0 auto;
+                padding: 14px 24px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .nav-logo { display: flex; align-items: center; gap: 11px; }
+            .nav-logo img { height: 34px; display: block; }
+            .nav-wordmark {
+                font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text);
+            }
+            .nav-wordmark .stats { color: var(--green); }
+            .nav-links { list-style: none; display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 500; }
+            .nav-links a { color: var(--text-muted); transition: color 0.15s; }
+            .nav-links a:hover { color: var(--text); }
+            .nav-back {
+                display: inline-flex; align-items: center; gap: 6px;
+                font-size: 13px; font-weight: 500; color: var(--text-muted);
+                transition: color 0.15s;
+            }
+            .nav-back:hover { color: var(--green); }
+
+            /* ── Header ──────────────────────────────────── */
+            .page-header {
+                padding: 64px 0 40px;
+                text-align: center;
+            }
+            .page-header h1 {
+                font-size: clamp(2rem, 5vw, 2.8rem);
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                margin-bottom: 14px;
+            }
+            .page-header p {
+                color: var(--text-muted);
+                font-size: 1.05rem;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+
+            /* ── Timeline ────────────────────────────────── */
+            .timeline {
+                position: relative;
+                padding: 0 0 80px;
+            }
+            .timeline::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 32px;
+                width: 2px;
+                background: linear-gradient(to bottom, var(--green), var(--border) 40%, transparent);
+            }
+
+            /* ── Release block ───────────────────────────── */
+            .release {
+                position: relative;
+                margin-bottom: 40px;
+                padding-left: 68px;
+            }
+            .release-dot {
+                position: absolute;
+                left: 23px;
+                top: 28px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: var(--bg);
+                border: 3px solid var(--green);
+                z-index: 1;
+            }
+            .release.latest .release-dot {
+                background: var(--green);
+                box-shadow: 0 0 12px var(--green);
+            }
+            .release-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                overflow: hidden;
+                transition: border-color 0.18s, box-shadow 0.18s;
+            }
+            .release-card:hover {
+                border-color: var(--border-hover);
+                box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+            }
+
+            /* ── Release header (clickable toggle) ──────── */
+            .release-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 20px 24px;
+                cursor: pointer;
+                user-select: none;
+                gap: 16px;
+                transition: background 0.15s;
+            }
+            .release-header:hover { background: var(--bg-subtle); }
+            .release-header:active { background: var(--bg-row); }
+
+            .release-meta {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .release-version {
+                font-size: 1.15rem;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+            }
+            .release-date {
+                font-size: 13px;
+                color: var(--text-dim);
+                font-family: 'JetBrains Mono', monospace;
+            }
+            .release-badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 100px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+            .release-badge.latest {
+                background: rgba(16, 185, 129, 0.15);
+                color: var(--green);
+                border: 1px solid rgba(16, 185, 129, 0.3);
+            }
+            .release-badge.version {
+                background: rgba(129, 140, 248, 0.1);
+                color: var(--indigo);
+                border: 1px solid rgba(129, 140, 248, 0.2);
+            }
+
+            .release-arrow {
+                font-size: 18px;
+                color: var(--text-dim);
+                transition: transform 0.25s ease;
+                flex-shrink: 0;
+            }
+            .release.open .release-arrow { transform: rotate(180deg); }
+
+            /* ── Release body ────────────────────────────── */
+            .release-body {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.4s ease;
+            }
+            .release.open .release-body {
+                max-height: 3000px;
+            }
+            .release-content {
+                padding: 0 24px 24px;
+                border-top: 1px solid var(--border);
+            }
+
+            /* ── Section groups ──────────────────────────── */
+            .chg-section { margin-top: 20px; }
+            .chg-section-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                margin-bottom: 10px;
+            }
+            .chg-section-title.added { color: var(--green); }
+            .chg-section-title.changed { color: var(--cyan); }
+            .chg-section-title.fixed { color: var(--yellow); }
+            .chg-section-title.removed { color: var(--red); }
+            .chg-section-title.docs { color: var(--indigo); }
+            .chg-section-title.refactored { color: #a78bfa; }
+            .chg-section-title.dependencies { color: var(--text-dim); }
+
+            .chg-section-title .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+            .chg-section.added .dot { background: var(--green); }
+            .chg-section.changed .dot { background: var(--cyan); }
+            .chg-section.fixed .dot { background: var(--yellow); }
+            .chg-section.removed .dot { background: var(--red); }
+            .chg-section.docs .dot { background: var(--indigo); }
+            .chg-section.refactored .dot { background: #a78bfa; }
+            .chg-section.dependencies .dot { background: var(--text-dim); }
+
+            .chg-list { list-style: none; }
+            .chg-list li {
+                padding: 6px 0;
+                font-size: 14px;
+                color: var(--text-muted);
+                line-height: 1.55;
+                border-bottom: 1px solid rgba(36, 48, 73, 0.4);
+            }
+            .chg-list li:last-child { border-bottom: none; }
+            .chg-list li strong { color: var(--text); font-weight: 600; }
+            .chg-list li code {
+                background: var(--bg-deep);
+                padding: 1px 6px;
+                border-radius: 4px;
+                font-size: 12.5px;
+                color: var(--cyan);
+            }
+            .chg-list li .ref {
+                color: var(--text-dim);
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 12px;
+            }
+
+            .release-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                margin-top: 14px;
+                font-size: 13px;
+                color: var(--text-dim);
+                transition: color 0.15s;
+            }
+            .release-link:hover { color: var(--green); }
+
+            /* ── Search ──────────────────────────────────── */
+            .search-wrap {
+                max-width: 400px;
+                margin: 0 auto 48px;
+                position: relative;
+            }
+            .search-input {
+                width: 100%;
+                padding: 12px 16px 12px 42px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                color: var(--text);
+                font-size: 14px;
+                font-family: inherit;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            .search-input:focus { border-color: var(--green); }
+            .search-input::placeholder { color: var(--text-dim); }
+            .search-icon {
+                position: absolute;
+                left: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-dim);
+                pointer-events: none;
+            }
+
+            /* ── Footer ──────────────────────────────────── */
+            footer {
+                border-top: 1px solid var(--border);
+                padding: 36px 0;
+            }
+            .footer-inner {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+            .footer-logo {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 14px;
+                color: var(--text-muted);
+            }
+            .footer-logo img { height: 36px; }
+            .footer-logo a { color: var(--green); }
+            .footer-links { list-style: none; display: flex; gap: 24px; font-size: 14px; }
+            .footer-links a { color: var(--text-muted); transition: color 0.15s; }
+            .footer-links a:hover { color: var(--text); }
+
+            /* ── Counters ────────────────────────────────── */
+            .counters {
+                display: flex;
+                justify-content: center;
+                gap: 40px;
+                margin-bottom: 40px;
+                flex-wrap: wrap;
+            }
+            .counter { text-align: center; }
+            .counter-num {
+                font-size: 2rem;
+                font-weight: 800;
+                background: linear-gradient(135deg, var(--green), var(--cyan));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .counter-label {
+                font-size: 13px;
+                color: var(--text-dim);
+                margin-top: 4px;
+            }
+
+            /* ── Responsive ──────────────────────────────── */
+            @media (max-width: 600px) {
+                .release { padding-left: 52px; }
+                .timeline::before { left: 24px; }
+                .release-dot { left: 15px; }
+                .release-header { padding: 16px 18px; }
+                .release-content { padding: 0 18px 18px; }
+                .counters { gap: 24px; }
+                .footer-inner { flex-direction: column; text-align: center; }
+            }
+
+            /* ── No-results ──────────────────────────────── */
+            .no-results {
+                text-align: center;
+                padding: 60px 20px;
+                color: var(--text-dim);
+                display: none;
+            }
+            .no-results.visible { display: block; }
+            .no-results svg { margin-bottom: 16px; }
+        </style>
+    </head>
+    <body>
+        <!-- ── NAV ─────────────────────────────────────── -->
+        <nav>
+            <div class="nav-inner">
+                <a class="nav-logo" href="../" aria-label="context-stats home">
+                    <img src="../assets/logo/logo-mark.svg" alt="context-stats" />
+                    <span class="nav-wordmark">Context<span class="stats">Stats</span></span>
+                </a>
+                <ul class="nav-links">
+                    <li><a href="../" class="nav-back">← Back to home</a></li>
+                    <li><a href="../docs.html">Documentation</a></li>
+                    <li><a href="https://pypi.org/project/context-stats/">PyPI</a></li>
+                    <li><a href="https://github.com/luongnv89/context-stats">GitHub</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- ── PAGE HEADER ────────────────────────────── -->
+        <div class="page-header">
+            <div class="container">
+                <h1>Release <span style="color:var(--green)">Changelog</span></h1>
+                <p>Every feature, fix, and improvement — tracked release by release.</p>
+            </div>
+        </div>
+
+        <!-- ── SEARCH ─────────────────────────────────── -->
+        <div class="container">
+            <div class="search-wrap">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input class="search-input" type="text" id="searchInput" placeholder="Search changes…" autocomplete="off" />
+            </div>
+        </div>
+
+        <!-- ── COUNTERS ───────────────────────────────── -->
+        <div class="container">
+            <div class="counters">
+                <div class="counter">
+                    <div class="counter-num" id="releaseCount">0</div>
+                    <div class="counter-label">Releases</div>
+                </div>
+                <div class="counter">
+                    <div class="counter-num" id="featureCount">0</div>
+                    <div class="counter-label">Features added</div>
+                </div>
+                <div class="counter">
+                    <div class="counter-num" id="fixCount">0</div>
+                    <div class="counter-label">Bugs fixed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TIMELINE ───────────────────────────────── -->
+        <div class="container">
+            <div class="timeline" id="timeline">
+
+                <!-- 1.22.0 — Latest -->
+                <div class="release latest open" data-version="1.22.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.22.0</span>
+                                <span class="release-badge latest">Latest</span>
+                                <span class="release-date">2026-06-11</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Thinking level display</strong> — Show Claude Code thinking level next to the model name in the statusline <span class="ref">#78, #80</span></li>
+                                        <li><strong>Pull request indicator</strong> — Display the current PR number in the statusline via <code>show_pr</code> toggle <span class="ref">#77, #79</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.21.0...v1.22.0" target="_blank" rel="noopener">
+                                    Compare on GitHub →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.21.0 -->
+                <div class="release" data-version="1.21.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.21.0</span>
+                                <span class="release-badge version">1.21.0</span>
+                                <span class="release-date">2026-06-04</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>tok/s throughput display</strong> — Optional tokens-per-second indicator showing real-time model generation speed as a smoothed, rolling average. Configurable via <code>show_tps</code>, <code>tps_precision</code>, <code>tps_unit</code>, <code>tps_window</code> <span class="ref">#70, #71</span></li>
+                                        <li><strong>tok/s trend graph</strong> — New <code>context-stats graph --type tps</code> renders an ASCII trend of per-turn throughput <span class="ref">#72, #75</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Tail-read tok/s history</strong> — Statusline now tail-reads only the last <code>tps_window + 1</code> rows via bounded <code>read_tail()</code> instead of parsing the entire file <span class="ref">#73, #74</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.20.0...v1.21.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.20.0 -->
+                <div class="release" data-version="1.20.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.20.0</span>
+                                <span class="release-badge version">1.20.0</span>
+                                <span class="release-date">2026-04-16</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Default to latest session</strong> — Session ID is now optional; the most recent session is auto-detected <span class="ref">#60, #68</span></li>
+                                        <li><strong>sessions subcommand</strong> — <code>context-stats sessions</code> lists recent sessions with project, model, token count, and last-activity time <span class="ref">#60, #68</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Stricter <code>sessions</code> argument validation — reject invalid <code>--minutes</code> values</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>Modernized prefix stripping to use <code>removeprefix()</code> (Python 3.9+)</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.19.0...v1.20.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.19.0 -->
+                <div class="release" data-version="1.19.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.19.0</span>
+                                <span class="release-badge version">1.19.0</span>
+                                <span class="release-date">2026-04-16</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Compaction event detection</strong> — Detect <code>/compact</code> events (>50% context drop) and annotate graphs with <code>▼</code> markers <span class="ref">#62, #67</span></li>
+                                        <li><strong>MI quality flagging at compaction</strong> — MI score captured and flagged if below warning threshold <span class="ref">#65, #67</span></li>
+                                        <li><strong>Actionable zone recommendations</strong> — Zone indicators now include brief recommendations <span class="ref">#63, #66</span></li>
+                                        <li><strong>Landing page</strong> — Static GitHub Pages landing page for ContextStats rebrand <span class="ref">#66</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Zone percentage thresholds corrected to match actual code</li>
+                                        <li>Landing page timeline arrows made visible</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>1M model zone thresholds recalibrated (300–400k tokens)</li>
+                                        <li>Brand identity — fresh logo for ContextStats rebrand</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.18.0...v1.19.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.18.0 -->
+                <div class="release" data-version="1.18.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.18.0</span>
+                                <span class="release-badge version">1.18.0</span>
+                                <span class="release-date">2026-04-07</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Mermaid charts</strong> — Added Mermaid-based charts to <code>context-stats report</code> for visual token analytics</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Report period and session filtering corrected</li>
+                                        <li>Mermaid x-axis label overlap fixed</li>
+                                        <li>CI workflow cleanup — removed stale test reference</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>Report rewritten with full analytics: session summaries, token breakdowns, chart data</li>
+                                        <li>Python-only codebase finalised</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.17.0...v1.18.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.17.0 -->
+                <div class="release" data-version="1.17.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.17.0</span>
+                                <span class="release-badge version">1.17.0</span>
+                                <span class="release-date">2026-04-07</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Token usage analytics &amp; reporting</strong> — Full token analytics with charts, summaries, and reporting <span class="ref">#56, #57</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section refactored">
+                                    <div class="chg-section-title refactored"><span class="dot"></span>Refactored</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Python-only migration complete</strong> — Removed shell script; single Python codebase <span class="ref">#58, #59</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.16.1...v1.17.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.16.1 -->
+                <div class="release" data-version="1.16.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.16.1</span>
+                                <span class="release-badge version">1.16.1</span>
+                                <span class="release-date">2026-04-07</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>cache-warm dispatch</strong> — Shell script now delegates <code>cache-warm</code> to Python CLI</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.16.0...v1.16.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.16.0 -->
+                <div class="release" data-version="1.16.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.16.0</span>
+                                <span class="release-badge version">1.16.0</span>
+                                <span class="release-date">2026-04-07</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Cache-warm subcommand</strong> — Keep a session's prompt cache alive via background daemon <span class="ref">#49, #54</span></li>
+                                        <li><strong>Cache graph type</strong> — <code>--type cache</code> visualizes cache creation and read activity <span class="ref">#48</span></li>
+                                        <li><strong>E2E install smoke tests</strong> — Pre-commit hook with clean install verification <span class="ref">#51, #53</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Action-based CLI</strong> — Redesigned to strict <code>&lt;session_id&gt; &lt;action&gt;</code> pattern <span class="ref">#50, #52</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Windows CI pytest-cov exit code, fork simulation tests, E2E test robustness</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.15.1...v1.16.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.15.1 -->
+                <div class="release" data-version="1.15.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.15.1</span>
+                                <span class="release-badge version">1.15.1</span>
+                                <span class="release-date">2026-04-02</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Auto-install Python package</strong> — Installer now bumps Python package alongside bash script <span class="ref">#47</span></li>
+                                        <li>Version validation, circular dependency fix, error icon correction</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.15.0...v1.15.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.15.0 -->
+                <div class="release" data-version="1.15.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.15.0</span>
+                                <span class="release-badge version">1.15.0</span>
+                                <span class="release-date">2026-04-02</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li>Context report example and CLI coverage added</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>Export report structure refined: Generate block, Executive Snapshot, key takeaways</li>
+                                        <li>README reworked around context zones and next-action guidance</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.14.0...v1.15.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.14.0 -->
+                <div class="release" data-version="1.14.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.14.0</span>
+                                <span class="release-badge version">1.14.0</span>
+                                <span class="release-date">2026-04-01</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Export session stats as Markdown</strong> — <code>context-stats export</code> with <code>--output</code> support <span class="ref">#45, #46</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.13.1...v1.14.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.13.1 -->
+                <div class="release" data-version="1.13.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.13.1</span>
+                                <span class="release-badge version">1.13.1</span>
+                                <span class="release-date">2026-03-26</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li>Example <code>statusline.conf</code> with full parameter reference <span class="ref">#34, #35</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>UTF-8 encoding for config file I/O</li>
+                                        <li>Simplified config setup with bundled example</li>
+                                        <li>Autocompact default set to false</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.13.0...v1.13.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.13.0 -->
+                <div class="release" data-version="1.13.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.13.0</span>
+                                <span class="release-badge version">1.13.0</span>
+                                <span class="release-date">2026-03-23</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Configurable zone indicator thresholds</strong> — Override zone boundaries via config <span class="ref">#27, #31</span></li>
+                                        <li><strong>E2E CI tests</strong> — 4 new jobs across Ubuntu/macOS with multiple runtimes <span class="ref">#30, #32</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.12.1...v1.13.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.12.1 -->
+                <div class="release" data-version="1.12.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.12.1</span>
+                                <span class="release-badge version">1.12.1</span>
+                                <span class="release-date">2026-03-22</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Unified colors</strong> — Context info and zone indicator now share the same traffic-light color <span class="ref">#28</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.12.0...v1.12.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.12.0 -->
+                <div class="release" data-version="1.12.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.12.0</span>
+                                <span class="release-badge version">1.12.0</span>
+                                <span class="release-date">2026-03-22</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Per-property color support</strong> — Override colors for individual elements <span class="ref">#23</span></li>
+                                        <li><strong>5-state context zones</strong> — Plan/Code/Dump/ExDump/Dead with absolute thresholds <span class="ref">#21</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>Statusline reordered — context info first, model name last</li>
+                                        <li>Full-word zone indicators (P/C/D → Plan/Code/Dump)</li>
+                                        <li><code>show_mi</code> defaults to <code>false</code></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.11.1...v1.12.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.11.1 -->
+                <div class="release" data-version="1.11.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.11.1</span>
+                                <span class="release-badge version">1.11.1</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li><code>--version</code> flag for bash CLI</li>
+                                        <li>Quick Start docs corrected</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.11.0...v1.11.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.11.0 -->
+                <div class="release" data-version="1.11.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.11.0</span>
+                                <span class="release-badge version">1.11.0</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li>MI color thresholds adjusted (green ≥ 0.90, red ≤ 0.80)</li>
+                                        <li>Consistent <code>|</code> pipe separators everywhere</li>
+                                        <li>Delta repositioned after MI; model name without brackets</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section removed">
+                                    <div class="chg-section-title removed"><span class="dot"></span>Removed</div>
+                                    <ul class="chg-list">
+                                        <li>Autocompact (AC) indicator removed from statusline</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.10.0...v1.11.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.10.0 -->
+                <div class="release" data-version="1.10.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.10.0</span>
+                                <span class="release-badge version">1.10.0</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>MI redesign: pure utilization-based formula</strong> — <code>MI(u) = max(0, 1 - u^beta)</code> per-model profiles <span class="ref">Michelangelo paper</span></li>
+                                        <li>3-decimal MI display (<code>MI:0.995</code>)</li>
+                                        <li>Color thresholds adjusted to simplified scale</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section removed">
+                                    <div class="chg-section-title removed"><span class="dot"></span>Removed</div>
+                                    <ul class="chg-list">
+                                        <li>ES (Efficiency Score) and PS (Productivity Score) removed from MI</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.9.1...v1.10.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.9.1 -->
+                <div class="release" data-version="1.9.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.9.1</span>
+                                <span class="release-badge version">1.9.1</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li><code>--version</code> flag now correctly reports installed version</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.9.0...v1.9.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.9.0 -->
+                <div class="release" data-version="1.9.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.9.0</span>
+                                <span class="release-badge version">1.9.0</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Installation checker</strong> — <code>check-install.sh</code> verifies setup regardless of install method</li>
+                                        <li><strong>MI monotonicity tests</strong> — 60 tests across Python, Node.js, Bash</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.8.0...v1.9.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.8.0 -->
+                <div class="release" data-version="1.8.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.8.0</span>
+                                <span class="release-badge version">1.8.0</span>
+                                <span class="release-date">2026-03-15</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Model Intelligence (MI) score</strong> — Heuristic quality score based on context utilization <span class="ref">Michelangelo paper</span></li>
+                                        <li>MI timeseries graph: <code>context-stats --type mi</code></li>
+                                        <li>MI in session summary with sub-component breakdown (CPS, ES, PS)</li>
+                                        <li>Bash feature parity: custom colors, state rotation, MI display</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.7.0...v1.8.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.7.0 -->
+                <div class="release" data-version="1.7.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.7.0</span>
+                                <span class="release-badge version">1.7.0</span>
+                                <span class="release-date">2026-03-14</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Configurable colors</strong> — Custom themes via <code>statusline.conf</code> with 24-bit true color support</li>
+                                        <li><strong>context-stats explain</strong> — Diagnostic dump of context and config</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.6.2...v1.7.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.6.2 -->
+                <div class="release" data-version="1.6.2">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.6.2</span>
+                                <span class="release-badge version">1.6.2</span>
+                                <span class="release-date">2026-03-13</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Delta calculation parity with Node.js</li>
+                                        <li>Duplicate-entry guard, state rotation, git timeout, exception handling</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li>Delta parity tests (4 new bats tests)</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.6.1...v1.6.2" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.6.1 -->
+                <div class="release" data-version="1.6.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.6.1</span>
+                                <span class="release-badge version">1.6.1</span>
+                                <span class="release-date">2026-03-13</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Footer version drift and project name correction</li>
+                                        <li>Install version embedding from package.json</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.6.0...v1.6.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.6.0 -->
+                <div class="release" data-version="1.6.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.6.0</span>
+                                <span class="release-badge version">1.6.0</span>
+                                <span class="release-date">2026-03-13</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><code>cli --version</code> flag, state file rotation, session ID validation, git timeout</li>
+                                        <li>51 core pipeline unit tests + cross-implementation parity test</li>
+                                        <li>Open-source files: CODE_OF_CONDUCT, CONTRIBUTING, SECURITY</li>
+                                        <li>NPM Package: <code>cc-context-stats</code> on npm</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.2.0...v1.6.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.2.0 -->
+                <div class="release" data-version="1.2.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.2.0</span>
+                                <span class="release-badge version">1.2.0</span>
+                                <span class="release-date">2025-01-08</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Context Zones</strong> — Smart/Dumb/Wrap Up with color-coded percentages</li>
+                                        <li>Project name display in header</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.1.0...v1.2.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.1.0 -->
+                <div class="release" data-version="1.1.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.1.0</span>
+                                <span class="release-badge version">1.1.0</span>
+                                <span class="release-date">2025-01-08</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section changed">
+                                    <div class="chg-section-title changed"><span class="dot"></span>Changed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>BREAKING</strong>: Renamed from <code>cc-statusline</code> to <code>cc-context-stats</code></li>
+                                        <li>Pivoted to real-time token monitoring and context tracking</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.0.2...v1.1.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.0.2 -->
+                <div class="release" data-version="1.0.2">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.0.2</span>
+                                <span class="release-badge version">1.0.2</span>
+                                <span class="release-date">2025-01-08</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Context showing negative values — using <code>current_used_tokens</code></li>
+                                        <li>ANSI escape codes in watch mode</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.0.1...v1.0.2" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.0.1 -->
+                <div class="release" data-version="1.0.1">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.0.1</span>
+                                <span class="release-badge version">1.0.1</span>
+                                <span class="release-date">2025-01-07</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li>pip/uv installable Python package on PyPI</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.0.0...v1.0.1" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.0.0 -->
+                <div class="release" data-version="1.0.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.0.0</span>
+                                <span class="release-badge version">1.0.0</span>
+                                <span class="release-date">2025-01-06</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li>Comprehensive test suite (Bats, pytest, Jest) + GitHub Actions CI/CD</li>
+                                        <li>Code quality tools: ShellCheck, Ruff, ESLint, Prettier</li>
+                                        <li>Pre-commit hooks, EditorConfig, Dependabot, release automation</li>
+                                        <li>Full-featured statusline (bash, Python, Node.js)</li>
+                                        <li>Interactive installer, configuration, autocompact buffer</li>
+                                        <li>Git branch and uncommitted changes display</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/releases/tag/v1.0.0" target="_blank" rel="noopener">Compare on GitHub →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /timeline -->
+
+            <div class="no-results" id="noResults">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.5">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    <path d="M8 11h6"/>
+                </svg>
+                <p>No changes match your search.</p>
+            </div>
+        </div>
+
+        <!-- ── FOOTER ─────────────────────────────────── -->
+        <footer>
+            <div class="container">
+                <div class="footer-inner">
+                    <div class="footer-logo">
+                        <img src="../assets/logo/logo-mark.svg" alt="context-stats" />
+                        <span>context-stats · MIT License · Made by <a href="https://github.com/luongnv89">luongnv89</a></span>
+                    </div>
+                    <ul class="footer-links">
+                        <li><a href="../">Home</a></li>
+                        <li><a href="../docs.html">Documentation</a></li>
+                        <li><a href="https://pypi.org/project/context-stats/">PyPI</a></li>
+                        <li><a href="https://github.com/luongnv89/context-stats">GitHub</a></li>
+                    </ul>
+                </div>
+            </div>
+        </footer>
+
+        <script>
+            /* ── Toggle release expand/collapse ─────────── */
+            function toggleRelease(header) {
+                const release = header.closest('.release');
+                release.classList.toggle('open');
+            }
+
+            /* ── Search / filter ────────────────────────── */
+            const searchInput = document.getElementById('searchInput');
+            const releases = document.querySelectorAll('.release');
+            const noResults = document.getElementById('noResults');
+            const timeline = document.getElementById('timeline');
+
+            searchInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase().trim();
+                let visibleCount = 0;
+
+                releases.forEach(function (release) {
+                    const card = release.querySelector('.release-card');
+                    const text = card.textContent.toLowerCase();
+
+                    if (!query || text.includes(query)) {
+                        release.style.display = '';
+                        visibleCount++;
+                        // Auto-expand if searching
+                        if (query) release.classList.add('open');
+                    } else {
+                        release.style.display = 'none';
+                    }
+                });
+
+                noResults.classList.toggle('visible', visibleCount === 0 && query.length > 0);
+            });
+
+            /* ── Counters ───────────────────────────────── */
+            (function () {
+                let featureCount = 0;
+                let fixCount = 0;
+                releases.forEach(function (r) {
+                    const added = r.querySelectorAll('.chg-section.added .chg-list li');
+                    const fixed = r.querySelectorAll('.chg-section.fixed .chg-list li');
+                    featureCount += added.length;
+                    fixCount += fixed.length;
+                });
+                document.getElementById('releaseCount').textContent = releases.length;
+                document.getElementById('featureCount').textContent = featureCount;
+                document.getElementById('fixCount').textContent = fixCount;
+            })();
+
+            /* ── Keyboard: Escape closes search ─────────── */
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && document.activeElement === searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                    searchInput.blur();
+                }
+            });
+        </script>
+    </body>
+</html>
