@@ -1,0 +1,43 @@
+# context-stats — robots.txt
+# Allow all crawlers (search and AI) for maximum visibility.
+
+User-agent: *
+Allow: /
+
+# AI training & research crawlers — allow for maximum visibility
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# AI search/indexing bots
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+# On-demand fetchers
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+Sitemap: https://luongnv89.github.io/context-stats/sitemap.xml

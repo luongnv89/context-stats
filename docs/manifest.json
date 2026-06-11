@@ -1,0 +1,17 @@
+{
+  "name": "context-stats — Track Claude Code Token Usage",
+  "short_name": "context-stats",
+  "description": "Real-time context window monitoring for Claude Code sessions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/logo/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}
