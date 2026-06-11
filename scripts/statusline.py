@@ -955,7 +955,7 @@ color_separator=dim
     return config
 
 
-def _format_thinking_info(budget):
+def _format_thinking_info(budget) -> str:
     """Format thinking budget for display next to model name.
 
     Returns an empty string when budget is None or zero.
