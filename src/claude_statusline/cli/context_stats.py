@@ -426,8 +426,7 @@ def _render_tps_graph(
 
     renderer._emit()
     renderer._emit(
-        f"  {colors.cyan}{'Current:':<12}{colors.reset} "
-        f"{format_tps(current, precision, unit)}"
+        f"  {colors.cyan}{'Current:':<12}{colors.reset} {format_tps(current, precision, unit)}"
     )
     if average is not None:
         renderer._emit(

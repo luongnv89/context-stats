@@ -452,7 +452,7 @@ def fit_to_width(parts, max_width):
     return result
 
 
-def get_pr_number(project_dir):
+def get_pr_number(project_dir: str) -> str:
     """Look up the PR number for the current branch via gh CLI.
 
     Returns a formatted string like ``#42`` when an open PR exists,
