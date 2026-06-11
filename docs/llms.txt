@@ -1,0 +1,34 @@
+# context-stats — Real-Time Context Monitoring for Claude Code
+
+> Track token usage, catch context degradation early, and optimize your Claude Code spend — all without leaving your terminal. Zero dependencies, MIT licensed, pure Python 3.9+.
+
+## Landing Page
+
+- [context-stats](https://luongnv89.github.io/context-stats/): Real-time context monitoring, three levels of analytics, terminal dashboard, context zones, and cache keep-warm
+
+## Documentation
+
+- [Installation](https://luongnv89.github.io/context-stats/installation.html): Quick install via pip, one command, zero dependencies
+- [Configuration](https://luongnv89.github.io/context-stats/configuration.html): Customize 18 colors, toggle MI display, delta tracking, and more
+- [CLI Scripts](https://luongnv89.github.io/context-stats/scripts.html): All commands — graph, sessions, export, report, cache-warm, explain
+- [CSV Format](https://luongnv89.github.io/context-stats/CSV_FORMAT.html): State file field specification (15 comma-separated fields)
+- [Model Intelligence](https://luongnv89.github.io/context-stats/MODEL_INTELLIGENCE.html): MI score calibration against MRCR v2 8-needle benchmark
+- [Architecture](https://luongnv89.github.io/context-stats/ARCHITECTURE.html): System architecture, data flow, and implementation details
+- [Troubleshooting](https://luongnv89.github.io/context-stats/troubleshooting.html): Common issues and solutions
+
+## Development
+
+- [Development Guide](https://luongnv89.github.io/context-stats/DEVELOPMENT.html): Setup, testing, and contribution guide
+- [Deployment](https://luongnv89.github.io/context-stats/DEPLOYMENT.html): Release and deployment procedures
+
+## Code
+
+- [GitHub Repository](https://github.com/luongnv89/context-stats): Source code, issues, and pull requests
+- [PyPI Package](https://pypi.org/project/context-stats/): Install via `pip install context-stats`
+- [Changelog](https://github.com/luongnv89/context-stats/blob/main/CHANGELOG.md): Version history
+
+## Optional
+
+- [Contributing](https://github.com/luongnv89/context-stats/blob/main/CONTRIBUTING.md): How to contribute to the project
+- [Security Policy](https://github.com/luongnv89/context-stats/blob/main/SECURITY.md): Security reporting and policies
+- [License](https://github.com/luongnv89/context-stats/blob/main/LICENSE): MIT License

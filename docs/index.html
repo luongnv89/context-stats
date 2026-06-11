@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>context-stats — Real-Time Context Monitoring for Claude Code</title>
+        <title>context-stats — Track Claude Code Token Usage</title>
         <meta
             name="description"
             content="Track token usage, catch context degradation early, and optimize your Claude Code spend. Three levels of analytics — live, per-session, and multi-week reports."
@@ -12,21 +12,179 @@
             name="keywords"
             content="claude code, context monitoring, token tracking, AI cost optimization, statusline, terminal"
         />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <link rel="canonical" href="https://luongnv89.github.io/context-stats/" />
 
         <!-- Open Graph -->
         <meta
             property="og:title"
-            content="context-stats — Real-Time Context Monitoring for Claude Code"
+            content="context-stats — Track Claude Code Token Usage"
         />
         <meta
             property="og:description"
             content="Know your context zone. Act before Claude degrades. Free, zero-dependency Python tool."
         />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="images/token-graph.png" />
+        <meta property="og:image" content="https://luongnv89.github.io/context-stats/images/token-graph.png" />
+        <meta property="og:url" content="https://luongnv89.github.io/context-stats/" />
+        <meta property="og:site_name" content="context-stats" />
+
+        <!-- Twitter Cards -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="context-stats — Track Claude Code Token Usage" />
+        <meta name="twitter:description" content="Know your context zone. Act before Claude degrades. Free, zero-dependency Python tool." />
+        <meta name="twitter:image" content="https://luongnv89.github.io/context-stats/images/token-graph.png" />
+        <meta name="twitter:image:alt" content="context-stats terminal dashboard showing real-time Claude Code context monitoring" />
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg" />
+        <link rel="apple-touch-icon" href="assets/logo/logo-full.svg" />
+        <meta name="theme-color" content="#0a0a0a" />
+
+        <!-- Resource hints -->
+        <link rel="preconnect" href="https://api.github.com" />
+        <link rel="preconnect" href="https://pypistats.org" crossorigin />
+
+        <!-- JSON-LD Structured Data -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "context-stats",
+          "description": "Real-time context window monitoring for Claude Code sessions. Track token usage, catch context degradation early, and optimize your AI spend — all without leaving your terminal.",
+          "url": "https://luongnv89.github.io/context-stats/",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Any",
+          "programmingLanguage": "Python",
+          "version": "1.22.0",
+          "license": "https://opensource.org/licenses/MIT",
+          "author": {
+            "@type": "Person",
+            "name": "Nguyen Luong",
+            "url": "https://github.com/luongnv89"
+          },
+          "publisher": {
+            "@type": "Person",
+            "name": "Nguyen Luong"
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "screenshot": "https://luongnv89.github.io/context-stats/images/token-graph.png"
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "context-stats",
+          "url": "https://luongnv89.github.io/context-stats/",
+          "logo": "https://luongnv89.github.io/context-stats/assets/logo/logo-full.svg",
+          "sameAs": [
+            "https://github.com/luongnv89/context-stats",
+            "https://pypi.org/project/context-stats/"
+          ]
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "context-stats",
+          "url": "https://luongnv89.github.io/context-stats/",
+          "description": "Real-time context window monitoring for Claude Code sessions."
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does context-stats send any data to the cloud?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. All session data stays local in ~/.claude/statusline/. There are no network requests, no telemetry, no external API calls of any kind. Your token usage and session data never leave your machine."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will it slow down my Claude Code sessions?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The statusline script is a lightweight Python process that runs synchronously on each prompt. Typical execution is under 10ms. Git operations have a 5-second timeout to prevent hangs."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it work on Windows?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. context-stats is pure Python 3.9+ with zero external dependencies and runs on macOS, Linux, and Windows."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What Python version do I need?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Python 3.9 or higher. No external packages are required — context-stats uses only the Python standard library."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I customize the colors and display?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Create ~/.claude/statusline.conf with key=value pairs. You can customize 18 named colors or use hex codes, toggle MI display, token detail, delta tracking, session ID, motion effects, and more."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How accurate are the token counts?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "context-stats reads the token data directly from Claude Code's status line JSON. It reports the exact values that Claude Code provides. The MI score is calibrated against the MRCR v2 8-needle benchmark."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What's the difference between the statusline and the graph dashboard?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The statusline (claude-statusline) is the persistent one-line display shown by Claude Code at each prompt — always on. The graph dashboard (context-stats graph) is an on-demand ASCII chart view you run manually to see usage history, MI trends, cache activity, and delta per interaction."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is cache keep-warm and why do I need it?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Claude's prompt cache has a 5-minute TTL. Any pause longer than 5 minutes silently evicts the cache. cache-warm solves this by running a lightweight background heartbeat every 4 minutes, keeping the cache alive for up to 30 minutes. The savings show up in your context-stats export report."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is compaction detection and what does the ▼ marker mean?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When Claude Code compacts its context (a >50% drop in token count between interactions), context-stats detects it automatically and marks the point with a ▼ symbol. If MI was below 0.6 when compaction happened, it flags the event as potentially lossy — meaning key details may have been lost in the summary."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What are zone recommendations?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Each context zone (Planning, Code, Dump, ExDump, Dead) comes with a brief actionable recommendation. For example, in the Dump zone you'll see \"Wrap up task, export session, prepare new context\". These appear inline in the statusline output and in graph annotations."
+              }
+            }
+          ]
+        }
+        </script>
 
         <style>
             /* ── Reset & Base ──────────────────────────────────── */
@@ -2507,6 +2665,8 @@
                             src="images/1.12.0/plan-zone.png"
                             alt="Planning zone — green, plenty of context"
                             loading="lazy"
+                            width="600"
+                            height="400"
                         />
                         <div class="screenshot-caption">
                             Planning Zone — plenty of context, keep working
@@ -2517,6 +2677,8 @@
                             src="images/1.12.0/code-zone.png"
                             alt="Code-only zone — yellow, context tightening"
                             loading="lazy"
+                            width="600"
+                            height="400"
                         />
                         <div class="screenshot-caption">
                             Code-Only Zone — tightening, finish current task
@@ -2527,6 +2689,8 @@
                             src="images/1.12.0/dump-zone.png"
                             alt="Dump zone — orange, quality declining"
                             loading="lazy"
+                            width="600"
+                            height="400"
                         />
                         <div class="screenshot-caption">
                             Dump Zone — quality declining, wrap up now
@@ -2535,8 +2699,10 @@
                     <div class="screenshot-card">
                         <img
                             src="images/token-graph.png"
-                            alt="Live ASCII graph dashboard"
+                            alt="Live ASCII graph dashboard — context-stats graph command output"
                             loading="lazy"
+                            width="600"
+                            height="400"
                         />
                         <div class="screenshot-caption">
                             Live ASCII graph dashboard — <code>context-stats graph</code>
