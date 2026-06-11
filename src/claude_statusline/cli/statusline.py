@@ -57,6 +57,32 @@ def _tps_tail_size(tps_window: int) -> int:
     return max(1, tps_window) * 2 + _TPS_TAIL_BUFFER
 
 
+def _format_thinking_info(budget) -> str:
+    """Format thinking budget for display next to model name.
+
+    Returns an empty string when budget is None or zero.
+    Small budgets (< 1000) are shown exactly.
+    Medium budgets (1000-9999) are shown as "Nk" only when rounding is reasonable (>= 5k).
+    Large budgets (>= 1M) are shown as "NM" tokens thinking.
+    """
+    if budget is None or budget == 0:
+        return ""
+    try:
+        tokens = int(budget)
+    except (ValueError, TypeError):
+        return ""
+    if tokens <= 0:
+        return ""
+    if tokens >= 1_000_000:
+        return f"{tokens // 1_000_000}M tokens thinking"
+    if tokens >= 10_000:
+        k = round(tokens / 1_000)
+        return f"{k}k tokens thinking"
+    if tokens >= 5_000:
+        return f"{tokens // 1_000}k tokens thinking"
+    return f"{tokens} tokens thinking"
+
+
 def main() -> None:
     """Main entry point for claude-statusline CLI."""
     try:
@@ -269,32 +295,6 @@ def main() -> None:
     # Display session_id if enabled
     if config.show_session and session_id:
         session_info = f" | {colors.separator}{session_id}{colors.reset}"
-
-def _format_thinking_info(budget):
-    """Format thinking budget for display next to model name.
-
-    Returns an empty string when budget is None or zero.
-    Small budgets (< 1000) are shown exactly.
-    Medium budgets (1000-9999) are shown as "Nk" only when rounding is reasonable (>= 5k).
-    Large budgets (>= 1M) are shown as "NM" tokens thinking.
-    """
-    if budget is None or budget == 0:
-        return ""
-    try:
-        tokens = int(budget)
-    except (ValueError, TypeError):
-        return ""
-    if tokens <= 0:
-        return ""
-    if tokens >= 1_000_000:
-        return f"{tokens // 1_000_000}M tokens thinking"
-    if tokens >= 10_000:
-        k = round(tokens / 1_000)
-        return f"{k}k tokens thinking"
-    if tokens >= 5_000:
-        return f"{tokens // 1_000}k tokens thinking"
-    return f"{tokens} tokens thinking"
-
 
     # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [session_id]
     # Model name is lowest priority — truncated first when terminal is narrow
