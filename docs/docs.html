@@ -704,12 +704,12 @@
                         <pre><span class="dm">| Metric             | Value              |</span>
 <span class="dm">|--------------------|--------------------|</span>
 | Context window     | <span class="c">200,000 tokens</span>
-| Final usage        | <span class="yl">168,400 (84.2%)</span>
+| Final usage        | <span class="or">124,800 (62.4%)</span>
 | Total input tokens | 812,340
 | Total output tokens| 793,218
 | Session cost       | <span class="g">$51.7475</span>
 | Lines changed      | <span class="g">+1,123</span> / <span class="rd">-887</span>
-| Final MI score     | <span class="or">0.412 (Dump zone)</span></pre>
+| Final MI score     | <span class="or">0.572 (Dump zone)</span></pre>
                     </div>
                 </section>
 
@@ -790,8 +790,8 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                     </p>
                     <ul>
                         <li><strong>≥ 0.90</strong> — green: full reasoning quality.</li>
-                        <li><strong>0.80–0.90</strong> — yellow: still solid; watch long chains.</li>
-                        <li><strong>below 0.80</strong> — degrading; compaction below 0.60 is flagged lossy.</li>
+                        <li><strong>0.80 &lt; MI &lt; 0.90</strong> — yellow: still solid; watch long chains.</li>
+                        <li><strong>≤ 0.80</strong> — degrading; compaction below 0.60 is flagged lossy.</li>
                     </ul>
                 </section>
 
