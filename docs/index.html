@@ -16,10 +16,7 @@
         <link rel="canonical" href="https://luongnv89.github.io/context-stats/" />
 
         <!-- Open Graph -->
-        <meta
-            property="og:title"
-            content="context-stats — Track Claude Code Token Usage"
-        />
+        <meta property="og:title" content="context-stats — Track Claude Code Token Usage" />
         <meta
             property="og:description"
             content="Know your context zone. Act before Claude degrades. Free, zero-dependency Python tool."
@@ -39,11 +36,17 @@
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg" />
         <link rel="apple-touch-icon" href="assets/logo/logo-full.svg" />
-        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="theme-color" content="#0F172A" />
 
         <!-- Resource hints -->
         <link rel="preconnect" href="https://api.github.com" />
         <link rel="preconnect" href="https://pypistats.org" crossorigin />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
 
         <!-- JSON-LD Structured Data -->
         <script type="application/ld+json">
@@ -97,94 +100,6 @@
           "description": "Real-time context window monitoring for Claude Code sessions."
         }
         </script>
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "Does context-stats send any data to the cloud?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "No. All session data stays local in ~/.claude/statusline/. There are no network requests, no telemetry, no external API calls of any kind. Your token usage and session data never leave your machine."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Will it slow down my Claude Code sessions?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "No. The statusline script is a lightweight Python process that runs synchronously on each prompt. Typical execution is under 10ms. Git operations have a 5-second timeout to prevent hangs."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Does it work on Windows?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes. context-stats is pure Python 3.9+ with zero external dependencies and runs on macOS, Linux, and Windows."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What Python version do I need?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Python 3.9 or higher. No external packages are required — context-stats uses only the Python standard library."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Can I customize the colors and display?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes. Create ~/.claude/statusline.conf with key=value pairs. You can customize 18 named colors or use hex codes, toggle MI display, token detail, delta tracking, session ID, motion effects, and more."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How accurate are the token counts?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "context-stats reads the token data directly from Claude Code's status line JSON. It reports the exact values that Claude Code provides. The MI score is calibrated against the MRCR v2 8-needle benchmark."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What's the difference between the statusline and the graph dashboard?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The statusline (claude-statusline) is the persistent one-line display shown by Claude Code at each prompt — always on. The graph dashboard (context-stats graph) is an on-demand ASCII chart view you run manually to see usage history, MI trends, cache activity, and delta per interaction."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What is cache keep-warm and why do I need it?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Claude's prompt cache has a 5-minute TTL. Any pause longer than 5 minutes silently evicts the cache. cache-warm solves this by running a lightweight background heartbeat every 4 minutes, keeping the cache alive for up to 30 minutes. The savings show up in your context-stats export report."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What is compaction detection and what does the ▼ marker mean?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "When Claude Code compacts its context (a >50% drop in token count between interactions), context-stats detects it automatically and marks the point with a ▼ symbol. If MI was below 0.6 when compaction happened, it flags the event as potentially lossy — meaning key details may have been lost in the summary."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What are zone recommendations?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Each context zone (Planning, Code, Dump, ExDump, Dead) comes with a brief actionable recommendation. For example, in the Dump zone you'll see \"Wrap up task, export session, prepare new context\". These appear inline in the statusline output and in graph annotations."
-              }
-            }
-          ]
-        }
-        </script>
 
         <style>
             /* ── Reset & Base ──────────────────────────────────── */
@@ -196,30 +111,27 @@
                 padding: 0;
             }
 
-            /* ── Dark theme — luongnv.com palette ──────────────── */
+            /* ── Brand theme — context-stats logo palette ─────── */
             :root {
-                --bg: #0a0a0a;
-                --bg-card: #111111;
-                --bg-subtle: #1a1a1a;
-                --border: #262626;
-                --border-hover: #404040;
-                --text: #fafafa;
-                --text-muted: #a1a1a1;
-                --accent: #00ff41;
-                --accent-hover: #00cc33;
-                --accent-glow: rgba(0, 255, 65, 0.15);
+                --bg: #0f172a;
+                --bg-deep: #0b1120;
+                --bg-card: #131c30;
+                --bg-subtle: #1c2740;
+                --border: #243049;
+                --border-hover: #334155;
+                --text: #f1f5f9;
+                --text-muted: #94a3b8;
+                --text-dim: #64748b;
 
-                --green: #00ff41;
+                --green: #10b981;
                 --cyan: #06b6d4;
                 --indigo: #818cf8;
                 --yellow: #f59e0b;
-                --orange: #f97316;
                 --red: #ef4444;
-                --gray: #64748b;
 
-                --radius: 12px;
-                --radius-lg: 20px;
-                --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+                --glow: rgba(16, 185, 129, 0.18);
+                --radius: 14px;
+                --maxw: 1080px;
             }
 
             html {
@@ -227,311 +139,259 @@
             }
 
             body {
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
                 background: var(--bg);
                 color: var(--text);
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-                font-size: 16px;
                 line-height: 1.6;
+                -webkit-font-smoothing: antialiased;
                 overflow-x: hidden;
             }
 
-            a {
-                color: var(--cyan);
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-
-            /* ── Layout helpers ────────────────────────────────── */
             .container {
-                max-width: 1100px;
+                max-width: var(--maxw);
                 margin: 0 auto;
                 padding: 0 24px;
             }
 
-            section {
-                padding: 80px 0;
-            }
-
-            .section-label {
-                display: inline-block;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.12em;
-                text-transform: uppercase;
-                color: var(--cyan);
-                margin-bottom: 12px;
-            }
-
-            h2 {
-                font-size: clamp(28px, 4vw, 40px);
-                font-weight: 700;
-                line-height: 1.2;
-                margin-bottom: 16px;
-            }
-
-            .lead {
-                font-size: 18px;
-                color: var(--text-muted);
-                max-width: 600px;
-                margin-bottom: 40px;
-            }
-
-            /* ── NAV ───────────────────────────────────────────── */
-            nav {
-                position: sticky;
-                top: 0;
-                z-index: 100;
-                background: rgba(10, 10, 10, 0.92);
-                backdrop-filter: blur(12px);
-                border-bottom: 1px solid var(--border);
-            }
-
-            .nav-inner {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 14px 24px;
-                max-width: 1100px;
-                margin: 0 auto;
-            }
-
-            .nav-logo {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .nav-logo img {
-                height: 36px;
-            }
-            .nav-logo span {
-                font-size: 15px;
-                font-weight: 600;
-                color: var(--text);
-                letter-spacing: -0.02em;
-            }
-
-            .nav-links {
-                display: flex;
-                gap: 28px;
-                list-style: none;
-            }
-            .nav-links a {
-                font-size: 14px;
-                font-weight: 500;
-                color: var(--text-muted);
-                transition: color 0.2s;
-            }
-            .nav-links a:hover {
-                color: var(--text);
+            a {
+                color: inherit;
                 text-decoration: none;
             }
 
+            code,
+            .mono {
+                font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+            }
+
+            /* ── Nav ───────────────────────────────────────────── */
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgba(15, 23, 42, 0.82);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+            }
+            .nav-inner {
+                max-width: var(--maxw);
+                margin: 0 auto;
+                padding: 14px 24px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .nav-logo {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+            }
+            .nav-logo img {
+                height: 34px;
+                display: block;
+            }
+            .nav-wordmark {
+                font-size: 22px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: var(--text);
+            }
+            .nav-wordmark .stats {
+                color: var(--green);
+            }
+            .nav-links {
+                list-style: none;
+                display: flex;
+                align-items: center;
+                gap: 28px;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .nav-links a {
+                color: var(--text-muted);
+                transition: color 0.15s;
+            }
+            .nav-links a:hover {
+                color: var(--text);
+            }
             .nav-cta {
+                padding: 8px 16px;
                 background: var(--green);
-                color: var(--bg) !important;
-                padding: 8px 18px;
+                color: #04221a !important;
                 border-radius: 8px;
-                font-weight: 700 !important;
-                font-size: 13px !important;
-                transition: opacity 0.2s !important;
+                font-weight: 700;
             }
             .nav-cta:hover {
-                opacity: 0.85;
-                text-decoration: none !important;
+                background: #34d399;
+            }
+            @media (max-width: 720px) {
+                .nav-links li:not(:last-child) {
+                    display: none;
+                }
             }
 
-            /* ── HERO ──────────────────────────────────────────── */
+            /* ── Buttons ───────────────────────────────────────── */
+            .btn-primary,
+            .btn-secondary {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 13px 24px;
+                border-radius: 10px;
+                font-weight: 700;
+                font-size: 15px;
+                transition: all 0.18s;
+                cursor: pointer;
+            }
+            .btn-primary {
+                background: var(--green);
+                color: #04221a;
+                box-shadow: 0 8px 30px var(--glow);
+            }
+            .btn-primary:hover {
+                background: #34d399;
+                transform: translateY(-1px);
+            }
+            .btn-secondary {
+                background: var(--bg-card);
+                color: var(--text);
+                border: 1px solid var(--border);
+            }
+            .btn-secondary:hover {
+                border-color: var(--border-hover);
+                background: var(--bg-subtle);
+            }
+
+            /* ── Hero ──────────────────────────────────────────── */
             .hero {
-                padding: 100px 0 80px;
-                text-align: center;
                 position: relative;
-                overflow: hidden;
+                padding: 96px 0 64px;
+                text-align: center;
             }
-
             .hero::before {
                 content: '';
                 position: absolute;
-                top: -200px;
+                top: -10%;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 800px;
-                height: 600px;
-                background: radial-gradient(ellipse, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+                width: 760px;
+                height: 460px;
+                background: radial-gradient(
+                    ellipse at center,
+                    var(--glow),
+                    transparent 68%
+                );
+                z-index: -1;
                 pointer-events: none;
             }
-
             .hero-badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.25);
-                border-radius: 999px;
+                gap: 8px;
                 padding: 6px 14px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 100px;
                 font-size: 13px;
-                color: var(--green);
+                font-weight: 500;
+                color: var(--text-muted);
                 margin-bottom: 28px;
             }
             .hero-badge .dot {
-                width: 6px;
-                height: 6px;
+                width: 7px;
+                height: 7px;
                 border-radius: 50%;
                 background: var(--green);
-                animation: pulse 2s infinite;
+                box-shadow: 0 0 8px var(--green);
             }
-            @keyframes pulse {
-                0%,
-                100% {
-                    opacity: 1;
-                    transform: scale(1);
-                }
-                50% {
-                    opacity: 0.5;
-                    transform: scale(0.8);
-                }
-            }
-
             .hero h1 {
-                font-size: clamp(36px, 6vw, 64px);
+                font-size: clamp(2.4rem, 6vw, 4rem);
                 font-weight: 800;
-                line-height: 1.1;
+                line-height: 1.08;
                 letter-spacing: -0.03em;
-                margin-bottom: 20px;
+                margin-bottom: 22px;
             }
-
-            .hero h1 .accent-green {
+            .accent-green {
                 color: var(--green);
             }
-            .hero h1 .accent-cyan {
+            .accent-cyan {
                 color: var(--cyan);
             }
-            .hero h1 .accent-indigo {
-                color: var(--indigo);
-            }
-
             .hero-sub {
-                font-size: clamp(16px, 2.5vw, 20px);
+                font-size: clamp(1.05rem, 2vw, 1.25rem);
                 color: var(--text-muted);
-                max-width: 560px;
-                margin: 0 auto 40px;
+                max-width: 600px;
+                margin: 0 auto 36px;
             }
-
             .hero-actions {
                 display: flex;
                 gap: 14px;
                 justify-content: center;
                 flex-wrap: wrap;
-                margin-bottom: 56px;
             }
 
-            .btn-primary {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                background: var(--green);
-                color: var(--bg);
-                padding: 14px 28px;
-                border-radius: 10px;
-                font-weight: 700;
-                font-size: 15px;
-                transition:
-                    transform 0.15s,
-                    box-shadow 0.15s;
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-            }
-            .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-                text-decoration: none;
-            }
-
-            .btn-secondary {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                background: transparent;
-                color: var(--text);
-                padding: 14px 28px;
-                border-radius: 10px;
-                font-weight: 600;
-                font-size: 15px;
-                border: 1px solid var(--border);
-                transition:
-                    border-color 0.2s,
-                    background 0.2s;
-            }
-            .btn-secondary:hover {
-                border-color: var(--cyan);
-                background: rgba(6, 182, 212, 0.05);
-                text-decoration: none;
-            }
-
-            /* ── Terminal demo ─────────────────────────────────── */
+            /* ── Terminal ──────────────────────────────────────── */
             .terminal-wrap {
-                max-width: 820px;
-                margin: 0 auto;
+                max-width: 680px;
+                margin: 56px auto 0;
+                perspective: 1400px;
             }
-
             .terminal {
-                background: var(--bg-subtle);
+                background: var(--bg-deep);
                 border: 1px solid var(--border);
-                border-radius: var(--radius-lg);
+                border-radius: var(--radius);
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
                 overflow: hidden;
-                box-shadow:
-                    var(--shadow),
-                    0 0 80px rgba(16, 185, 129, 0.06);
+                text-align: left;
             }
             .terminal-bar {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                padding: 12px 16px;
-                background: var(--bg-subtle);
+                padding: 11px 16px;
+                background: var(--bg-card);
                 border-bottom: 1px solid var(--border);
             }
             .terminal-dot {
-                width: 12px;
-                height: 12px;
+                width: 11px;
+                height: 11px;
                 border-radius: 50%;
             }
             .terminal-dot.red {
                 background: #ff5f57;
             }
             .terminal-dot.yellow {
-                background: #ffbd2e;
+                background: #febc2e;
             }
             .terminal-dot.green {
                 background: #28c840;
             }
             .terminal-title {
-                flex: 1;
-                text-align: center;
+                margin-left: 10px;
                 font-size: 12px;
-                color: var(--text-muted);
-                font-family: monospace;
+                color: var(--text-dim);
+                font-family: 'JetBrains Mono', monospace;
             }
-
             .terminal-body {
-                padding: 20px 24px;
-                font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
-                font-size: 14px;
+                padding: 22px 20px;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 13px;
                 line-height: 1.7;
+                white-space: pre-wrap;
             }
-
-            .t-cmd {
+            .t-prompt {
                 color: var(--green);
             }
-            .t-out {
+            .t-cmd {
                 color: var(--text);
             }
             .t-muted {
+                color: var(--text-dim);
+            }
+            .t-dim {
                 color: var(--text-muted);
             }
             .t-green {
                 color: var(--green);
-                font-weight: 700;
             }
             .t-cyan {
                 color: var(--cyan);
@@ -539,788 +399,260 @@
             .t-yellow {
                 color: var(--yellow);
             }
-            .t-orange {
-                color: var(--orange);
+            .t-indigo {
+                color: var(--indigo);
             }
             .t-red {
                 color: var(--red);
             }
-            .t-indigo {
-                color: var(--indigo);
+            .t-cursor {
+                color: var(--green);
+                animation: blink 1.1s step-end infinite;
             }
-            .t-prompt {
-                color: #64748b;
-            }
-            .t-dim {
-                color: #475569;
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
             }
 
-            /* ── Stats bar ─────────────────────────────────────── */
-            .stats-bar {
-                display: flex;
-                justify-content: center;
-                gap: 48px;
-                flex-wrap: wrap;
-                padding: 40px 0;
-                border-top: 1px solid var(--border);
-                border-bottom: 1px solid var(--border);
+            /* ── Metrics bar ───────────────────────────────────── */
+            .metrics {
+                margin: 64px auto 0;
             }
-            .stat-item {
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1px;
+                background: var(--border);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                overflow: hidden;
+            }
+            .metric {
+                background: var(--bg-card);
+                padding: 26px 18px;
                 text-align: center;
             }
-            .stat-num {
-                font-size: 32px;
+            .metric-num {
+                font-size: clamp(1.6rem, 3.5vw, 2.3rem);
                 font-weight: 800;
-                letter-spacing: -0.03em;
+                letter-spacing: -0.02em;
+                line-height: 1;
                 background: linear-gradient(135deg, var(--green), var(--cyan));
                 -webkit-background-clip: text;
+                background-clip: text;
                 -webkit-text-fill-color: transparent;
             }
-            .stat-label {
+            .metric-label {
+                margin-top: 8px;
                 font-size: 13px;
                 color: var(--text-muted);
-                margin-top: 2px;
+                font-weight: 500;
+            }
+            @media (max-width: 720px) {
+                .metrics-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
             }
 
-            /* ── PROBLEM ───────────────────────────────────────── */
-            #problem {
-                background: var(--bg-subtle);
+            /* ── Section scaffolding ──────────────────────────── */
+            section {
+                padding: 88px 0;
             }
-
-            .problem-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 20px;
-                margin-top: 40px;
+            .section-head {
+                text-align: center;
+                max-width: 640px;
+                margin: 0 auto 56px;
             }
-
-            .pain-card {
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: var(--radius);
-                padding: 24px;
-            }
-            .pain-icon {
-                font-size: 28px;
-                margin-bottom: 12px;
-            }
-            .pain-card h3 {
-                font-size: 16px;
+            .section-label {
+                display: inline-block;
+                font-size: 13px;
                 font-weight: 700;
-                margin-bottom: 8px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--green);
+                margin-bottom: 14px;
             }
-            .pain-card p {
-                font-size: 14px;
+            .section-head h2 {
+                font-size: clamp(1.8rem, 4vw, 2.6rem);
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+            }
+            .section-head p {
+                margin-top: 16px;
                 color: var(--text-muted);
-                line-height: 1.5;
+                font-size: 1.08rem;
             }
 
-            /* ── FEATURES / THREE LEVELS ──────────────────────── */
-            .levels-grid {
+            /* ── Feature cards (3 levels) ─────────────────────── */
+            .levels {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 24px;
-                margin-top: 48px;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
             }
-
             .level-card {
                 background: var(--bg-card);
-                border-radius: var(--radius-lg);
-                overflow: hidden;
                 border: 1px solid var(--border);
-                transition:
-                    border-color 0.2s,
-                    transform 0.2s;
+                border-radius: var(--radius);
+                padding: 32px 28px;
+                position: relative;
+                transition: border-color 0.18s, transform 0.18s;
             }
             .level-card:hover {
-                transform: translateY(-4px);
-                border-color: var(--green);
+                border-color: var(--border-hover);
+                transform: translateY(-3px);
             }
-            .level-card:nth-child(2):hover {
-                border-color: var(--cyan);
+            .level-card::before {
+                content: '';
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 3px;
+                border-radius: var(--radius) var(--radius) 0 0;
             }
-            .level-card:nth-child(3):hover {
-                border-color: var(--indigo);
+            .level-card.green::before {
+                background: var(--green);
             }
-
-            .level-header {
-                padding: 24px 24px 16px;
-                border-bottom: 1px solid var(--border);
+            .level-card.cyan::before {
+                background: var(--cyan);
             }
-            .level-num {
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.1em;
-                text-transform: uppercase;
-                margin-bottom: 8px;
+            .level-card.indigo::before {
+                background: var(--indigo);
             }
-            .level-num.green {
-                color: var(--green);
-            }
-            .level-num.cyan {
-                color: var(--cyan);
-            }
-            .level-num.indigo {
-                color: var(--indigo);
-            }
-
-            .level-header h3 {
-                font-size: 20px;
-                font-weight: 700;
-                margin-bottom: 6px;
-            }
-            .level-header p {
-                font-size: 14px;
-                color: var(--text-muted);
-            }
-
-            .level-features {
-                padding: 20px 24px;
-                list-style: none;
-            }
-            .level-features li {
-                display: flex;
-                align-items: flex-start;
-                gap: 10px;
-                font-size: 14px;
-                color: var(--text-muted);
-                padding: 7px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            }
-            .level-features li:last-child {
-                border-bottom: none;
-            }
-            .level-features .check {
-                flex-shrink: 0;
-                width: 16px;
-                height: 16px;
-                margin-top: 2px;
-            }
-            .level-features .check.green {
-                color: var(--green);
-            }
-            .level-features .check.cyan {
-                color: var(--cyan);
-            }
-            .level-features .check.indigo {
-                color: var(--indigo);
-            }
-
-            /* ── ZONES ─────────────────────────────────────────── */
-            #zones {
-                background: var(--bg-subtle);
-            }
-
-            .zones-list {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                max-width: 700px;
-                margin: 40px auto 0;
-            }
-
-            .zone-row {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: var(--radius);
-                padding: 16px 20px;
-            }
-            .zone-dot {
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                flex-shrink: 0;
-            }
-            .zone-name {
-                width: 100px;
-                font-weight: 700;
-                font-size: 15px;
-                flex-shrink: 0;
-            }
-            .zone-action {
-                flex: 1;
-                font-size: 14px;
-                color: var(--text-muted);
-            }
-            .zone-pct {
+            .level-tag {
                 font-size: 12px;
                 font-weight: 700;
-                padding: 2px 8px;
-                border-radius: 999px;
-                flex-shrink: 0;
-            }
-
-            /* ── STATUSLINE PREVIEW ─────────────────────────────── */
-            #statusline-preview {
-                background: var(--bg-subtle);
-            }
-
-            .sl-grid {
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-                margin-top: 48px;
-            }
-
-            .sl-zone-block {
-                border-radius: var(--radius);
-                overflow: hidden;
-                border: 1px solid var(--border);
-            }
-
-            .sl-zone-label {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 10px 16px;
-                background: var(--bg-card);
-                border-bottom: 1px solid var(--border);
-                font-size: 12px;
-                font-weight: 700;
+                letter-spacing: 0.06em;
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
             }
-
-            .sl-dot {
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                flex-shrink: 0;
-            }
-
-            .sl-terminal {
-                background: var(--bg-subtle);
-                padding: 14px 20px;
-                font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
-                font-size: 13px;
-                line-height: 1.6;
-                overflow-x: auto;
-            }
-
-            .sl-bar {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                flex-wrap: wrap;
-            }
-
-            .sl-seg {
-                white-space: nowrap;
-            }
-
-            /* ── HOW IT WORKS ──────────────────────────────────── */
-            .steps {
-                display: flex;
-                flex-direction: column;
-                gap: 0;
-                margin-top: 48px;
-                max-width: 820px;
-            }
-
-            .step-arrow {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--border);
-                font-size: 20px;
-                height: 28px;
-                margin-left: 40px; /* align with step-num center (44px/2 - border) */
-            }
-
-            .step {
-                display: grid;
-                grid-template-columns: 44px 1fr;
-                gap: 20px;
-                align-items: start;
-                text-align: left;
-                padding: 28px 32px;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-lg);
-            }
-
-            .step-body {
-            }
-
-            .step h3 {
-                font-size: 16px;
-                font-weight: 700;
-                margin-bottom: 6px;
-            }
-
-            .step p {
-                font-size: 14px;
-                color: var(--text-muted);
-                margin-bottom: 0;
-            }
-
-            .step code {
-                display: block;
-                background: var(--bg-subtle);
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 10px 14px;
-                font-family: monospace;
-                font-size: 13px;
-                color: var(--cyan);
-                margin-top: 10px;
-                text-align: left;
-            }
-
-            .step-num {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 44px;
-                height: 44px;
-                border-radius: 50%;
-                background: rgba(16, 185, 129, 0.1);
-                border: 2px solid var(--green);
-                font-size: 18px;
-                font-weight: 800;
+            .level-card.green .level-tag {
                 color: var(--green);
-                margin-bottom: 16px;
             }
-
-            .step h3 {
-                font-size: 16px;
-                font-weight: 700;
-                margin-bottom: 8px;
-            }
-
-            .step p {
-                font-size: 14px;
-                color: var(--text-muted);
-            }
-
-            .step code {
-                display: block;
-                background: var(--bg-subtle);
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 10px 14px;
-                font-family: monospace;
-                font-size: 13px;
+            .level-card.cyan .level-tag {
                 color: var(--cyan);
-                margin-top: 10px;
-                text-align: left;
             }
-
-            /* ── OUTPUT EXAMPLES ──────────────────────────────── */
-            #examples {
-                background: var(--bg);
-            }
-
-            .examples-tabs {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 0;
-                border-bottom: 1px solid var(--border);
-                padding-bottom: 0;
-            }
-
-            .tab-btn {
-                background: none;
-                border: none;
-                border-bottom: 2px solid transparent;
-                padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--text-muted);
-                cursor: pointer;
-                font-family: inherit;
-                transition:
-                    color 0.2s,
-                    border-color 0.2s;
-                margin-bottom: -1px;
-            }
-            .tab-btn:hover {
-                color: var(--text);
-            }
-            .tab-btn.active {
-                color: var(--cyan);
-                border-bottom-color: var(--cyan);
-            }
-            .tab-btn.active.green {
-                color: var(--green);
-                border-bottom-color: var(--green);
-            }
-            .tab-btn.active.indigo {
+            .level-card.indigo .level-tag {
                 color: var(--indigo);
-                border-bottom-color: var(--indigo);
             }
-
-            .tab-panel {
-                display: none;
+            .level-card h3 {
+                font-size: 1.35rem;
+                font-weight: 700;
+                margin: 12px 0 10px;
+                letter-spacing: -0.01em;
             }
-            .tab-panel.active {
-                display: block;
+            .level-card p {
+                color: var(--text-muted);
+                font-size: 0.97rem;
+                margin-bottom: 18px;
             }
-
-            .example-terminal {
-                background: var(--bg-subtle);
+            .level-card code {
+                display: inline-block;
+                background: var(--bg-deep);
                 border: 1px solid var(--border);
-                border-top: none;
-                border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-                overflow: hidden;
-            }
-
-            .example-terminal-body {
-                padding: 20px 24px;
-                font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
-                font-size: 13px;
-                line-height: 1.65;
-                overflow-x: auto;
-            }
-
-            .t-border {
-                color: #4b5563;
-            }
-            .t-h1 {
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 12.5px;
                 color: var(--cyan);
-                font-weight: 700;
             }
-            .t-h2 {
-                color: var(--indigo);
-                font-weight: 700;
-            }
-            .t-key {
-                color: var(--text-muted);
-            }
-            .t-val {
-                color: var(--text);
-            }
-            .t-money {
-                color: var(--green);
-                font-weight: 700;
-            }
-            .t-bar-g {
-                color: var(--green);
-            }
-            .t-bar-y {
-                color: var(--yellow);
-            }
-            .t-bar-o {
-                color: var(--orange);
-            }
-            .t-bar-r {
-                color: var(--red);
-            }
-            .t-bar-d {
-                color: #4b5563;
+            @media (max-width: 820px) {
+                .levels {
+                    grid-template-columns: 1fr;
+                }
             }
 
-            /* ── SCREENSHOTS ───────────────────────────────────── */
-            .screenshots-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-                gap: 20px;
-                margin-top: 48px;
-            }
-
-            .screenshot-card {
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-lg);
-                overflow: hidden;
-            }
-
-            .screenshot-card img {
-                width: 100%;
-                display: block;
-            }
-
-            .screenshot-caption {
-                padding: 12px 16px;
-                font-size: 13px;
-                color: var(--text-muted);
-                text-align: center;
-                border-top: 1px solid var(--border);
-            }
-
-            /* ── FAQ ───────────────────────────────────────────── */
-            .faq-list {
-                max-width: 720px;
-                margin: 40px auto 0;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            details {
-                background: var(--bg-card);
+            /* ── Detail CTA banner ────────────────────────────── */
+            .detail-banner {
+                background: linear-gradient(135deg, var(--bg-card), var(--bg-subtle));
                 border: 1px solid var(--border);
                 border-radius: var(--radius);
-                overflow: hidden;
-            }
-
-            summary {
-                padding: 18px 20px;
-                font-weight: 600;
-                font-size: 15px;
-                cursor: pointer;
-                list-style: none;
+                padding: 40px;
                 display: flex;
+                align-items: center;
                 justify-content: space-between;
-                align-items: center;
-                user-select: none;
-            }
-            summary::-webkit-details-marker {
-                display: none;
-            }
-            summary::after {
-                content: '+';
-                font-size: 20px;
-                color: var(--text-muted);
-                transition: transform 0.2s;
-            }
-            details[open] summary::after {
-                content: '−';
-            }
-
-            details p {
-                padding: 0 20px 18px;
-                color: var(--text-muted);
-                font-size: 14px;
-                line-height: 1.6;
-            }
-
-            details code {
-                background: var(--bg-subtle);
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-family: monospace;
-                font-size: 13px;
-                color: var(--cyan);
-            }
-
-            /* ── FINAL CTA ─────────────────────────────────────── */
-            .cta-section {
-                text-align: center;
-                background: linear-gradient(
-                    135deg,
-                    rgba(16, 185, 129, 0.06),
-                    rgba(129, 140, 248, 0.06)
-                );
-                border-top: 1px solid var(--border);
-                border-bottom: 1px solid var(--border);
-            }
-
-            .cta-section h2 {
-                font-size: clamp(28px, 4vw, 44px);
-            }
-
-            .cta-section .lead {
-                margin: 0 auto 36px;
-            }
-
-            .trust-badges {
-                display: flex;
-                justify-content: center;
                 gap: 24px;
                 flex-wrap: wrap;
-                margin-top: 36px;
+            }
+            .detail-banner h3 {
+                font-size: 1.5rem;
+                font-weight: 800;
+                letter-spacing: -0.01em;
+            }
+            .detail-banner p {
+                color: var(--text-muted);
+                margin-top: 6px;
+                max-width: 520px;
             }
 
+            /* ── Final CTA ────────────────────────────────────── */
+            .cta-section {
+                text-align: center;
+            }
+            .cta-section h2 {
+                font-size: clamp(2rem, 5vw, 3rem);
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                line-height: 1.1;
+                margin-bottom: 18px;
+            }
+            .cta-section .lead {
+                color: var(--text-muted);
+                font-size: 1.1rem;
+                margin-bottom: 32px;
+            }
+            .trust-badges {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 24px;
+                margin-top: 40px;
+                font-size: 13.5px;
+                color: var(--text-muted);
+            }
             .badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 999px;
-                padding: 6px 14px;
-                font-size: 13px;
-                color: var(--text-muted);
+                gap: 7px;
             }
 
-            /* ── FOOTER ────────────────────────────────────────── */
+            /* ── Footer ───────────────────────────────────────── */
             footer {
-                padding: 40px 0;
                 border-top: 1px solid var(--border);
+                padding: 36px 0;
             }
-
             .footer-inner {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                flex-wrap: wrap;
-                gap: 16px;
-            }
-
-            .footer-logo {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .footer-logo img {
-                height: 28px;
-            }
-            .footer-logo span {
-                font-size: 14px;
-                color: var(--text-muted);
-            }
-
-            .footer-links {
-                display: flex;
                 gap: 20px;
-                list-style: none;
-            }
-            .footer-links a {
-                font-size: 13px;
-                color: var(--text-muted);
-            }
-            .footer-links a:hover {
-                color: var(--text);
-                text-decoration: none;
-            }
-
-            /* ── CACHE KEEP-WARM ─────────────────────────────── */
-            #cache-warm {
-                background: var(--bg-subtle);
-            }
-
-            .cw-layout {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 48px;
-                margin-top: 48px;
-                align-items: start;
-            }
-
-            .cw-scenario {
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: var(--radius);
-                padding: 16px 20px;
-                margin-bottom: 14px;
-            }
-            .cw-scenario-label {
-                font-size: 11px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                margin-bottom: 12px;
-            }
-            .cw-scenario-label.bad {
-                color: var(--red);
-            }
-            .cw-scenario-label.good {
-                color: var(--green);
-            }
-
-            .cw-track {
-                display: flex;
-                align-items: center;
                 flex-wrap: wrap;
-                gap: 4px;
-                font-family: 'SF Mono', Consolas, monospace;
-                font-size: 11px;
-                line-height: 1.8;
             }
-            .cw-event {
-                display: inline-flex;
-                align-items: center;
-                gap: 3px;
-                padding: 2px 8px;
-                border-radius: 6px;
-                font-weight: 700;
-                white-space: nowrap;
-            }
-            .cw-event.req {
-                background: rgba(0, 255, 65, 0.12);
-                color: var(--green);
-            }
-            .cw-event.hb {
-                background: rgba(6, 182, 212, 0.12);
-                color: var(--cyan);
-            }
-            .cw-event.exp {
-                background: rgba(239, 68, 68, 0.12);
-                color: var(--red);
-            }
-            .cw-event.hit {
-                background: rgba(0, 255, 65, 0.12);
-                color: var(--green);
-            }
-            .cw-event.miss {
-                background: rgba(239, 68, 68, 0.12);
-                color: var(--red);
-            }
-            .cw-arrow {
-                color: var(--gray);
-                font-size: 11px;
-            }
-
-            .cw-stat-rows {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                margin: 24px 0;
-            }
-            .cw-stat-row {
+            .footer-logo {
                 display: flex;
                 align-items: center;
                 gap: 12px;
                 font-size: 14px;
                 color: var(--text-muted);
             }
-            .cw-badge {
-                display: inline-block;
-                background: rgba(0, 255, 65, 0.1);
-                border: 1px solid rgba(0, 255, 65, 0.2);
+            .footer-logo img {
+                height: 36px;
+            }
+            .footer-logo a {
                 color: var(--green);
-                font-weight: 700;
-                font-size: 12px;
-                padding: 2px 10px;
-                border-radius: 999px;
-                white-space: nowrap;
-                flex-shrink: 0;
             }
-            .cw-savings {
-                background: linear-gradient(
-                    135deg,
-                    rgba(0, 255, 65, 0.06),
-                    rgba(6, 182, 212, 0.06)
-                );
-                border: 1px solid rgba(0, 255, 65, 0.2);
-                border-radius: var(--radius);
-                padding: 24px;
-                text-align: center;
-                margin-top: 4px;
+            .footer-links {
+                list-style: none;
+                display: flex;
+                gap: 24px;
+                font-size: 14px;
             }
-            .cw-savings-num {
-                font-size: 44px;
-                font-weight: 800;
-                background: linear-gradient(135deg, var(--green), var(--cyan));
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                letter-spacing: -0.03em;
-                line-height: 1;
-            }
-            .cw-savings-label {
-                font-size: 13px;
+            .footer-links a {
                 color: var(--text-muted);
-                margin-top: 8px;
-                line-height: 1.5;
+                transition: color 0.15s;
             }
-
-            /* ── Responsive ────────────────────────────────────── */
-            @media (max-width: 768px) {
-                .cw-layout {
-                    grid-template-columns: 1fr;
-                }
+            .footer-links a:hover {
+                color: var(--text);
             }
-            @media (max-width: 640px) {
-                .nav-links {
-                    display: none;
-                }
-                .stats-bar {
-                    gap: 28px;
-                }
+            @media (max-width: 600px) {
                 .footer-inner {
                     flex-direction: column;
                     text-align: center;
@@ -1329,35 +661,32 @@
         </style>
     </head>
     <body>
-        <!-- ── NAV ──────────────────────────────────────────────────── -->
+        <!-- ── NAV ──────────────────────────────────────────────── -->
         <nav>
             <div class="nav-inner">
-                <div class="nav-logo">
-                    <img src="assets/logo/logo-full.svg" alt="context-stats" />
-                </div>
+                <a class="nav-logo" href="/context-stats/" aria-label="context-stats home">
+                    <img src="assets/logo/logo-mark.svg" alt="context-stats" />
+                    <span class="nav-wordmark">Context<span class="stats">Stats</span></span>
+                </a>
                 <ul class="nav-links">
-                    <li><a href="#whats-new">v1.22.0</a></li>
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#cache-warm">Cache Warm</a></li>
-                    <li><a href="#how-it-works">Install</a></li>
-                    <li><a href="#examples">Examples</a></li>
-                    <li><a href="#zones">Zones</a></li>
-                    <li><a href="#faq">FAQ</a></li>
+                    <li><a href="#levels">Features</a></li>
+                    <li><a href="docs.html">Documentation</a></li>
+                    <li><a href="https://pypi.org/project/context-stats/">PyPI</a></li>
                     <li>
                         <a href="https://github.com/luongnv89/context-stats" class="nav-cta"
-                            >GitHub</a
+                            >GitHub ★</a
                         >
                     </li>
                 </ul>
             </div>
         </nav>
 
-        <!-- ── HERO ─────────────────────────────────────────────────── -->
+        <!-- ── HERO ─────────────────────────────────────────────── -->
         <section class="hero">
             <div class="container">
                 <div class="hero-badge">
                     <span class="dot"></span>
-                    v1.22.0 — Thinking level and PR context in your statusline
+                    v1.22.0 — Live context monitoring for Claude Code
                 </div>
 
                 <h1>
@@ -1367,33 +696,19 @@
                 </h1>
 
                 <p class="hero-sub">
-                    Real-time context monitoring for Claude Code. Track token usage, catch
-                    degradation early, and understand your AI spend — all without leaving your
+                    Real-time context-window monitoring for Claude Code. See your token usage,
+                    catch degradation early, and understand your AI spend — without leaving the
                     terminal.
                 </p>
 
                 <div class="hero-actions">
-                    <a href="#how-it-works" class="btn-primary">
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                        >
+                    <a href="https://pypi.org/project/context-stats/" class="btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M12 5v14M5 12l7 7 7-7" />
                         </svg>
-                        Install in 60 seconds
+                        pip install context-stats
                     </a>
-                    <a href="https://github.com/luongnv89/context-stats" class="btn-secondary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
-                            />
-                        </svg>
-                        View on GitHub
-                    </a>
+                    <a href="docs.html" class="btn-secondary">Read the docs →</a>
                 </div>
 
                 <!-- Terminal Demo -->
@@ -1403,85 +718,74 @@
                             <span class="terminal-dot red"></span>
                             <span class="terminal-dot yellow"></span>
                             <span class="terminal-dot green"></span>
-                            <span class="terminal-title"
-                                >Claude Code — context-stats live statusline</span
-                            >
+                            <span class="terminal-title">Claude Code — context-stats live</span>
                         </div>
-                        <div class="terminal-body">
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">pip install context-stats</span>
-                            </div>
-                            <div class="t-muted">Successfully installed context-stats-1.22.0</div>
-                            <br />
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats graph</span>
-                            </div>
-                            <br />
-                            <div class="t-muted">Context usage — last 12 interactions</div>
-                            <div class="t-green">▓▓▓▓▓▓▓▓░░░░░░ 64,000 free (32.0%)</div>
-                            <br />
-                            <div class="t-dim">╔══ Session: abc-123 ══════════════╗</div>
-                            <div class="t-dim">
-                                ║ Model: <span class="t-cyan">Claude Opus 4.6</span> ║
-                            </div>
-                            <div class="t-dim">
-                                ║ Zone: <span class="t-yellow">◆ Code-only</span> ║
-                            </div>
-                            <div class="t-dim">
-                                ║ MI: <span class="t-green">0.918</span> (high) ║
-                            </div>
-                            <div class="t-dim">
-                                ║ Delta: <span class="t-cyan">+2,500</span> tokens this step ║
-                            </div>
-                            <div class="t-dim">╚══════════════════════════════════╝</div>
-                            <br />
-                            <div class="t-muted">Delta per interaction:</div>
-                            <div class="t-green">1│ ██</div>
-                            <div class="t-green">2│ ████</div>
-                            <div class="t-yellow">3│ ████████</div>
-                            <div class="t-red">
-                                4│ <span style="color: #ef4444">▼</span
-                                ><span class="t-muted"> compact (MI 0.61 ⚠ lossy)</span>
-                            </div>
-                            <div class="t-green">5│ ██</div>
-                            <div class="t-yellow">6│ ████████████</div>
-                            <br />
-                            <div>
-                                <span class="t-prompt">$ </span><span class="t-cursor">█</span>
-                            </div>
+                        <div class="terminal-body"><span class="t-muted"># Always-on statusline in Claude Code</span>
+<span class="t-green">meta-app</span><span class="t-dim"> | </span><span class="t-cyan">feat/85-catalog-visibility-toggle</span> <span class="t-cyan">[3]</span><span class="t-dim"> | </span><span class="t-yellow">132,944 (66.5%)</span><span class="t-dim"> | </span><span class="t-dim">Code</span><span class="t-dim"> | </span><span class="t-dim">3.3 tok/s</span><span class="t-dim"> | </span><span class="t-dim">Sonnet 4.6</span><span class="t-dim"> | </span><span class="t-dim">baaff3c8-2b25-458b-adcd-96ebdeb5125d</span>
+
+<span class="t-prompt">$ </span><span class="t-cmd">context-stats graph</span>
+
+<span class="t-dim">Token Usage Graphs (Session: a3f9c12d…)</span>
+
+<span class="t-muted">Cumulative Token Usage   Max: 53,250</span>
+<span class="t-green">53,250 ┤            ▄▄▟███████</span>
+<span class="t-green">37,192 ┤        ▗▄██████████</span>
+<span class="t-green">25,148 ┤▄▄▄▄▟███</span>
+<span class="t-dim">       └16:25──────16:27──────16:34</span>
+
+<span class="t-muted">Token Delta Per Interval   Max: 25,148</span>
+<span class="t-cyan">25,148 ┤▌        ▖     ▟</span>
+<span class="t-cyan">     0 ┤▁▁▁▂▁▁▁▁█▁▁▁▁██▁</span>
+
+<span class="t-muted">Summary Statistics</span>
+<span class="t-dim">Current Tokens:   </span><span class="t-green">53,250</span>
+<span class="t-dim">Session Duration: </span>8m
+<span class="t-dim">Average Delta:    </span><span class="t-cyan">2,958</span>
+<span class="t-dim">Total Growth:     </span><span class="t-green">28,102</span>
+
+<span class="t-prompt">$ </span><span class="t-cursor">█</span></div>
+                    </div>
+                </div>
+
+                <!-- ── METRICS BAR ──────────────────────────────── -->
+                <div class="metrics">
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-num" id="stat-stars">—</div>
+                            <div class="metric-label">GitHub stars</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num" id="stat-forks">—</div>
+                            <div class="metric-label">Forks</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num" id="stat-downloads">—</div>
+                            <div class="metric-label">PyPI downloads</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num">3</div>
+                            <div class="metric-label">Analytics levels</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num">5</div>
+                            <div class="metric-label">Context zones</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num">0</div>
+                            <div class="metric-label">Network calls</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num">60s</div>
+                            <div class="metric-label">To set up</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-num">MIT</div>
+                            <div class="metric-label">Free forever</div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
-
-        <!-- ── STATS BAR ─────────────────────────────────────────────── -->
-        <div class="container">
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <div class="stat-num" id="stat-stars">—</div>
-                    <div class="stat-label">GitHub stars</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-num" id="stat-forks">—</div>
-                    <div class="stat-label">Forks</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-num" id="stat-downloads">—</div>
-                    <div class="stat-label">PyPI downloads</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-num">0</div>
-                    <div class="stat-label">Dependencies</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-num">MIT</div>
-                    <div class="stat-label">Free forever</div>
-                </div>
-            </div>
-        </div>
 
         <script>
             (function () {
@@ -1500,7 +804,7 @@
                         if (f && d.forks_count !== undefined) f.textContent = fmt(d.forks_count);
                     })
                     .catch(() => {});
-                // PyPI total downloads (last month via pypistats)
+                // PyPI downloads (last month via pypistats)
                 fetch('https://pypistats.org/api/packages/context-stats/recent')
                     .then(r => r.json())
                     .then(d => {
@@ -1513,1759 +817,86 @@
             })();
         </script>
 
-        <!-- ── PROBLEM ───────────────────────────────────────────────── -->
-        <section id="problem">
+        <!-- ── 3 LEVELS ─────────────────────────────────────────── -->
+        <section id="levels">
             <div class="container">
-                <span class="section-label">The Problem</span>
-                <h2>Claude Code doesn't tell you<br />when you're in trouble.</h2>
-                <p class="lead">
-                    By the time you notice output quality dropping, you've already wasted tokens —
-                    and money.
-                </p>
-
-                <div class="problem-grid">
-                    <div class="pain-card">
-                        <div class="pain-icon">🪫</div>
-                        <h3>Invisible context drain</h3>
-                        <p>
-                            Each tool call, each file read quietly consumes context. You only find
-                            out when Claude starts looping or forgetting what it just wrote.
-                        </p>
-                    </div>
-                    <div class="pain-card">
-                        <div class="pain-icon">💸</div>
-                        <h3>Surprise API bills</h3>
-                        <p>
-                            A single runaway session can burn thousands of tokens before you realize
-                            the model is operating at 20% intelligence. No warning, no way to see
-                            trends.
-                        </p>
-                    </div>
-                    <div class="pain-card">
-                        <div class="pain-icon">📉</div>
-                        <h3>Silent model degradation</h3>
-                        <p>
-                            As context fills, Claude's effective intelligence drops along a
-                            measurable curve. Running at 30% context free isn't the same as running
-                            at 80% free.
-                        </p>
-                    </div>
-                    <div class="pain-card">
-                        <div class="pain-icon">🌀</div>
-                        <h3>No session history</h3>
-                        <p>
-                            After a session ends, you can't audit what happened — which interactions
-                            consumed the most tokens or why a particular task ballooned the context.
-                        </p>
-                    </div>
-                    <div class="pain-card">
-                        <div class="pain-icon">⏱️</div>
-                        <h3>Silent cache expiry</h3>
-                        <p>
-                            Claude's prompt cache has a 5-minute TTL. Every pause — a review, a
-                            coffee, a long think — silently evicts it. Your next request pays full
-                            token price again, with no warning and no way to tell.
-                        </p>
-                    </div>
-                    <div class="pain-card">
-                        <div class="pain-icon">🗜️</div>
-                        <h3>Lossy compaction, no warning</h3>
-                        <p>
-                            When Claude compacts its context at low model intelligence, the summary
-                            is lossy — key details get lost. You have no idea when it happened or
-                            how degraded the model was at the time.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── WHAT'S NEW ─────────────────────────────────────────────── -->
-        <section id="whats-new">
-            <div class="container">
-                <span class="section-label">What's New</span>
-                <h2>v1.22.0 — Session context,<br />right where you work.</h2>
-                <p class="lead">
-                    See more of the context that matters while you work: Claude's thinking level
-                    beside the model name, plus the active pull request number when enabled.
-                </p>
-
-                <div class="problem-grid">
-                    <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
-                        <div class="pain-icon">📋</div>
-                        <h3 style="color: var(--green)">Thinking level in your statusline</h3>
-                        <p>
-                            Claude's thinking level now appears next to the model name, making it easier
-                            to understand the current session mode without leaving your terminal.
-                        </p>
-                    </div>
-                    <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
-                        <div class="pain-icon">⚡</div>
-                        <h3 style="color: var(--cyan)">PR number indicator</h3>
-                        <p>
-                            When you are working on a GitHub pull request, the statusline can show the
-                            current PR number alongside branch context. Enable or disable it with
-                            the <code>show_pr</code> toggle.
-                        </p>
-                    </div>
-                    <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
-                        <div class="pain-icon">🛡</div>
-                        <h3 style="color: var(--yellow)">Less context switching</h3>
-                        <p>
-                            Model, branch, PR, and thinking-level cues stay visible in one compact line,
-                            so you can keep coding without checking separate commands or browser tabs.
-                        </p>
-                    </div>
-                    <div class="pain-card" style="border-color: rgba(0, 255, 65, 0.2)">
-                        <div class="pain-icon">🧹</div>
-                        <h3 style="color: var(--indigo)">Still lightweight</h3>
-                        <p>
-                            The new indicators extend the existing local-only statusline flow while
-                            preserving the project’s zero-network, append-only state-file design.
-                        </p>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 32px">
-                    <a
-                        href="https://github.com/luongnv89/context-stats/releases/tag/v1.22.0"
-                        class="btn-secondary"
-                        style="display: inline-flex"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
-                            />
-                        </svg>
-                        Full changelog on GitHub
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── FEATURES ──────────────────────────────────────────────── -->
-        <section id="features">
-            <div class="container">
-                <span class="section-label">The Solution</span>
-                <h2>Three levels of analytics,<br />one lightweight tool.</h2>
-                <p class="lead">
-                    From real-time awareness to multi-week cost reports — context-stats gives you
-                    complete visibility without ever leaving your terminal.
-                </p>
-
-                <div class="levels-grid">
-                    <!-- Level 1 -->
-                    <div class="level-card">
-                        <div class="level-header">
-                            <div class="level-num green">Level 1 — Live</div>
-                            <h3>Real-Time Statusline</h3>
-                            <p>
-                                Persistent status line in your Claude Code session — always on, zero
-                                friction.
-                            </p>
-                        </div>
-                        <ul class="level-features">
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Context zone with color-coded action signal + recommendation
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Model Intelligence (MI) score per interaction
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Token delta since last refresh
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Git branch + project name
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Live ASCII graph dashboard (<code>context-stats graph</code>)
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Compaction event detection — <code>▼</code> markers show when &amp;
-                                where Claude compacted
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                MI quality flag at compaction — warns if summary was created at low
-                                intelligence
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Session listing — <code>context-stats sessions</code> shows recent
-                                sessions with metadata
-                            </li>
-                            <li>
-                                <svg class="check green" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Auto-detect latest session — no session ID needed for any command
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Level 2 -->
-                    <div class="level-card">
-                        <div class="level-header">
-                            <div class="level-num cyan">Level 2 — Session</div>
-                            <h3>Per-Session Deep Dive</h3>
-                            <p>Export a detailed Markdown report for any completed session.</p>
-                        </div>
-                        <ul class="level-features">
-                            <li>
-                                <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Executive snapshot with model, duration, interactions
-                            </li>
-                            <li>
-                                <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Interaction timeline with per-step context + MI
-                            </li>
-                            <li>
-                                <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Cache activity analysis (creation vs. read ratio)
-                            </li>
-                            <li>
-                                <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Mermaid visual charts (context growth, zones, cache)
-                            </li>
-                            <li
-                                style="
-                                    background: rgba(0, 255, 65, 0.04);
-                                    border-radius: 6px;
-                                    padding: 8px 10px;
-                                    margin-top: 4px;
-                                    border-bottom: none !important;
-                                "
-                            >
-                                <svg class="check cyan" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                <span
-                                    >Cache keep-warm — heartbeat every 4 min to prevent costly cache
-                                    misses &nbsp;<a
-                                        href="#cache-warm"
-                                        style="
-                                            background: rgba(0, 255, 65, 0.15);
-                                            color: var(--green);
-                                            font-size: 10px;
-                                            font-weight: 700;
-                                            padding: 1px 7px;
-                                            border-radius: 999px;
-                                            letter-spacing: 0.05em;
-                                            text-decoration: none;
-                                        "
-                                        >details ↓</a
-                                    ></span
-                                >
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Level 3 -->
-                    <div class="level-card">
-                        <div class="level-header">
-                            <div class="level-num indigo">Level 3 — Report</div>
-                            <h3>Multi-Week Analytics</h3>
-                            <p>
-                                Understand cost trends, model mix, and efficiency across all your
-                                projects.
-                            </p>
-                        </div>
-                        <ul class="level-features">
-                            <li>
-                                <svg class="check indigo" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Cost breakdown by model family (Opus/Sonnet/Haiku)
-                            </li>
-                            <li>
-                                <svg class="check indigo" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Daily activity heatmaps
-                            </li>
-                            <li>
-                                <svg class="check indigo" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Cross-project efficiency metrics
-                            </li>
-                            <li>
-                                <svg class="check indigo" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                41%+ cache hit ratio analysis
-                            </li>
-                            <li>
-                                <svg class="check indigo" viewBox="0 0 16 16" fill="currentColor">
-                                    <path
-                                        d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"
-                                    />
-                                </svg>
-                                Cost optimization opportunities
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── CACHE KEEP-WARM ────────────────────────────────────────── -->
-        <section id="cache-warm">
-            <div class="container">
-                <span class="section-label">Cache Optimization</span>
-                <h2>Never let your prompt cache<br />expire mid-session.</h2>
-                <p class="lead">
-                    Claude's prompt cache has a strict
-                    <strong style="color: var(--yellow)">5-minute TTL</strong>. One idle gap — a
-                    review pause, a coffee, a long think — silently evicts it. Your next request
-                    pays full token price, no warning.
-                </p>
-
-                <div class="cw-layout">
-                    <!-- Left: timeline explanation + stats -->
-                    <div>
-                        <div class="cw-scenario">
-                            <div class="cw-scenario-label bad">✗ Without cache-warm</div>
-                            <div class="cw-track">
-                                <span class="cw-event req">request</span>
-                                <span class="cw-arrow">──── 5+ min idle ────</span>
-                                <span class="cw-event exp">cache expired</span>
-                                <span class="cw-arrow">──</span>
-                                <span class="cw-event miss">cache miss 💸</span>
-                            </div>
-                            <div
-                                style="
-                                    margin-top: 10px;
-                                    font-size: 12px;
-                                    color: var(--red);
-                                    line-height: 1.5;
-                                "
-                            >
-                                All context tokens re-processed at full price. No warning. No way to
-                                know it happened.
-                            </div>
-                        </div>
-
-                        <div class="cw-scenario">
-                            <div class="cw-scenario-label good">✓ With cache-warm on</div>
-                            <div class="cw-track">
-                                <span class="cw-event req">request</span>
-                                <span class="cw-arrow">── 4 min ──</span>
-                                <span class="cw-event hb">♥ heartbeat</span>
-                                <span class="cw-arrow">── 4 min ──</span>
-                                <span class="cw-event hb">♥ heartbeat</span>
-                                <span class="cw-arrow">──</span>
-                                <span class="cw-event hit">cache hit ✓</span>
-                            </div>
-                            <div
-                                style="
-                                    margin-top: 10px;
-                                    font-size: 12px;
-                                    color: var(--green);
-                                    line-height: 1.5;
-                                "
-                            >
-                                Cache stays alive. Next request reads cached tokens at ~10% the cost
-                                of uncached.
-                            </div>
-                        </div>
-
-                        <div class="cw-stat-rows">
-                            <div class="cw-stat-row">
-                                <span class="cw-badge">4 min</span>
-                                heartbeat interval — always under the 5-min TTL
-                            </div>
-                            <div class="cw-stat-row">
-                                <span class="cw-badge">30 min</span>
-                                default duration — configure with
-                                <code
-                                    style="
-                                        font-family: monospace;
-                                        font-size: 12px;
-                                        color: var(--cyan);
-                                    "
-                                    >1h</code
-                                >,
-                                <code
-                                    style="
-                                        font-family: monospace;
-                                        font-size: 12px;
-                                        color: var(--cyan);
-                                    "
-                                    >90m</code
-                                >,
-                                <code
-                                    style="
-                                        font-family: monospace;
-                                        font-size: 12px;
-                                        color: var(--cyan);
-                                    "
-                                    >3600s</code
-                                >
-                            </div>
-                            <div class="cw-stat-row">
-                                <span class="cw-badge">background</span>
-                                detached process — zero impact on your Claude session
-                            </div>
-                        </div>
-
-                        <div class="cw-savings">
-                            <div class="cw-savings-num">63.4%</div>
-                            <div class="cw-savings-label">
-                                cache hit rate in a typical session<br />visible in every
-                                <code
-                                    style="
-                                        font-family: monospace;
-                                        font-size: 12px;
-                                        color: var(--cyan);
-                                    "
-                                    >context-stats export</code
-                                >
-                                report
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: terminal demo -->
-                    <div>
-                        <div class="terminal">
-                            <div class="terminal-bar">
-                                <span class="terminal-dot red"></span>
-                                <span class="terminal-dot yellow"></span>
-                                <span class="terminal-dot green"></span>
-                                <span class="terminal-title"
-                                    >cache-warm — keep the 5-min TTL alive</span
-                                >
-                            </div>
-                            <div class="terminal-body">
-                                <div class="t-muted">
-                                    # Activate keep-warm for the latest session (no ID needed)
-                                </div>
-                                <div>
-                                    <span class="t-prompt">$ </span
-                                    ><span class="t-cmd">context-stats cache-warm on</span>
-                                </div>
-                                <div class="t-green">Cache keep-warm started</div>
-                                <div>
-                                    <span class="t-key"> Session: </span
-                                    ><span class="t-cyan">abc-1234</span>
-                                </div>
-                                <div>
-                                    <span class="t-key"> Interval: </span
-                                    ><span class="t-cyan">every 4 min</span>
-                                </div>
-                                <div>
-                                    <span class="t-key"> Duration: </span
-                                    ><span class="t-cyan">30 min</span
-                                    ><span class="t-muted"> (expires 14:02)</span>
-                                </div>
-                                <div>
-                                    <span class="t-key"> PID: </span
-                                    ><span class="t-indigo">12845</span>
-                                </div>
-                                <br />
-                                <div class="t-muted"># Use a custom duration</div>
-                                <div>
-                                    <span class="t-prompt">$ </span
-                                    ><span class="t-cmd">context-stats cache-warm on 1h</span>
-                                </div>
-                                <div class="t-green">
-                                    Cache keep-warm started <span class="t-muted">(1h)</span>
-                                </div>
-                                <br />
-                                <div class="t-muted"># Stop the heartbeat early</div>
-                                <div>
-                                    <span class="t-prompt">$ </span
-                                    ><span class="t-cmd">context-stats cache-warm off</span>
-                                </div>
-                                <div class="t-green">Cache keep-warm stopped</div>
-                                <br />
-                                <div class="t-muted"># Verify savings in your session report</div>
-                                <div>
-                                    <span class="t-prompt">$ </span
-                                    ><span class="t-cmd">context-stats export abc-1234</span>
-                                </div>
-                                <div>
-                                    <span class="t-key"> Cache read tokens: </span
-                                    ><span class="t-green">49,120</span
-                                    ><span class="t-muted"> (63.4% hit rate)</span>
-                                </div>
-                                <div>
-                                    <span class="t-key"> Cache savings: </span
-                                    ><span class="t-money">~$0.087</span
-                                    ><span class="t-muted"> (vs. uncached)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── OUTPUT EXAMPLES ───────────────────────────────────────── -->
-        <section id="examples">
-            <div class="container">
-                <span class="section-label">Real Output</span>
-                <h2>What you actually see<br />in the terminal.</h2>
-                <p class="lead">Four commands — each level of analytics, shown in full.</p>
-
-                <div class="examples-tabs">
-                    <button class="tab-btn active green" onclick="switchTab(event, 'tab-graph')">
-                        context-stats graph
-                    </button>
-                    <button class="tab-btn" onclick="switchTab(event, 'tab-sessions')">
-                        context-stats sessions
-                    </button>
-                    <button class="tab-btn" onclick="switchTab(event, 'tab-export')">
-                        context-stats export
-                    </button>
-                    <button class="tab-btn" onclick="switchTab(event, 'tab-report')">
-                        context-stats report
-                    </button>
-                </div>
-
-                <!-- Graph tab -->
-                <div id="tab-graph" class="tab-panel active">
-                    <div class="example-terminal">
-                        <div class="example-terminal-body">
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats graph --type all</span>
-                            </div>
-                            <br />
-                            <div class="t-h1">Context Stats (my-project • abc-1234)</div>
-                            <br />
-                            <div class="t-muted">Context usage — last 14 interactions</div>
-                            <div>
-                                <span class="t-bar-g"> ▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░ </span
-                                ><span class="t-key">88,000 free </span
-                                ><span class="t-muted">(44.0%)</span>
-                            </div>
-                            <br />
-                            <div class="t-border">╔══ Session: abc-1234 ═════════════════════╗</div>
-                            <div class="t-border">
-                                ║ <span class="t-key">Model: </span
-                                ><span class="t-cyan">Claude Opus 4.6</span>
-                                <span class="t-border">║</span>
-                            </div>
-                            <div class="t-border">
-                                ║ <span class="t-key">Zone: </span
-                                ><span class="t-yellow">◆ Code-only</span>
-                                <span class="t-border">║</span>
-                            </div>
-                            <div class="t-border">
-                                ║ <span class="t-key">MI: </span
-                                ><span class="t-yellow">0.712</span> (context pressure)
-                                <span class="t-border">║</span>
-                            </div>
-                            <div class="t-border">
-                                ║ <span class="t-key">Delta: </span
-                                ><span class="t-cyan">+3,140</span> tokens this step
-                                <span class="t-border">║</span>
-                            </div>
-                            <div class="t-border">
-                                ║ <span class="t-key">Cost: </span
-                                ><span class="t-money">$0.2847</span>
-                                <span class="t-border">║</span>
-                            </div>
-                            <div class="t-border">╚══════════════════════════════════════════╝</div>
-                            <br />
-                            <div class="t-h2">Context Growth Per Interaction</div>
-                            <div class="t-muted">Max: 8,420 Min: 0 Points: 14</div>
-                            <br />
-                            <div class="t-muted">8,420 │ <span class="t-bar-r">●</span></div>
-                            <div class="t-muted">
-                                │ <span class="t-bar-o">●</span> <span class="t-bar-r">▒</span>
-                            </div>
-                            <div class="t-muted">
-                                │ <span class="t-bar-y">●</span> <span class="t-bar-y">●</span>
-                                <span class="t-bar-o">▒</span> <span class="t-bar-r">░</span>
-                            </div>
-                            <div class="t-muted">
-                                │ <span class="t-bar-g">●</span> <span class="t-bar-y">▒</span>
-                                <span class="t-bar-y">▒</span> <span class="t-bar-o">░</span>
-                                <span class="t-bar-o">●</span> <span class="t-bar-r">░</span>
-                            </div>
-                            <div class="t-muted">
-                                2,810 │ <span class="t-bar-g">●</span>
-                                <span class="t-bar-g">▒</span> <span class="t-bar-g">●</span>
-                                <span class="t-bar-y">░</span> <span class="t-bar-y">░</span>
-                                <span class="t-bar-o">░</span> <span class="t-bar-o">▒</span>
-                                <span class="t-bar-r">░</span> <span class="t-bar-o">●</span>
-                            </div>
-                            <div class="t-muted">
-                                0 │<span class="t-bar-g"
-                                    >●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●</span
-                                >
-                            </div>
-                            <div class="t-muted">└──────────────────────────────────────────</div>
-                            <div class="t-muted">10:12 11:08 12:30</div>
-                            <br />
-                            <div class="t-h2">Model Intelligence (MI) Over Time</div>
-                            <div class="t-muted">Calibrated against MRCR v2 8-needle benchmark</div>
-                            <br />
-                            <div class="t-muted">1.00 │<span class="t-bar-g">●●</span></div>
-                            <div class="t-muted">0.90 │ <span class="t-bar-g">●●●</span></div>
-                            <div class="t-muted">0.80 │ <span class="t-bar-g">●●●</span></div>
-                            <div class="t-muted">0.70 │ <span class="t-bar-y">●●●</span></div>
-                            <div class="t-muted">
-                                0.61 │ <span class="t-bar-y">●</span
-                                ><span style="color: #ef4444">▼</span
-                                ><span class="t-muted" style="font-size: 11px">
-                                    compact (⚠ lossy)</span
-                                >
-                            </div>
-                            <div class="t-muted">1.00 │ <span class="t-bar-g">●●</span></div>
-                            <div class="t-muted">0.80 │ <span class="t-bar-g">●●●</span></div>
-                            <div class="t-muted">0.70 │ <span class="t-bar-y">●●</span></div>
-                            <div class="t-muted">└──────────────────────────────────────────</div>
-                            <div class="t-muted">step 1 ▼ compact step 14</div>
-                            <br />
-                            <div class="t-h2">Cache Activity</div>
-                            <div class="t-muted">Creation ░ Read ▓</div>
-                            <br />
-                            <div class="t-muted">
-                                3│ <span class="t-cyan">░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
-                            </div>
-                            <div class="t-muted">
-                                2│ <span class="t-cyan">░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
-                            </div>
-                            <div class="t-muted">
-                                1│ <span class="t-cyan">░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sessions tab -->
-                <div id="tab-sessions" class="tab-panel">
-                    <div class="example-terminal">
-                        <div class="example-terminal-body">
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats sessions</span>
-                            </div>
-                            <br />
-                            <div class="t-h1">
-                                Recent Sessions <span class="t-muted">(last 5 min)</span>
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-cyan">43b5ed93-e7a3-44d9-9d58-bd35911f17e9</span>
-                            </div>
-                            <div>
-                                <span class="t-green">my-project</span>
-                                <span class="t-muted">·</span>
-                                <span class="t-muted">claude-opus-4-6[1m]</span>
-                                <span class="t-muted">·</span> 59K tokens
-                                <span class="t-muted">· 1m 55s ago</span>
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-cyan">66c00dcb-ebf6-4ed0-872e-23a60d715d60</span>
-                            </div>
-                            <div>
-                                <span class="t-green">api-server</span>
-                                <span class="t-muted">·</span>
-                                <span class="t-muted">claude-opus-4-6[1m]</span>
-                                <span class="t-muted">·</span> 83K tokens
-                                <span class="t-muted">· 4m 52s ago</span>
-                            </div>
-                            <br />
-                            <div class="t-muted">
-                                Tip: context-stats 43b5ed93-e7a3-44d9-9d58-bd35911f17e9 graph
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats sessions --minutes 30</span>
-                            </div>
-                            <br />
-                            <div class="t-h1">
-                                Recent Sessions <span class="t-muted">(last 30 min)</span>
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-cyan">43b5ed93-e7a3-44d9-9d58-bd35911f17e9</span>
-                            </div>
-                            <div>
-                                <span class="t-green">my-project</span>
-                                <span class="t-muted">·</span>
-                                <span class="t-muted">claude-opus-4-6[1m]</span>
-                                <span class="t-muted">·</span> 59K tokens
-                                <span class="t-muted">· 1m 55s ago</span>
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-cyan">66c00dcb-ebf6-4ed0-872e-23a60d715d60</span>
-                            </div>
-                            <div>
-                                <span class="t-green">api-server</span>
-                                <span class="t-muted">·</span>
-                                <span class="t-muted">claude-opus-4-6[1m]</span>
-                                <span class="t-muted">·</span> 83K tokens
-                                <span class="t-muted">· 4m 52s ago</span>
-                            </div>
-                            <br />
-                            <div>
-                                <span class="t-cyan">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>
-                            </div>
-                            <div>
-                                <span class="t-green">docs-site</span>
-                                <span class="t-muted">·</span>
-                                <span class="t-muted">claude-sonnet-4-6</span>
-                                <span class="t-muted">·</span> 142K tokens
-                                <span class="t-muted">· 18m ago</span>
-                            </div>
-                            <br />
-                            <div class="t-muted">
-                                Tip: context-stats 43b5ed93-e7a3-44d9-9d58-bd35911f17e9 graph
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Export tab -->
-                <div id="tab-export" class="tab-panel">
-                    <div class="example-terminal">
-                        <div class="example-terminal-body">
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats export abc-1234</span>
-                            </div>
-                            <div class="t-green">Exported → session-abc-1234-2026-04-07.md</div>
-                            <br />
-                            <div class="t-h1"># Session Export — abc-1234</div>
-                            <div class="t-muted">
-                                Generated: 2026-04-07 12:30:15 | context-stats v1.22.0
-                            </div>
-                            <br />
-                            <div class="t-h2">## Executive Summary</div>
-                            <br />
-                            <div class="t-muted">| Metric | Value |</div>
-                            <div class="t-muted">
-                                |---------------------|------------------------|
-                            </div>
-                            <div>
-                                <span class="t-key"> | Model | </span
-                                ><span class="t-cyan">Claude Opus 4.6</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Duration | </span
-                                ><span class="t-val">2h 18m 03s</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Interactions | </span
-                                ><span class="t-val">14</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Peak Context Used | </span
-                                ><span class="t-orange">112,000 / 200,000 (56%)</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Final MI Score | </span
-                                ><span class="t-yellow">0.712</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Total Cost | </span
-                                ><span class="t-money">$0.2847</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Cache Hit Ratio | </span
-                                ><span class="t-green">63.4%</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Git Branch | </span
-                                ><span class="t-indigo">feat/landing-page</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Lines Changed | </span
-                                ><span class="t-val">+284 / -41</span> |
-                            </div>
-                            <br />
-                            <div class="t-h2">## Interaction Timeline</div>
-                            <br />
-                            <div class="t-muted">
-                                | Step | Time | Context Used | Free | MI | Delta | Zone |
-                            </div>
-                            <div class="t-muted">
-                                |------|-------|--------------|---------|-------|---------|-------------|
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 1 | 10:12 | </span
-                                ><span class="t-green"> 18,240</span
-                                ><span class="t-muted"> | 181,760 | </span
-                                ><span class="t-green">0.982</span
-                                ><span class="t-muted"> | +18,240 | </span
-                                ><span class="t-green">Planning</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 2 | 10:24 | </span
-                                ><span class="t-green"> 24,610</span
-                                ><span class="t-muted"> | 175,390 | </span
-                                ><span class="t-green">0.971</span
-                                ><span class="t-muted"> | +6,370 | </span
-                                ><span class="t-green">Planning</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 5 | 10:58 | </span
-                                ><span class="t-green"> 61,340</span
-                                ><span class="t-muted"> | 138,660 | </span
-                                ><span class="t-green">0.894</span
-                                ><span class="t-muted"> | +8,100 | </span
-                                ><span class="t-green">Planning</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 8 | 11:22 | </span
-                                ><span class="t-yellow"> 84,920</span
-                                ><span class="t-muted"> | 115,080 | </span
-                                ><span class="t-yellow">0.812</span
-                                ><span class="t-muted"> | +5,280 | </span
-                                ><span class="t-yellow">Code-only</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 11 | 11:51 | </span
-                                ><span class="t-yellow"> 99,480</span
-                                ><span class="t-muted"> | 100,520 | </span
-                                ><span class="t-yellow">0.764</span
-                                ><span class="t-muted"> | +4,100 | </span
-                                ><span class="t-yellow">Code-only</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 14 | 12:30 | </span
-                                ><span class="t-orange">112,000</span
-                                ><span class="t-muted"> | 88,000 | </span
-                                ><span class="t-yellow">0.712</span
-                                ><span class="t-muted"> | +3,140 | </span
-                                ><span class="t-yellow">Code-only</span
-                                ><span class="t-muted"> |</span>
-                            </div>
-                            <br />
-                            <div class="t-h2">## Cache Analysis</div>
-                            <br />
-                            <div>
-                                <span class="t-key"> Cache creation tokens: </span
-                                ><span class="t-val">28,400</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Cache read tokens: </span
-                                ><span class="t-green">49,120</span>
-                                <span class="t-muted">(63.4% hit rate)</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Cache savings: </span
-                                ><span class="t-money">~$0.087</span>
-                                <span class="t-muted">(vs. uncached)</span>
-                            </div>
-                            <br />
-                            <div class="t-muted">```mermaid</div>
-                            <div class="t-muted">pie title Cache Efficiency</div>
-                            <div class="t-muted">"Cache Hit" : 63.4</div>
-                            <div class="t-muted">"Fresh tokens" : 36.6</div>
-                            <div class="t-muted">```</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Report tab -->
-                <div id="tab-report" class="tab-panel">
-                    <div class="example-terminal">
-                        <div class="example-terminal-body">
-                            <div>
-                                <span class="t-prompt">$ </span
-                                ><span class="t-cmd">context-stats report --since-days 30</span>
-                            </div>
-                            <div class="t-green">Analyzing 312 sessions across 18 projects...</div>
-                            <br />
-                            <div class="t-h1"># Token Usage Analytics Report</div>
-                            <div class="t-muted">
-                                Generated: 2026-04-07 12:00:00 | context-stats v1.22.0
-                            </div>
-                            <br />
-                            <div class="t-h2">## Executive Summary (last 30 days)</div>
-                            <br />
-                            <div class="t-muted">| Metric | Value |</div>
-                            <div class="t-muted">
-                                |-------------------------|-------------------------------|
-                            </div>
-                            <div>
-                                <span class="t-key"> | Total Spend | </span
-                                ><span class="t-money">$1,842.35</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Total Sessions | </span
-                                ><span class="t-val">312</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Projects Analyzed | </span
-                                ><span class="t-val">18</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Cache Hit Ratio | </span
-                                ><span class="t-green">41.2%</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Avg Session Cost | </span
-                                ><span class="t-val">$5.90</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Avg Session Duration | </span
-                                ><span class="t-val">3h 22m 14s</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Most Expensive Session | </span
-                                ><span class="t-orange">a3f9c12d… ($87.40, 4.7%)</span> |
-                            </div>
-                            <div>
-                                <span class="t-key"> | Most Expensive Project | </span
-                                ><span class="t-orange">project-alpha ($412.80, 22.4%)</span> |
-                            </div>
-                            <br />
-                            <div class="t-h2">## Model Usage</div>
-                            <br />
-                            <div class="t-muted">| Model | Sessions | Cost | % Total |</div>
-                            <div class="t-muted">|--------|----------|------------|---------|</div>
-                            <div>
-                                <span class="t-muted"> | </span><span class="t-indigo">opus </span
-                                ><span class="t-muted"> | 241 | </span
-                                ><span class="t-money">$1,512.30</span
-                                ><span class="t-muted"> | 82.1% |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | </span><span class="t-cyan">sonnet</span
-                                ><span class="t-muted"> | 42 | </span
-                                ><span class="t-money">$218.75</span
-                                ><span class="t-muted"> | 11.9% |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | </span><span class="t-yellow">haiku </span
-                                ><span class="t-muted"> | 29 | </span
-                                ><span class="t-money">$111.30</span
-                                ><span class="t-muted"> | 6.0% |</span>
-                            </div>
-                            <br />
-                            <div class="t-h2">## Weekly Spend Trend</div>
-                            <br />
-                            <div>
-                                <span class="t-muted"> W10 </span
-                                ><span class="t-bar-g">███████████</span
-                                ><span class="t-muted"> $284.50 (48 sessions)</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> W11 </span
-                                ><span class="t-bar-y">████████████████</span
-                                ><span class="t-muted"> $412.80 (74 sessions)</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> W12 </span
-                                ><span class="t-bar-y">█████████████</span
-                                ><span class="t-muted"> $348.20 (68 sessions)</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> W13 </span
-                                ><span class="t-bar-o">████████████████████</span
-                                ><span class="t-muted"> $489.60 (82 sessions) ← peak</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> W14 </span
-                                ><span class="t-bar-g">████████</span
-                                ><span class="t-muted"> $218.75 (31 sessions)</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> W15 </span><span class="t-bar-g">███</span
-                                ><span class="t-muted"> $88.50 (9 sessions)</span>
-                            </div>
-                            <br />
-                            <div class="t-h2">## Top Projects by Cost</div>
-                            <br />
-                            <div class="t-muted">
-                                | # | Project | Sessions | Cost | Cache % | Dominant |
-                            </div>
-                            <div class="t-muted">
-                                |---|-----------------|----------|-----------|----------|----------|
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 1 | project-alpha | 28 | </span
-                                ><span class="t-red">$412.80</span><span class="t-muted"> | </span
-                                ><span class="t-orange">12.0%</span
-                                ><span class="t-muted"> | opus |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 2 | project-beta | 41 | </span
-                                ><span class="t-orange">$318.44</span
-                                ><span class="t-muted"> | </span><span class="t-yellow">44.1%</span
-                                ><span class="t-muted"> | opus |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 3 | project-gamma | 35 | </span
-                                ><span class="t-orange">$264.17</span
-                                ><span class="t-muted"> | </span><span class="t-yellow">38.4%</span
-                                ><span class="t-muted"> | opus |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 4 | project-delta | 27 | </span
-                                ><span class="t-yellow">$198.53</span
-                                ><span class="t-muted"> | </span><span class="t-green">49.2%</span
-                                ><span class="t-muted"> | opus |</span>
-                            </div>
-                            <div>
-                                <span class="t-muted"> | 5 | project-epsilon | 22 | </span
-                                ><span class="t-yellow">$187.62</span
-                                ><span class="t-muted"> | </span><span class="t-yellow">31.0%</span
-                                ><span class="t-muted"> | opus |</span>
-                            </div>
-                            <br />
-                            <div class="t-h2">## Activity by Day of Week</div>
-                            <br />
-                            <div>
-                                <span class="t-key"> Mon </span
-                                ><span class="t-bar-g">############</span
-                                ><span class="t-muted">........ 52 sessions</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Tue </span
-                                ><span class="t-bar-g">##################</span
-                                ><span class="t-muted">... 68 sessions</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Wed </span
-                                ><span class="t-bar-g">####################</span
-                                ><span class="t-muted"> 71 sessions ← busiest</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Thu </span
-                                ><span class="t-bar-g">############</span
-                                ><span class="t-muted">........ 48 sessions</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Fri </span
-                                ><span class="t-bar-g">###############</span
-                                ><span class="t-muted">..... 55 sessions</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Sat </span><span class="t-bar-d">######</span
-                                ><span class="t-muted">.............. 22 sessions</span>
-                            </div>
-                            <div>
-                                <span class="t-key"> Sun </span><span class="t-bar-d">#######</span
-                                ><span class="t-muted">............. 26 sessions</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <script>
-            function switchTab(e, panelId) {
-                const section = e.target.closest('section');
-                section.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('active', 'green');
-                    b.style.borderBottomColor = 'transparent';
-                    b.style.color = '';
-                });
-                section.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                e.target.classList.add('active');
-                if (panelId === 'tab-graph') {
-                    e.target.classList.add('green');
-                } else if (panelId === 'tab-sessions') {
-                    e.target.style.color = 'var(--cyan)';
-                    e.target.style.borderBottomColor = 'var(--cyan)';
-                } else if (panelId === 'tab-report') {
-                    e.target.style.color = 'var(--indigo)';
-                    e.target.style.borderBottomColor = 'var(--indigo)';
-                }
-                document.getElementById(panelId).classList.add('active');
-            }
-        </script>
-
-        <!-- ── SCREENSHOTS ────────────────────────────────────────────── -->
-        <section id="screenshots">
-            <div class="container">
-                <span class="section-label">See It In Action</span>
-                <h2>Every context state, visualized.</h2>
-                <p class="lead">
-                    Color-coded zones tell you exactly what to do — no guesswork required.
-                </p>
-
-                <div class="screenshots-grid">
-                    <div class="screenshot-card">
-                        <img
-                            src="images/1.12.0/plan-zone.png"
-                            alt="Planning zone — green, plenty of context"
-                            loading="lazy"
-                            width="600"
-                            height="400"
-                        />
-                        <div class="screenshot-caption">
-                            Planning Zone — plenty of context, keep working
-                        </div>
-                    </div>
-                    <div class="screenshot-card">
-                        <img
-                            src="images/1.12.0/code-zone.png"
-                            alt="Code-only zone — yellow, context tightening"
-                            loading="lazy"
-                            width="600"
-                            height="400"
-                        />
-                        <div class="screenshot-caption">
-                            Code-Only Zone — tightening, finish current task
-                        </div>
-                    </div>
-                    <div class="screenshot-card">
-                        <img
-                            src="images/1.12.0/dump-zone.png"
-                            alt="Dump zone — orange, quality declining"
-                            loading="lazy"
-                            width="600"
-                            height="400"
-                        />
-                        <div class="screenshot-caption">
-                            Dump Zone — quality declining, wrap up now
-                        </div>
-                    </div>
-                    <div class="screenshot-card">
-                        <img
-                            src="images/token-graph.png"
-                            alt="Live ASCII graph dashboard — context-stats graph command output"
-                            loading="lazy"
-                            width="600"
-                            height="400"
-                        />
-                        <div class="screenshot-caption">
-                            Live ASCII graph dashboard — <code>context-stats graph</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── ZONES ─────────────────────────────────────────────────── -->
-        <section id="zones">
-            <div class="container">
-                <div style="text-align: center">
-                    <span class="section-label">Context Zones</span>
-                    <h2>Five zones. One clear action each.</h2>
-                    <p class="lead" style="margin: 0 auto 0">
-                        context-stats maps token usage to five zones so you always know what to do
-                        next.
+                <div class="section-head">
+                    <span class="section-label">What you get</span>
+                    <h2>Three levels of analytics,<br />one lightweight tool.</h2>
+                    <p>
+                        From the live statusline in front of you to multi-week cost reports —
+                        each level answers a different question about how you use Claude Code.
                     </p>
                 </div>
 
-                <div class="zones-list">
-                    <div class="zone-row">
-                        <span
-                            class="zone-dot"
-                            style="background: #10b981; box-shadow: 0 0 8px #10b981"
-                        ></span>
-                        <span class="zone-name" style="color: #10b981">Planning</span>
-                        <span class="zone-action"
-                            >Plenty of room — keep planning and coding freely<br /><span
-                                style="
-                                    font-size: 12px;
-                                    color: var(--text-muted);
-                                    font-style: italic;
-                                "
-                                >→ Plan ahead, explore options, read large files freely</span
-                            ></span
-                        >
-                        <span
-                            class="zone-pct"
-                            style="background: rgba(16, 185, 129, 0.12); color: #10b981"
-                            >&lt;25%</span
-                        >
+                <div class="levels">
+                    <div class="level-card green">
+                        <span class="level-tag">Level 1 · Live</span>
+                        <h3>Real-time statusline</h3>
+                        <p>
+                            Context zone, Model Intelligence score, and token delta on every
+                            prompt — so you act now, not after the context is already gone.
+                        </p>
+                        <code>context-stats graph</code>
                     </div>
-                    <div class="zone-row">
-                        <span
-                            class="zone-dot"
-                            style="background: #f59e0b; box-shadow: 0 0 8px #f59e0b"
-                        ></span>
-                        <span class="zone-name" style="color: #f59e0b">Code-only</span>
-                        <span class="zone-action"
-                            >Context tightening — finish current task, skip exploration<br /><span
-                                style="
-                                    font-size: 12px;
-                                    color: var(--text-muted);
-                                    font-style: italic;
-                                "
-                                >→ Avoid new file reads; complete what's in progress</span
-                            ></span
-                        >
-                        <span
-                            class="zone-pct"
-                            style="background: rgba(245, 158, 11, 0.12); color: #f59e0b"
-                            >25–40%</span
-                        >
+                    <div class="level-card cyan">
+                        <span class="level-tag">Level 2 · Session</span>
+                        <h3>Per-session deep dive</h3>
+                        <p>
+                            Export a full session to Markdown: cache efficiency, interaction
+                            timeline, zone history, and the exact moments context compacted.
+                        </p>
+                        <code>context-stats export</code>
                     </div>
-                    <div class="zone-row">
-                        <span
-                            class="zone-dot"
-                            style="background: #f97316; box-shadow: 0 0 8px #f97316"
-                        ></span>
-                        <span class="zone-name" style="color: #f97316">Dump</span>
-                        <span class="zone-action"
-                            >Quality declining — wrap up, prepare to export context<br /><span
-                                style="
-                                    font-size: 12px;
-                                    color: var(--text-muted);
-                                    font-style: italic;
-                                "
-                                >→ Wrap up task, export session, prepare new context</span
-                            ></span
-                        >
-                        <span
-                            class="zone-pct"
-                            style="background: rgba(249, 115, 22, 0.12); color: #f97316"
-                            >40–70%</span
-                        >
-                    </div>
-                    <div class="zone-row">
-                        <span
-                            class="zone-dot"
-                            style="background: #ef4444; box-shadow: 0 0 8px #ef4444"
-                        ></span>
-                        <span class="zone-name" style="color: #ef4444">ExDump</span>
-                        <span class="zone-action"
-                            >Near hard limit — start a new session immediately<br /><span
-                                style="
-                                    font-size: 12px;
-                                    color: var(--text-muted);
-                                    font-style: italic;
-                                "
-                                >→ Stop work, start a fresh session now</span
-                            ></span
-                        >
-                        <span
-                            class="zone-pct"
-                            style="background: rgba(239, 68, 68, 0.12); color: #ef4444"
-                            >70–75%</span
-                        >
-                    </div>
-                    <div class="zone-row">
-                        <span class="zone-dot" style="background: #64748b"></span>
-                        <span class="zone-name" style="color: #64748b">Dead</span>
-                        <span class="zone-action"
-                            >Context exhausted — stop, nothing productive remains<br /><span
-                                style="
-                                    font-size: 12px;
-                                    color: var(--text-muted);
-                                    font-style: italic;
-                                "
-                                >→ Start a new session immediately</span
-                            ></span
-                        >
-                        <span
-                            class="zone-pct"
-                            style="background: rgba(100, 116, 139, 0.12); color: #64748b"
-                            >&gt;75%</span
-                        >
+                    <div class="level-card indigo">
+                        <span class="level-tag">Level 3 · Report</span>
+                        <h3>Multi-week analytics</h3>
+                        <p>
+                            Cost breakdown, cache analysis, and cross-project patterns over weeks
+                            or months — so you know exactly where your tokens go.
+                        </p>
+                        <code>context-stats report</code>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ── STATUSLINE PREVIEW ─────────────────────────────────────── -->
-        <section id="statusline-preview">
+        <!-- ── DETAIL BANNER ────────────────────────────────────── -->
+        <section style="padding-top: 0">
             <div class="container">
-                <div style="text-align: center">
-                    <span class="section-label">Statusline Preview</span>
-                    <h2>What you see at every context zone.</h2>
-                    <p class="lead" style="margin: 0 auto 0">
-                        The statusline updates live after each prompt. Here's exactly what it shows
-                        across all five zones.
-                    </p>
-                </div>
-
-                <!-- Thresholds from src/claude_statusline/graphs/intelligence.py (200k standard model):
-         dump_zone  = 200k × 0.40 = 80,000 used
-         warn_start = 80,000 − 30,000 = 50,000 used  ← Plan/Code boundary
-         hard_limit = 200k × 0.70 = 140,000 used     ← Dump/ExDump boundary
-         dead_zone  = 200k × 0.75 = 150,000 used     ← ExDump/Dead boundary
-         Plan:   used < 50,000          (< 25%)
-         Code:   50,000 ≤ used < 80,000 (25–40%)
-         Dump:   80,000 ≤ used < 140,000 (40–70%)
-         ExDump: 140,000 ≤ used < 150,000 (70–75%)
-         Dead:   used ≥ 150,000          (≥ 75%)
-    -->
-
-                <div class="sl-grid">
-                    <!-- Plan: used < 50,000 on 200k model -->
-                    <div class="sl-zone-block">
-                        <div class="sl-zone-label">
-                            <span
-                                class="sl-dot"
-                                style="background: #10b981; box-shadow: 0 0 6px #10b981"
-                            ></span>
-                            <span style="color: #10b981">Plan</span>
-                            <span
-                                style="
-                                    color: var(--text-muted);
-                                    font-weight: 400;
-                                    margin-left: auto;
-                                "
-                                >used &lt; 50,000 &nbsp;·&nbsp; &lt; 25% used</span
-                            >
-                        </div>
-                        <div class="sl-terminal">
-                            <span style="color: #06b6d4">my-project</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #c084fc">main [2]</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #10b981">32,480 (16.2%)</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #10b981">Plan</span
-                            ><span style="color: var(--text-muted)">
-                                | Opus 4.6 (200k context) | </span
-                            ><span style="color: #475569"
-                                >76f0c6e5-47e1-4656-9ffe-59ba12005967</span
-                            >
-                            <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px">
-                                → Plenty of room. Keep planning and coding freely.
-                            </div>
-                        </div>
+                <div class="detail-banner">
+                    <div>
+                        <h3>Want the full picture?</h3>
+                        <p>
+                            Terminal walkthroughs, the five context zones, Model Intelligence,
+                            cache keep-warm, configuration, and every command — all in one place.
+                        </p>
                     </div>
-
-                    <!-- Code: 50,000 ≤ used < 80,000 on 200k model -->
-                    <div class="sl-zone-block">
-                        <div class="sl-zone-label">
-                            <span
-                                class="sl-dot"
-                                style="background: #f59e0b; box-shadow: 0 0 6px #f59e0b"
-                            ></span>
-                            <span style="color: #f59e0b">Code</span>
-                            <span
-                                style="
-                                    color: var(--text-muted);
-                                    font-weight: 400;
-                                    margin-left: auto;
-                                "
-                                >50,000 ≤ used &lt; 80,000 &nbsp;·&nbsp; 25–40% used</span
-                            >
-                        </div>
-                        <div class="sl-terminal">
-                            <span style="color: #06b6d4">my-project</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #c084fc">feat/new-ui [5]</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #f59e0b">65,210 (32.6%)</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #f59e0b">Code</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #06b6d4">+494</span
-                            ><span style="color: var(--text-muted)">
-                                | Opus 4.6 (200k context) | </span
-                            ><span style="color: #475569"
-                                >e43c4908-3374-46e5-b8e4-73ab96e42d0f</span
-                            >
-                            <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px">
-                                → Context tightening. Finish current task, skip exploration.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Dump: 80,000 ≤ used < 140,000 on 200k model -->
-                    <div class="sl-zone-block">
-                        <div class="sl-zone-label">
-                            <span
-                                class="sl-dot"
-                                style="background: #f97316; box-shadow: 0 0 6px #f97316"
-                            ></span>
-                            <span style="color: #f97316">Dump</span>
-                            <span
-                                style="
-                                    color: var(--text-muted);
-                                    font-weight: 400;
-                                    margin-left: auto;
-                                "
-                                >80,000 ≤ used &lt; 140,000 &nbsp;·&nbsp; 40–70% used</span
-                            >
-                        </div>
-                        <div class="sl-terminal">
-                            <span style="color: #06b6d4">my-project</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #c084fc">fix/bug-123 [8]</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #f97316">112,640 (56.3%)</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #f97316">Dump</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #06b6d4">+198</span
-                            ><span style="color: var(--text-muted)">
-                                | Opus 4.6 (200k context) | </span
-                            ><span style="color: #475569"
-                                >c58eab6e-9fd9-4a99-8fee-8de07b566b9a</span
-                            >
-                            <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px">
-                                → Quality declining. Wrap up now, prepare to export context.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ExDump: 140,000 ≤ used < 150,000 on 200k model -->
-                    <div class="sl-zone-block">
-                        <div class="sl-zone-label">
-                            <span
-                                class="sl-dot"
-                                style="background: #ef4444; box-shadow: 0 0 6px #ef4444"
-                            ></span>
-                            <span style="color: #ef4444">ExDump</span>
-                            <span
-                                style="
-                                    color: var(--text-muted);
-                                    font-weight: 400;
-                                    margin-left: auto;
-                                "
-                                >140,000 ≤ used &lt; 150,000 &nbsp;·&nbsp; 70–75% used</span
-                            >
-                        </div>
-                        <div class="sl-terminal">
-                            <span style="color: #06b6d4">my-project</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #c084fc">fix/bug-123 [12]</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #ef4444">144,380 (72.2%)</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #ef4444">ExDump</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #06b6d4">+1,240</span
-                            ><span style="color: var(--text-muted)">
-                                | Opus 4.6 (200k context) | </span
-                            ><span style="color: #475569"
-                                >d4e5f6a7-b8c9-0123-defa-234567890123</span
-                            >
-                            <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px">
-                                → Near hard limit. Start a new session immediately.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Dead: used ≥ 150,000 on 200k model -->
-                    <div class="sl-zone-block">
-                        <div class="sl-zone-label">
-                            <span class="sl-dot" style="background: #64748b"></span>
-                            <span style="color: #64748b">Dead</span>
-                            <span
-                                style="
-                                    color: var(--text-muted);
-                                    font-weight: 400;
-                                    margin-left: auto;
-                                "
-                                >used ≥ 150,000 &nbsp;·&nbsp; ≥ 75% used</span
-                            >
-                        </div>
-                        <div class="sl-terminal">
-                            <span style="color: #06b6d4">my-project</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #c084fc">fix/bug-123 [15]</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #64748b">158,920 (79.5%)</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #64748b">Dead</span
-                            ><span style="color: var(--text-muted)"> | </span
-                            ><span style="color: #06b6d4">+320</span
-                            ><span style="color: var(--text-muted)">
-                                | Opus 4.6 (200k context) | </span
-                            ><span style="color: #475569"
-                                >e5f6a7b8-c9d0-1234-efab-345678901234</span
-                            >
-                            <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px">
-                                → Context exhausted. Stop — nothing productive remains.
-                            </div>
-                        </div>
-                    </div>
+                    <a href="docs.html" class="btn-primary">Open the documentation →</a>
                 </div>
             </div>
         </section>
 
-        <!-- ── HOW IT WORKS ───────────────────────────────────────────── -->
-        <section id="how-it-works">
-            <div class="container">
-                <span class="section-label">Get Started</span>
-                <h2>Up and running in 60 seconds.</h2>
-                <p class="lead">No config files. No sign-up. No data leaving your machine.</p>
-
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-num">1</div>
-                        <div class="step-body">
-                            <h3>Install the package</h3>
-                            <p>One pip command, zero dependencies.</p>
-                            <code>pip install context-stats</code>
-                        </div>
-                    </div>
-                    <div class="step-arrow">↓</div>
-                    <div class="step">
-                        <div class="step-num">2</div>
-                        <div class="step-body">
-                            <h3>Configure Claude Code</h3>
-                            <p>Add the status line to <code>~/.claude/settings.json</code>.</p>
-                            <code style="white-space: pre"
-                                >{ "statusLine": { "type": "command", "command": "claude-statusline"
-                                } }</code
-                            >
-                        </div>
-                    </div>
-                    <div class="step-arrow">↓</div>
-                    <div class="step">
-                        <div class="step-num">3</div>
-                        <div class="step-body">
-                            <h3>Start a session</h3>
-                            <p>
-                                Your status line is live. Context zone, MI score, token delta — all
-                                visible.
-                            </p>
-                            <code>claude # or open Claude Code</code>
-                        </div>
-                    </div>
-                    <div class="step-arrow">↓</div>
-                    <div class="step">
-                        <div class="step-num">4</div>
-                        <div class="step-body">
-                            <h3>Explore & analyze</h3>
-                            <p>Use any of these commands any time — no session ID needed.</p>
-                            <code style="white-space: pre"
-                                ># Live ASCII dashboard — context, MI, cache, delta context-stats
-                                graph # List recent sessions (last 5 min by default) context-stats
-                                sessions context-stats sessions --minutes 30 # Keep the prompt cache
-                                alive during idle gaps context-stats cache-warm on # Export full
-                                session report to Markdown context-stats export # Multi-project
-                                analytics (last 30 days) context-stats report --since-days 30 #
-                                Explain raw JSON from Claude Code stdin context-stats explain</code
-                            >
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── FAQ ───────────────────────────────────────────────────── -->
-        <section id="faq">
-            <div class="container">
-                <div style="text-align: center">
-                    <span class="section-label">FAQ</span>
-                    <h2>Common questions</h2>
-                </div>
-
-                <div class="faq-list">
-                    <details>
-                        <summary>Does context-stats send any data to the cloud?</summary>
-                        <p>
-                            No. All session data stays local in <code>~/.claude/statusline/</code>.
-                            There are no network requests, no telemetry, no external API calls of
-                            any kind. Your token usage and session data never leave your machine.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>Will it slow down my Claude Code sessions?</summary>
-                        <p>
-                            No. The statusline script is a lightweight Python process that runs
-                            synchronously on each prompt. It reads from local CSV files and writes a
-                            single line to stdout. Typical execution is under 10ms. Git operations
-                            have a 5-second timeout to prevent hangs.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>Does it work on Windows?</summary>
-                        <p>
-                            Yes. context-stats is pure Python 3.9+ with zero external dependencies
-                            and runs on macOS, Linux, and Windows. The statusline script and CLI
-                            both work across all platforms.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>What Python version do I need?</summary>
-                        <p>
-                            Python 3.9 or higher. No external packages are required — context-stats
-                            uses only the Python standard library.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>Can I customize the colors and display?</summary>
-                        <p>
-                            Yes. Create <code>~/.claude/statusline.conf</code> with key=value pairs.
-                            You can customize 18 named colors or use hex codes, toggle MI display,
-                            token detail, delta tracking, session ID, motion effects, and more. Full
-                            configuration reference in the docs.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>How accurate are the token counts?</summary>
-                        <p>
-                            context-stats reads the token data directly from Claude Code's status
-                            line JSON. It does not estimate — it reports the exact values that
-                            Claude Code provides. The MI score is calibrated against the MRCR v2
-                            8-needle benchmark.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>
-                            What's the difference between the statusline and the graph dashboard?
-                        </summary>
-                        <p>
-                            The statusline (<code>claude-statusline</code>) is the persistent
-                            one-line display shown by Claude Code at each prompt — it's always on.
-                            The graph dashboard (<code>context-stats graph</code>) is an on-demand
-                            ASCII chart view you run manually to see usage history, MI trends, cache
-                            activity, and delta per interaction over the session.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>What is cache keep-warm and why do I need it?</summary>
-                        <p>
-                            Claude's prompt cache has a 5-minute TTL. Any pause longer than 5
-                            minutes — a code review, a coffee break, a long think before replying —
-                            silently evicts the cache. Your next request then pays full token price
-                            instead of the cached rate (roughly 10× cheaper for large contexts).
-                            <code>cache-warm</code> solves this by running a lightweight background
-                            heartbeat every 4 minutes, keeping the cache alive for up to 30 minutes
-                            (or a custom duration you specify). Start it with
-                            <code>context-stats &lt;session_id&gt; cache-warm on</code> from a
-                            separate terminal, and stop it with <code>cache-warm off</code>. The
-                            savings show up automatically in your
-                            <code>context-stats export</code> report.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>
-                            What is compaction detection and what does the ▼ marker mean?
-                        </summary>
-                        <p>
-                            When Claude Code compacts its context (a &gt;50% drop in token count
-                            between interactions), context-stats detects it automatically and marks
-                            the point with a <code>▼</code> symbol in your graphs. This tells you
-                            exactly when and where compaction occurred during a session. More
-                            importantly, it also captures the MI (Model Intelligence) score at that
-                            moment — if MI was below 0.6 when compaction happened, it flags the
-                            event as <em>potentially lossy</em>. A lossy compaction means Claude was
-                            already degraded when it summarized, so the summary may have dropped
-                            important details. You'll see this as
-                            <code>▼ compact (MI 0.61 ⚠ lossy)</code> in the graph output.
-                        </p>
-                    </details>
-
-                    <details>
-                        <summary>What are zone recommendations?</summary>
-                        <p>
-                            Each context zone (Planning, Code, Dump, ExDump, Dead) now comes with a
-                            brief actionable recommendation so you always know what to do next — no
-                            need to look anything up. For example, in the Dump zone you'll see
-                            <em>"Wrap up task, export session, prepare new context"</em>. These
-                            appear inline in the statusline output and in graph annotations.
-                        </p>
-                    </details>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── FINAL CTA ──────────────────────────────────────────────── -->
+        <!-- ── FINAL CTA ────────────────────────────────────────── -->
         <section class="cta-section">
             <div class="container">
-                <span class="section-label">Get Started Free</span>
+                <span class="section-label">Get started free</span>
                 <h2>Stop flying blind.<br />Start every session with a map.</h2>
                 <p class="lead">
-                    Free. MIT licensed. Zero external dependencies.<br />
-                    All your data stays local — always.
+                    Free. MIT licensed. Zero external dependencies. All your data stays local —
+                    always.
                 </p>
 
                 <div class="hero-actions">
                     <a href="https://pypi.org/project/context-stats/" class="btn-primary">
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                        >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M12 5v14M5 12l7 7 7-7" />
                         </svg>
                         pip install context-stats
                     </a>
                     <a href="https://github.com/luongnv89/context-stats" class="btn-secondary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
-                            />
+                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                         Star on GitHub
                     </a>
@@ -3273,65 +904,29 @@
 
                 <div class="trust-badges">
                     <span class="badge">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="var(--green)"
-                            stroke-width="2"
-                        >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                         No data sent anywhere
                     </span>
                     <span class="badge">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="var(--cyan)"
-                            stroke-width="2"
-                        >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2">
                             <circle cx="12" cy="12" r="10" />
                             <path d="M12 8v4l3 3" />
                         </svg>
                         Install in under 60s
                     </span>
                     <span class="badge">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="var(--indigo)"
-                            stroke-width="2"
-                        >
-                            <path
-                                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                            />
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2">
+                            <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
                         MIT licensed, free forever
-                    </span>
-                    <span class="badge">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="var(--yellow)"
-                            stroke-width="2"
-                        >
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                        </svg>
-                        Zero dependencies
                     </span>
                 </div>
             </div>
         </section>
 
-        <!-- ── FOOTER ────────────────────────────────────────────────── -->
+        <!-- ── FOOTER ───────────────────────────────────────────── -->
         <footer>
             <div class="container">
                 <div class="footer-inner">
@@ -3343,14 +938,10 @@
                         >
                     </div>
                     <ul class="footer-links">
+                        <li><a href="docs.html">Documentation</a></li>
                         <li><a href="https://pypi.org/project/context-stats/">PyPI</a></li>
                         <li><a href="https://github.com/luongnv89/context-stats">GitHub</a></li>
-                        <li>
-                            <a href="https://github.com/luongnv89/context-stats/issues">Issues</a>
-                        </li>
-                        <li>
-                            <a href="https://github.com/luongnv89/context-stats#readme">Docs</a>
-                        </li>
+                        <li><a href="https://github.com/luongnv89/context-stats/issues">Issues</a></li>
                     </ul>
                 </div>
             </div>
