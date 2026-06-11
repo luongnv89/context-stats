@@ -2,18 +2,12 @@
   <!-- Background -->
   <rect width="16" height="16" rx="3" fill="#0F172A"/>
 
-  <!-- Simplified three-arc mark at 16×16
-       Origin at (3, 13), arcs sweep to upper-right
-       Keep outer two arcs only for clarity at tiny size -->
+  <!-- Simplified 2-layer context-window mark at 16×16:
+       outer frame + inner fill gauge (drop cursor/tick/dot detail) -->
 
-  <!-- Origin dot -->
-  <circle cx="3" cy="13" r="1" fill="#10B981"/>
+  <!-- Window frame -->
+  <rect x="2.5" y="5" width="11" height="6" rx="2" fill="none" stroke="#334155" stroke-width="1.2"/>
 
-  <!-- Arc 1 — Live (green, innermost) -->
-  <path d="M 3 13 C 3 9, 6 7, 9 7"
-        stroke="#10B981" stroke-width="1" fill="none" stroke-linecap="round"/>
-
-  <!-- Arc 2 — Report (indigo, outer) — skip cyan for clarity -->
-  <path d="M 3 13 C 3 6, 8 2, 14 2"
-        stroke="#818CF8" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.75"/>
+  <!-- Fill gauge (green, ~55%) -->
+  <rect x="4" y="6.5" width="5" height="3" rx="1" fill="#10B981"/>
 </svg>
