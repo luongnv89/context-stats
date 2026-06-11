@@ -2,18 +2,18 @@
   "description": "Monotonicity test: MI must decrease as context fills — per-model profiles",
   "context_window": 200000,
   "utilization_steps": [
-    { "pct": 0,   "used": 0,      "description": "empty context" },
-    { "pct": 5,   "used": 10000,  "description": "5% used" },
-    { "pct": 10,  "used": 20000,  "description": "10% used" },
-    { "pct": 20,  "used": 40000,  "description": "20% used" },
-    { "pct": 30,  "used": 60000,  "description": "30% used" },
-    { "pct": 40,  "used": 80000,  "description": "40% used" },
-    { "pct": 50,  "used": 100000, "description": "50% used" },
-    { "pct": 60,  "used": 120000, "description": "60% used" },
-    { "pct": 70,  "used": 140000, "description": "70% used" },
-    { "pct": 80,  "used": 160000, "description": "80% used" },
-    { "pct": 90,  "used": 180000, "description": "90% used" },
-    { "pct": 95,  "used": 190000, "description": "95% used" },
+    { "pct": 0, "used": 0, "description": "empty context" },
+    { "pct": 5, "used": 10000, "description": "5% used" },
+    { "pct": 10, "used": 20000, "description": "10% used" },
+    { "pct": 20, "used": 40000, "description": "20% used" },
+    { "pct": 30, "used": 60000, "description": "30% used" },
+    { "pct": 40, "used": 80000, "description": "40% used" },
+    { "pct": 50, "used": 100000, "description": "50% used" },
+    { "pct": 60, "used": 120000, "description": "60% used" },
+    { "pct": 70, "used": 140000, "description": "70% used" },
+    { "pct": 80, "used": 160000, "description": "80% used" },
+    { "pct": 90, "used": 180000, "description": "90% used" },
+    { "pct": 95, "used": 190000, "description": "95% used" },
     { "pct": 100, "used": 200000, "description": "100% used" }
   ],
   "model_scenarios": [
@@ -26,7 +26,7 @@
   "zone_thresholds": {
     "smart_zone_max_pct": 40,
     "dumb_zone_max_pct": 80,
-    "mi_green": 0.90,
-    "mi_yellow": 0.80
+    "mi_green": 0.9,
+    "mi_yellow": 0.8
   }
 }

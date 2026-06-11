@@ -4,10 +4,10 @@
 
 context-stats is distributed through two channels:
 
-| Channel      | Package Name      | Command                              |
-| ------------ | ----------------- | ------------------------------------ |
-| Shell script | N/A               | `curl -fsSL .../install.sh \| bash`  |
-| PyPI         | `context-stats`| `pip install context-stats`       |
+| Channel      | Package Name    | Command                             |
+| ------------ | --------------- | ----------------------------------- |
+| Shell script | N/A             | `curl -fsSL .../install.sh \| bash` |
+| PyPI         | `context-stats` | `pip install context-stats`         |
 
 The pip install provides the `claude-statusline` and `context-stats` CLI commands.
 
@@ -45,12 +45,12 @@ CI is also run on every push and PR via `.github/workflows/ci.yml`.
 
 Versions must be updated in sync across these files:
 
-| File | Field |
-| --- | --- |
-| `pyproject.toml` | `[project] version` |
-| `src/claude_statusline/__init__.py` | `__version__` |
-| `CHANGELOG.md` | New version entry |
-| `RELEASE_NOTES.md` | Current release notes |
+| File                                | Field                 |
+| ----------------------------------- | --------------------- |
+| `pyproject.toml`                    | `[project] version`   |
+| `src/claude_statusline/__init__.py` | `__version__`         |
+| `CHANGELOG.md`                      | New version entry     |
+| `RELEASE_NOTES.md`                  | Current release notes |
 
 ## Install Script
 

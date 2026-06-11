@@ -6,6 +6,13 @@ from pathlib import Path
 
 import pytest
 
+# Ensure the project root is on sys.path so that the standalone script
+# (scripts/statusline.py) can be imported as a module.  This must happen
+# at conftest level so the path is available before any test module loads.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):

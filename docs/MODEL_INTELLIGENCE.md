@@ -10,11 +10,11 @@ Model Intelligence (MI) estimates how well an LLM will perform at the current co
 
 The MRCR v2 8-needle benchmark measures retrieval accuracy across context lengths:
 
-| Model | 256K accuracy | 1M accuracy | Relative drop |
-|-------|--------------|-------------|---------------|
-| **Opus 4.6** | 91.9% | 78.3% | ~14.8% |
-| **Sonnet 4.6** | 90.6% | 65.1% | ~28.1% |
-| **Haiku 4.5** | (estimated) | (estimated) | ~57% |
+| Model          | 256K accuracy | 1M accuracy | Relative drop |
+| -------------- | ------------- | ----------- | ------------- |
+| **Opus 4.6**   | 91.9%         | 78.3%       | ~14.8%        |
+| **Sonnet 4.6** | 90.6%         | 65.1%       | ~28.1%        |
+| **Haiku 4.5**  | (estimated)   | (estimated) | ~57%          |
 
 Key insight: Even the best model loses accuracy with context length, but the rate varies dramatically per model family.
 
@@ -25,20 +25,21 @@ MI(u) = max(0, 1 - u^β)
 ```
 
 Where:
+
 - `u = current_used_tokens / context_window_size` (utilization ratio, 0 to 1)
 - `β` (beta) = curve shape, controls where degradation steepens (model-specific)
-- All models drop from 1.0 to 0.0 — beta controls *when* the drop happens
+- All models drop from 1.0 to 0.0 — beta controls _when_ the drop happens
 
 ### Per-Model Profiles
 
 Calibrated from MRCR v2 benchmark data:
 
 | Model Family | β (beta) | MI at 25% | MI at 50% | MI at 75% | MI at 100% |
-|-------------|----------|-----------|-----------|-----------|------------|
-| **opus** | 1.8 | 0.918 | 0.713 | 0.404 | 0.000 |
-| **sonnet** | 1.5 | 0.875 | 0.646 | 0.350 | 0.000 |
-| **haiku** | 1.2 | 0.811 | 0.565 | 0.292 | 0.000 |
-| **default** | 1.5 | 0.875 | 0.646 | 0.350 | 0.000 |
+| ------------ | -------- | --------- | --------- | --------- | ---------- |
+| **opus**     | 1.8      | 0.918     | 0.713     | 0.404     | 0.000      |
+| **sonnet**   | 1.5      | 0.875     | 0.646     | 0.350     | 0.000      |
+| **haiku**    | 1.2      | 0.811     | 0.565     | 0.292     | 0.000      |
+| **default**  | 1.5      | 0.875     | 0.646     | 0.350     | 0.000      |
 
 **Model matching**: The `model_id` string is checked for "opus", "sonnet", or "haiku" (case-insensitive). Unknown models fall back to the default (sonnet) profile.
 
@@ -70,11 +71,11 @@ MI = max(0, 1 - 0.50^1.2) = 1 - 0.435 = 0.565
 
 ## Color Thresholds
 
-| MI Range | Color | Label | Interpretation |
-|----------|-------|-------|----------------|
-| > 0.70 | Green | Operating well | Minimal degradation |
-| 0.40–0.70 | Yellow | Degrading | Consider wrapping up |
-| < 0.40 | Red | Significant | Start a new session |
+| MI Range  | Color  | Label          | Interpretation       |
+| --------- | ------ | -------------- | -------------------- |
+| > 0.70    | Green  | Operating well | Minimal degradation  |
+| 0.40–0.70 | Yellow | Degrading      | Consider wrapping up |
+| < 0.40    | Red    | Significant    | Start a new session  |
 
 **Implication**: Opus enters yellow around 60% utilization, sonnet around 50%, haiku around 45%. MI values are displayed with 3 decimal places (e.g., `MI:0.995`) for precision at low utilization.
 
@@ -84,13 +85,13 @@ Zone indicators provide an at-a-glance signal for session state, displayed along
 
 ### Five States
 
-| Zone | Indicator | Color | Meaning | 1M model (>= 500k ctx) | Standard model (< 500k ctx) |
-|------|-----------|-------|---------|------------------------|----------------------------|
-| Planning | **Plan** | Green | Safe to plan and code | < 70k tokens used | < (40% - 30k tokens) |
-| Code-only | **Code** | Yellow | Avoid starting new plans | 70k–100k tokens | (40% - 30k) to 40% |
-| Dump zone | **Dump** | Orange | Quality declining, finish up | 100k–250k tokens | 40%–70% utilization |
-| Hard limit | **ExDump** | Dark red | Start a new session | 250k–275k tokens | 70%–75% utilization |
-| Dead zone | **Dead** | Light gray | Nothing productive here | >= 275k tokens | >= 75% utilization |
+| Zone       | Indicator  | Color      | Meaning                      | 1M model (>= 500k ctx) | Standard model (< 500k ctx) |
+| ---------- | ---------- | ---------- | ---------------------------- | ---------------------- | --------------------------- |
+| Planning   | **Plan**   | Green      | Safe to plan and code        | < 70k tokens used      | < (40% - 30k tokens)        |
+| Code-only  | **Code**   | Yellow     | Avoid starting new plans     | 70k–100k tokens        | (40% - 30k) to 40%          |
+| Dump zone  | **Dump**   | Orange     | Quality declining, finish up | 100k–250k tokens       | 40%–70% utilization         |
+| Hard limit | **ExDump** | Dark red   | Start a new session          | 250k–275k tokens       | 70%–75% utilization         |
+| Dead zone  | **Dead**   | Light gray | Nothing productive here      | >= 275k tokens         | >= 75% utilization          |
 
 ### Design Rationale
 
@@ -151,11 +152,11 @@ If `context_window_size == 0` (malformed data), MI returns 1.0 with utilization 
 
 The MI formula and zone logic are duplicated between the package and the standalone script and must be kept in sync:
 
-| Logic | Package (`src/`) | Standalone Python (`scripts/statusline.py`) |
-|-------|-----------------|----------------------------------------------|
-| MODEL_PROFILES | `intelligence.py` | `statusline.py` |
-| get_model_profile | `intelligence.py` | `statusline.py` |
-| MI formula | `calculate_context_pressure()` | `compute_mi()` |
-| Color thresholds | `get_mi_color()` | `get_mi_color()` |
-| Zone indicator | `get_context_zone()` | `get_context_zone()` |
-| Zone constants | `ZONE_1M_*`, `ZONE_STD_*` | `ZONE_1M_*`, `ZONE_STD_*` |
+| Logic             | Package (`src/`)               | Standalone Python (`scripts/statusline.py`) |
+| ----------------- | ------------------------------ | ------------------------------------------- |
+| MODEL_PROFILES    | `intelligence.py`              | `statusline.py`                             |
+| get_model_profile | `intelligence.py`              | `statusline.py`                             |
+| MI formula        | `calculate_context_pressure()` | `compute_mi()`                              |
+| Color thresholds  | `get_mi_color()`               | `get_mi_color()`                            |
+| Zone indicator    | `get_context_zone()`           | `get_context_zone()`                        |
+| Zone constants    | `ZONE_1M_*`, `ZONE_STD_*`      | `ZONE_1M_*`, `ZONE_STD_*`                   |

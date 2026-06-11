@@ -11,6 +11,7 @@
 Real-time context window monitoring for Claude Code. Five zones tell you exactly what to do next — keep coding, finish up, export your session, or restart.
 
 [**Get Started →**](#installation)
+
 </div>
 
 ---
@@ -41,18 +42,18 @@ graph LR
 
 Five zones with a clear action for each:
 
-| Zone | Color | Meaning | Do this now |
-|---|:---:|---|---|
-| Planning | Green | Plenty of room | Keep planning and coding |
-| Code-only | Yellow | Context tightening | Finish the current task, no new plans |
-| Dump | Orange | Quality declining | Wrap up and prepare to export |
-| ExDump | Dark red | Near hard limit | Start a new session |
-| Dead | Gray | Exhausted | Stop — nothing productive left |
+| Zone      |  Color   | Meaning            | Do this now                           |
+| --------- | :------: | ------------------ | ------------------------------------- |
+| Planning  |  Green   | Plenty of room     | Keep planning and coding              |
+| Code-only |  Yellow  | Context tightening | Finish the current task, no new plans |
+| Dump      |  Orange  | Quality declining  | Wrap up and prepare to export         |
+| ExDump    | Dark red | Near hard limit    | Start a new session                   |
+| Dead      |   Gray   | Exhausted          | Stop — nothing productive left        |
 
 Thresholds are **model-size-aware**: 1M context models use absolute token counts (70k/100k/250k/275k); standard models use utilization ratios (40%/70%/75%). Both are configurable.
 
-| Plan zone | Code zone | Dump zone |
-|:---:|:---:|:---:|
+|                 Plan zone                 |                 Code zone                 |                 Dump zone                 |
+| :---------------------------------------: | :---------------------------------------: | :---------------------------------------: |
 | ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
 
 ---
@@ -65,21 +66,21 @@ A single line in your Claude Code terminal that shows everything at a glance:
 my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
 ```
 
-| Element | What it tells you |
-|---|---|
-| `my-project` | Current directory |
-| `main [3]` | Git branch + uncommitted changes |
-| `64,000 free (32.0%)` | Available tokens and utilization |
-| `Code` | Current context zone (color-coded) |
-| `MI:0.918` | Model Intelligence score — how sharp the model still is |
-| `+2,500` | Tokens consumed since last refresh |
-| `Opus 4.6` | Active model |
-| `abc-123` | Session ID (double-click to copy) |
+| Element               | What it tells you                                       |
+| --------------------- | ------------------------------------------------------- |
+| `my-project`          | Current directory                                       |
+| `main [3]`            | Git branch + uncommitted changes                        |
+| `64,000 free (32.0%)` | Available tokens and utilization                        |
+| `Code`                | Current context zone (color-coded)                      |
+| `MI:0.918`            | Model Intelligence score — how sharp the model still is |
+| `+2,500`              | Tokens consumed since last refresh                      |
+| `Opus 4.6`            | Active model                                            |
+| `abc-123`             | Session ID (double-click to copy)                       |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 
-| Green status | Warning state |
-|:---:|:---:|
+|                     Green status                      |                     Warning state                     |
+| :---------------------------------------------------: | :---------------------------------------------------: |
 | ![Green statusline](images/1.10/statusline-green.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
 
 ### Customization
@@ -117,11 +118,11 @@ MI(u) = max(0, 1 - u^β)
 
 Each model family has a measured beta:
 
-| Model | β | MI at 50% | MI at 75% |
-|---|---|---|---|
-| Opus 4.6 | 1.8 | 0.713 | 0.404 |
-| Sonnet 4.6 | 1.5 | 0.646 | 0.350 |
-| Haiku 4.5 | 1.2 | 0.565 | 0.292 |
+| Model      | β   | MI at 50% | MI at 75% |
+| ---------- | --- | --------- | --------- |
+| Opus 4.6   | 1.8 | 0.713     | 0.404     |
+| Sonnet 4.6 | 1.5 | 0.646     | 0.350     |
+| Haiku 4.5  | 1.2 | 0.565     | 0.292     |
 
 Color-coded: **green** (>0.70, operating well), **yellow** (0.40–0.70, pressure building), **red** (<0.40, start new session). Override the curve with `mi_curve_beta=1.5` in config.
 
@@ -134,23 +135,23 @@ context-stats <session_id> graph               # Context growth per interaction 
 context-stats <session_id> graph --type all    # All graphs
 ```
 
-| Graph | What it answers |
-|---|---|
-| `delta` | How many tokens each interaction consumed |
-| `cumulative` | Total context used over the session |
-| `cache` | Cache creation and read tokens over time, with 5-min TTL countdown |
-| `mi` | How MI degraded across the session |
-| `io` | Input/output token breakdown |
-| `both` | Cumulative + delta side by side |
+| Graph        | What it answers                                                    |
+| ------------ | ------------------------------------------------------------------ |
+| `delta`      | How many tokens each interaction consumed                          |
+| `cumulative` | Total context used over the session                                |
+| `cache`      | Cache creation and read tokens over time, with 5-min TTL countdown |
+| `mi`         | How MI degraded across the session                                 |
+| `io`         | Input/output token breakdown                                       |
+| `both`       | Cumulative + delta side by side                                    |
 
 Auto-refreshes every 2 seconds (flicker-free). Pass `-w 5` to slow it down or `--no-watch` to show once.
 
-| Context growth | Cumulative graph | Cache activity |
-|:---:|:---:|:---:|
+|               Context growth               |                   Cumulative graph                   |                Cache activity                |
+| :----------------------------------------: | :--------------------------------------------------: | :------------------------------------------: |
 | ![Delta graph](images/1.10/1.10-delta.png) | ![Cumulative graph](images/1.10/1.10-cumulative.png) | ![Cache graph](images/1.16.0/1.16-cache.png) |
 
-| MI over time |
-|:---:|
+|                             MI over time                              |
+| :-------------------------------------------------------------------: |
 | ![Model Intelligence view](images/1.10/1.10.0-model-intelligence.png) |
 
 ---
@@ -177,13 +178,13 @@ The report breaks down every token dollar spent across projects, models, and ses
 - Total Sessions: 751 across 59 projects
 ```
 
-| Section | What you learn |
-|---|---|
-| Grand Totals | Total spend, token breakdown (input/output/cache), session count |
-| Per-project breakdown | Which projects consume the most tokens and cost the most |
-| Top sessions | Heaviest sessions per project — identify costly workflows |
-| Cache efficiency | Cache read vs. cache creation ratio — high read ratio means good reuse |
-| Token composition | How much of your spend is output (expensive) vs. cache reads (cheap) |
+| Section               | What you learn                                                         |
+| --------------------- | ---------------------------------------------------------------------- |
+| Grand Totals          | Total spend, token breakdown (input/output/cache), session count       |
+| Per-project breakdown | Which projects consume the most tokens and cost the most               |
+| Top sessions          | Heaviest sessions per project — identify costly workflows              |
+| Cache efficiency      | Cache read vs. cache creation ratio — high read ratio means good reuse |
+| Token composition     | How much of your spend is output (expensive) vs. cache reads (cheap)   |
 
 Cache reads cost ~10x less than input tokens. The report makes cache efficiency visible so you can optimize session structure.
 
@@ -197,27 +198,28 @@ Export a full session report when you need the timeline, charts, and analysis in
 context-stats <session_id> export --output report.md
 ```
 
-| Section | Contents |
-|---|---|
-| Executive Snapshot | Model, project, duration, interactions, final zone, cache activity |
-| Summary | Window size, token totals, cost, final MI |
-| Key Takeaways | Short read of what changed |
-| Visual Summary | Mermaid charts: context, zones, cache, composition |
-| Interaction Timeline | Per-interaction context, MI, and zone history |
+| Section              | Contents                                                           |
+| -------------------- | ------------------------------------------------------------------ |
+| Executive Snapshot   | Model, project, duration, interactions, final zone, cache activity |
+| Summary              | Window size, token totals, cost, final MI                          |
+| Key Takeaways        | Short read of what changed                                         |
+| Visual Summary       | Mermaid charts: context, zones, cache, composition                 |
+| Interaction Timeline | Per-interaction context, MI, and zone history                      |
 
 Example output:
 
 ```markdown
 ## Executive Snapshot
-| Signal | Value | Why it matters |
-|--------|-------|----------------|
-| Session | `8bb55603-...` | Link back to source session |
-| Project | claude-howto | Identify where the report came from |
-| Model | claude-sonnet-4-6 | See which model produced the session |
-| Duration | 59m 32s | Relate context growth to session length |
-| Interactions | 135 | Show how active the session was |
-| Final usage | 129,755 (64.9%) | See how close the session got to the limit |
-| Final zone | Dump zone | See whether the session stayed in a safe range |
+
+| Signal       | Value             | Why it matters                                 |
+| ------------ | ----------------- | ---------------------------------------------- |
+| Session      | `8bb55603-...`    | Link back to source session                    |
+| Project      | claude-howto      | Identify where the report came from            |
+| Model        | claude-sonnet-4-6 | See which model produced the session           |
+| Duration     | 59m 32s           | Relate context growth to session length        |
+| Interactions | 135               | Show how active the session was                |
+| Final usage  | 129,755 (64.9%)   | See how close the session got to the limit     |
+| Final zone   | Dump zone         | See whether the session stayed in a safe range |
 ```
 
 See the full example in [`context-stats-export-output.md`](context-stats-export-output.md).

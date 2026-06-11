@@ -50,28 +50,28 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 [Opus 4.6] my-project | main [3] | 64,000 free (32.0%) [+2,500] MI:0.918 [AC:45k] session_id
 ```
 
-| Component     | Description              | Default Color    | Config Key             |
-| ------------- | ------------------------ | ---------------- | ---------------------- |
-| `[Opus 4.6]`  | Current AI model         | Dim              | `color_separator`      |
-| `my-project`  | Current directory        | Cyan             | `color_project_name`   |
-| `main`        | Git branch               | Green            | `color_branch_name`    |
-| `[3]`         | Uncommitted changes      | Cyan             | `color_cyan`           |
-| `64,000 free` | Available tokens         | Bold White       | `color_context_length` |
-| `(32.0%)`     | Context usage percentage | -                | -                      |
-| `[+2,500]`    | Token delta              | Dim              | `color_separator`      |
-| `MI:0.918`    | Model Intelligence score | Yellow           | `color_mi_score`       |
-| `[AC:45k]`    | Autocompact buffer       | Dim              | -                      |
-| `session_id`  | Current session          | Dim              | `color_separator`      |
+| Component     | Description              | Default Color | Config Key             |
+| ------------- | ------------------------ | ------------- | ---------------------- |
+| `[Opus 4.6]`  | Current AI model         | Dim           | `color_separator`      |
+| `my-project`  | Current directory        | Cyan          | `color_project_name`   |
+| `main`        | Git branch               | Green         | `color_branch_name`    |
+| `[3]`         | Uncommitted changes      | Cyan          | `color_cyan`           |
+| `64,000 free` | Available tokens         | Bold White    | `color_context_length` |
+| `(32.0%)`     | Context usage percentage | -             | -                      |
+| `[+2,500]`    | Token delta              | Dim           | `color_separator`      |
+| `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
+| `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
+| `session_id`  | Current session          | Dim           | `color_separator`      |
 
 ## Token Colors
 
 Context availability is color-coded based on Model Intelligence (MI) score (not raw percentages):
 
-| MI Score  | Color  | Meaning                                    |
-| --------- | ------ | ------------------------------------------ |
-| > 0.70    | Green  | Model is operating well                    |
-| 0.40–0.70 | Yellow | Context pressure building                  |
-| < 0.40    | Red    | Significant degradation                    |
+| MI Score  | Color  | Meaning                   |
+| --------- | ------ | ------------------------- |
+| > 0.70    | Green  | Model is operating well   |
+| 0.40–0.70 | Yellow | Context pressure building |
+| < 0.40    | Red    | Significant degradation   |
 
 When `color_context_length` is explicitly set, it overrides MI-based coloring.
 
@@ -79,11 +79,11 @@ When `color_context_length` is explicitly set, it overrides MI-based coloring.
 
 MI score is color-coded based on degradation level:
 
-| MI Score | Color  | Meaning                                    |
-| -------- | ------ | ------------------------------------------ |
-| > 0.70   | Green  | Model is operating well                    |
-| 0.40-0.70| Yellow | Context pressure building, consider wrap up|
-| < 0.40   | Red    | Significant degradation, start new session |
+| MI Score  | Color  | Meaning                                     |
+| --------- | ------ | ------------------------------------------- |
+| > 0.70    | Green  | Model is operating well                     |
+| 0.40-0.70 | Yellow | Context pressure building, consider wrap up |
+| < 0.40    | Red    | Significant degradation, start new session  |
 
 MI uses per-model degradation profiles. Set `mi_curve_beta` to override the auto-detected profile.
 

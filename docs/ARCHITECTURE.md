@@ -48,6 +48,7 @@ graph TD
 | `statusline.py` | Python 3 | None         | Yes          |
 
 **Data flow:**
+
 1. Claude Code pipes JSON state via stdin on each refresh
 2. Script parses model info, context tokens, session data
 3. Script reads `~/.claude/statusline.conf` for user preferences
@@ -57,8 +58,8 @@ graph TD
 
 ### Context Stats CLI
 
-| Script             | Language | Install Method            |
-| ------------------ | -------- | ------------------------- |
+| Script             | Language | Install Method              |
+| ------------------ | -------- | --------------------------- |
 | `context_stats.py` | Python   | `pip install context-stats` |
 
 The Python CLI provides live ASCII graphs with zone awareness. Install via `pip install context-stats` to get the `context-stats` command.
@@ -108,6 +109,7 @@ Each line is a CSV record with 15 comma-separated fields (timestamp, token count
 ## Data Privacy
 
 All data stays local:
+
 - State files are written to `~/.claude/statusline/`
 - No network requests are made
 - No telemetry or analytics
