@@ -1,0 +1,31 @@
+{
+  "model": {
+    "display_name": "Opus 4.5",
+    "api_name": "claude-opus-4-5",
+    "thinking_budget": 20000
+  },
+  "workspace": {
+    "current_dir": "/home/user/my-project",
+    "project_dir": "/home/user/my-project"
+  },
+  "context_window": {
+    "context_window_size": 200000,
+    "total_input_tokens": 75000,
+    "total_output_tokens": 8500,
+    "current_usage": {
+      "input_tokens": 50000,
+      "output_tokens": 5000,
+      "cache_creation_input_tokens": 10000,
+      "cache_read_input_tokens": 20000
+    }
+  },
+  "cost": {
+    "total_cost_usd": 0.05234,
+    "total_duration_ms": 120000,
+    "total_api_duration_ms": 5000,
+    "total_lines_added": 250,
+    "total_lines_removed": 45
+  },
+  "session_id": "test-session-123",
+  "version": "1.0.80"
+}

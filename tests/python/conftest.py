@@ -129,3 +129,10 @@ def sample_input():
             },
         },
     }
+
+
+@pytest.fixture
+def with_thinking_input():
+    """Load with_thinking.json fixture (thinking budget present)."""
+    with open(FIXTURES_DIR / "with_thinking.json") as f:
+        return json.load(f)

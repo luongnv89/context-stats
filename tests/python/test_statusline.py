@@ -471,3 +471,73 @@ class TestPRDisplay:
         monkeypatch.setattr("shutil.which", lambda x: None)
         result = get_pr_number("/tmp")
         assert result == ""
+
+
+class TestThinkingDisplay:
+    """Tests for thinking budget display next to model name (#78)."""
+
+    def test_thinking_shown_when_present(self):
+        """Should show thinking budget next to model name when configured."""
+        input_data = {
+            "model": {"display_name": "Opus 4.5", "api_name": "claude-opus-4-5", "thinking_budget": 20000},
+            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
+            "context_window": {"context_window_size": 200000, "total_input_tokens": 75000, "total_output_tokens": 8500, "current_usage": {"input_tokens": 50000, "output_tokens": 5000, "cache_creation_input_tokens": 10000, "cache_read_input_tokens": 20000}},
+            "cost": {"total_cost_usd": 0.05, "total_duration_ms": 120000, "total_api_duration_ms": 5000, "total_lines_added": 250, "total_lines_removed": 45},
+            "session_id": "test-session-123",
+        }
+        output, code = run_script(input_data, {"COLUMNS": "200"})
+        assert code == 0
+        assert "Opus 4.5" in output
+        assert "20k tokens thinking" in output
+
+    def test_thinking_not_shown_when_missing(self, sample_input):
+        """Should not show thinking text when budget is not present."""
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        assert "thinking" not in output.lower().replace("claud", "")  # avoid false positive in other context
+
+    def test_thinking_zero_budget_not_shown(self):
+        """Should not show thinking when budget is zero."""
+        input_data = {
+            "model": {"display_name": "Sonnet", "thinking_budget": 0},
+            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
+            "context_window": {"context_window_size": 200000, "total_input_tokens": 10000, "total_output_tokens": 1000, "current_usage": {"input_tokens": 5000, "output_tokens": 500, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}},
+            "cost": {"total_cost_usd": 0.01, "total_duration_ms": 5000, "total_api_duration_ms": 1000, "total_lines_added": 10, "total_lines_removed": 2},
+        }
+        output, code = run_script(input_data)
+        assert code == 0
+        assert "thinking" not in output.lower()
+
+    def test_thinking_small_budget_shown(self):
+        """Should show exact token count for small budgets."""
+        input_data = {
+            "model": {"display_name": "Sonnet", "thinking_budget": 4096},
+            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
+            "context_window": {"context_window_size": 200000, "total_input_tokens": 10000, "total_output_tokens": 1000, "current_usage": {"input_tokens": 5000, "output_tokens": 500, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}},
+            "cost": {"total_cost_usd": 0.01, "total_duration_ms": 5000, "total_api_duration_ms": 1000, "total_lines_added": 10, "total_lines_removed": 2},
+        }
+        output, code = run_script(input_data, {"COLUMNS": "200"})
+        assert code == 0
+        assert "4096 tokens thinking" in output
+
+    def test_thinking_fixture_loaded(self, with_thinking_input):
+        """Should correctly display thinking from fixture file."""
+        output, code = run_script(with_thinking_input, {"COLUMNS": "200"})
+        assert code == 0
+        assert "Opus 4.5" in output
+        assert "20k tokens thinking" in output
+
+    def test_output_still_fits_80_columns_with_thinking(self, with_thinking_input):
+        """Output with thinking should still fit within 80 columns."""
+        output, code = run_script(with_thinking_input, {"COLUMNS": "80"})
+        assert code == 0
+        visible = strip_ansi(output)
+        assert len(visible) <= 80
+
+    def test_model_without_model_object_still_works(self):
+        """Should handle input with no model object gracefully."""
+        input_data = {"workspace": {"current_dir": "/tmp/test", "project_dir": "/tmp/test"}}
+        output, code = run_script(input_data)
+        assert code == 0
+        assert "Claude" in output
+        assert "thinking" not in output.lower()
