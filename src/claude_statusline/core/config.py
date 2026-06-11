@@ -72,6 +72,7 @@ show_tps=false
 tps_precision=1
 tps_unit=tok/s
 tps_window=5
+show_pr=false
 """
 
 
@@ -107,6 +108,9 @@ class Config:
 
     # Model throughput display (tokens per second)
     show_tps: bool = False
+
+    # PR number display — shows associated PR number from gh CLI
+    show_pr: bool = False
     tps_precision: int = 1  # decimal places for the tok/s value
     tps_unit: str = "tok/s"  # unit label appended to the value
     tps_window: int = 5  # number of recent turns averaged for rolling tok/s
@@ -206,6 +210,8 @@ class Config:
                         pass
                 elif key == "show_tps":
                     self.show_tps = value_lower != "false"
+                elif key == "show_pr":
+                    self.show_pr = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -308,6 +314,7 @@ class Config:
             "mi_curve_beta": self.mi_curve_beta,
             "show_tps": self.show_tps,
             "tps_precision": self.tps_precision,
+            "show_pr": self.show_pr,
             "tps_unit": self.tps_unit,
             "tps_window": self.tps_window,
             "zone_1m_plan_max": self.zone_1m_plan_max,

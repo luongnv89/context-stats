@@ -1,57 +1,53 @@
 {
-  "version": 1,
-  "updated": "2026-03-25T16:00:00Z",
-  "source": "/issue-triage",
+  "updated": "2026-06-11T07:59:00Z",
+  "source": "issue-triage update",
   "analyzed_count": 2,
   "issues": [
     {
-      "number": 34,
-      "title": "Update statusline.conf template to include all attributes with default values",
-      "type": "enhancement",
-      "priority": "P2",
-      "blocks": [],
-      "blocked_by": [],
+      "number": 77,
+      "title": "Add PR number for current branch to statusline",
+      "priority": "P3",
       "status": "ready",
-      "stale_days": null,
+      "type": "feature",
+      "updatedAt": "2026-06-09T14:21:33Z",
       "labels": ["enhancement"],
-      "affected_files": [
-        "install.sh",
-        "src/claude_statusline/core/config.py",
-        "scripts/statusline.py",
-        "scripts/statusline.js",
-        "docs/configuration.md"
-      ],
-      "updated_at": "2026-03-25T15:35:43Z",
-      "potentially_fixed_by": null
+      "blocked_by": [],
+      "blocks": [],
+      "stale": false,
+      "potentially_fixed": false,
+      "affected_files": ["src/claude_statusline/core/config.py"],
+      "url": "https://github.com/luongnv89/context-stats/issues/77"
     },
     {
-      "number": 10,
-      "title": "[Question] Does this project support use on the Windows platform?",
-      "type": "feature",
+      "number": 78,
+      "title": "Show thinking level next to model name in statusline",
       "priority": "P3",
-      "blocks": [],
+      "status": "ready",
+      "type": "feature",
+      "updatedAt": "2026-06-10T08:36:29Z",
+      "labels": ["feature", "statusline", "model-info"],
       "blocked_by": [],
-      "status": "stale",
-      "stale_days": 46,
-      "labels": [],
-      "affected_files": [],
-      "updated_at": "2026-02-07T23:08:31Z",
-      "potentially_fixed_by": null
+      "blocks": [],
+      "stale": false,
+      "potentially_fixed": false,
+      "affected_files": [
+        "scripts/statusline.py",
+        "src/claude_statusline/cli/statusline.py",
+        "tests/python/test_statusline.py"
+      ],
+      "url": "https://github.com/luongnv89/context-stats/issues/78"
     }
   ],
-  "summary": {
-    "parallel_groups": [[34, 10]],
-    "stale_count": 1,
-    "stale_threshold_days": 14,
-    "potentially_fixed_count": 0,
-    "suggested_order": [34, 10],
-    "circular_deps": []
-  },
-  "history": [
+  "dependencies": [
     {
-      "time": "2026-03-25T16:00:00Z",
-      "source": "/issue-triage",
-      "changes": "Full re-triage (2 issues)"
+      "issue_a": 77,
+      "issue_b": 78,
+      "shared_dirs": ["src/claude_statusline/cli/"],
+      "strength": "directory"
     }
-  ]
+  ],
+  "parallelizable_groups": [],
+  "execution_order": [77, 78],
+  "stale": [],
+  "already_fixed": []
 }

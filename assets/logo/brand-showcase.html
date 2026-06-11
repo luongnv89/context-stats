@@ -1,649 +1,809 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContextStats — Brand Identity</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ContextStats — Brand Identity</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
 
-    :root {
-      --bg:       #0F172A;
-      --surface:  #1E293B;
-      --border:   #334155;
-      --muted:    #94A3B8;
-      --text:     #F1F5F9;
-      --green:    #10B981;
-      --cyan:     #06B6D4;
-      --indigo:   #818CF8;
-      --bg-light: #F8FAFC;
-      --text-dark:#0F172A;
-      --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
-    }
+            :root {
+                --bg: #0f172a;
+                --surface: #1e293b;
+                --border: #334155;
+                --muted: #94a3b8;
+                --text: #f1f5f9;
+                --green: #10b981;
+                --cyan: #06b6d4;
+                --indigo: #818cf8;
+                --bg-light: #f8fafc;
+                --text-dark: #0f172a;
+                --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+            }
 
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-    }
+            body {
+                font-family: 'Inter', system-ui, sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                line-height: 1.6;
+            }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+            .container {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
 
-    /* ── Hero ── */
-    .hero {
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      padding: 80px 24px 72px;
-      text-align: center;
-    }
-    .hero-mark {
-      display: inline-block;
-      margin-bottom: 32px;
-      filter: drop-shadow(0 0 24px rgba(16,185,129,0.25));
-    }
-    .hero h1 {
-      font-size: 48px;
-      font-weight: 700;
-      letter-spacing: -1px;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-    .hero-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color: var(--green);
-      margin-bottom: 16px;
-    }
-    .hero-tagline {
-      font-size: 18px;
-      color: var(--muted);
-      max-width: 480px;
-      margin: 0 auto;
-    }
+            /* ── Hero ── */
+            .hero {
+                background: var(--bg);
+                border-bottom: 1px solid var(--border);
+                padding: 80px 24px 72px;
+                text-align: center;
+            }
+            .hero-mark {
+                display: inline-block;
+                margin-bottom: 32px;
+                filter: drop-shadow(0 0 24px rgba(16, 185, 129, 0.25));
+            }
+            .hero h1 {
+                font-size: 48px;
+                font-weight: 700;
+                letter-spacing: -1px;
+                color: var(--text);
+                margin-bottom: 8px;
+            }
+            .hero-label {
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 4px;
+                text-transform: uppercase;
+                color: var(--green);
+                margin-bottom: 16px;
+            }
+            .hero-tagline {
+                font-size: 18px;
+                color: var(--muted);
+                max-width: 480px;
+                margin: 0 auto;
+            }
 
-    /* ── Sections ── */
-    section { padding: 72px 0; border-bottom: 1px solid var(--border); }
-    section:last-of-type { border-bottom: none; }
+            /* ── Sections ── */
+            section {
+                padding: 72px 0;
+                border-bottom: 1px solid var(--border);
+            }
+            section:last-of-type {
+                border-bottom: none;
+            }
 
-    .section-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color: var(--green);
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      margin-bottom: 40px;
-      color: var(--text);
-    }
+            .section-label {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 4px;
+                text-transform: uppercase;
+                color: var(--green);
+                margin-bottom: 12px;
+            }
+            .section-title {
+                font-size: 28px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+                margin-bottom: 40px;
+                color: var(--text);
+            }
 
-    /* ── Design Concept ── */
-    .concept-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      align-items: start;
-    }
-    .concept-mark-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-    }
-    .concept-annotations {
-      width: 100%;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .annotation-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .annotation-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .concept-prose p {
-      color: var(--muted);
-      margin-bottom: 16px;
-      font-size: 15px;
-    }
-    .concept-prose strong { color: var(--text); }
+            /* ── Design Concept ── */
+            .concept-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+                align-items: start;
+            }
+            .concept-mark-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 40px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+            }
+            .concept-annotations {
+                width: 100%;
+                font-size: 12px;
+                color: var(--muted);
+            }
+            .annotation-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .annotation-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+            .concept-prose p {
+                color: var(--muted);
+                margin-bottom: 16px;
+                font-size: 15px;
+            }
+            .concept-prose strong {
+                color: var(--text);
+            }
 
-    /* ── Logo Variants ── */
-    .variants-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .variant-card {
-      border-radius: 12px;
-      padding: 32px 24px 20px;
-      position: relative;
-      transition: transform 0.18s ease;
-      border: 1px solid transparent;
-    }
-    .variant-card:hover { transform: translateY(-3px); }
-    .variant-card.dark-bg  { background: var(--bg); border-color: var(--border); }
-    .variant-card.light-bg { background: var(--bg-light); box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-    .variant-card.full-width { grid-column: 1 / -1; }
-    .variant-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      position: absolute;
-      top: 14px;
-      left: 18px;
-    }
-    .dark-bg  .variant-label { color: var(--muted); }
-    .light-bg .variant-label { color: #64748B; }
-    .variant-img {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 80px;
-      margin: 8px 0 16px;
-    }
-    .variant-img img { max-width: 100%; height: auto; }
-    .variant-filename {
-      font-family: var(--mono);
-      font-size: 11px;
-      text-align: right;
-    }
-    .dark-bg  .variant-filename { color: #475569; }
-    .light-bg .variant-filename { color: #94A3B8; }
-    .favicon-note {
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      margin-top: 4px;
-    }
+            /* ── Logo Variants ── */
+            .variants-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            .variant-card {
+                border-radius: 12px;
+                padding: 32px 24px 20px;
+                position: relative;
+                transition: transform 0.18s ease;
+                border: 1px solid transparent;
+            }
+            .variant-card:hover {
+                transform: translateY(-3px);
+            }
+            .variant-card.dark-bg {
+                background: var(--bg);
+                border-color: var(--border);
+            }
+            .variant-card.light-bg {
+                background: var(--bg-light);
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            }
+            .variant-card.full-width {
+                grid-column: 1 / -1;
+            }
+            .variant-label {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                position: absolute;
+                top: 14px;
+                left: 18px;
+            }
+            .dark-bg .variant-label {
+                color: var(--muted);
+            }
+            .light-bg .variant-label {
+                color: #64748b;
+            }
+            .variant-img {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 80px;
+                margin: 8px 0 16px;
+            }
+            .variant-img img {
+                max-width: 100%;
+                height: auto;
+            }
+            .variant-filename {
+                font-family: var(--mono);
+                font-size: 11px;
+                text-align: right;
+            }
+            .dark-bg .variant-filename {
+                color: #475569;
+            }
+            .light-bg .variant-filename {
+                color: #94a3b8;
+            }
+            .favicon-note {
+                font-size: 10px;
+                color: var(--muted);
+                text-align: center;
+                margin-top: 4px;
+            }
 
-    /* ── Color Palette ── */
-    .palette-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
-    .color-chip {
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .color-swatch {
-      height: 80px;
-      display: flex;
-      align-items: flex-end;
-      padding: 10px 12px;
-    }
-    .color-hex {
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .color-info {
-      padding: 12px;
-      background: var(--surface);
-    }
-    .color-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2px;
-    }
-    .color-role {
-      font-size: 11px;
-      color: var(--muted);
-    }
+            /* ── Color Palette ── */
+            .palette-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+            }
+            .color-chip {
+                border-radius: 12px;
+                overflow: hidden;
+                border: 1px solid var(--border);
+            }
+            .color-swatch {
+                height: 80px;
+                display: flex;
+                align-items: flex-end;
+                padding: 10px 12px;
+            }
+            .color-hex {
+                font-family: var(--mono);
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .color-info {
+                padding: 12px;
+                background: var(--surface);
+            }
+            .color-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text);
+                margin-bottom: 2px;
+            }
+            .color-role {
+                font-size: 11px;
+                color: var(--muted);
+            }
 
-    /* ── Typography ── */
-    .type-specimen {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-    }
-    .type-row {
-      border-bottom: 1px solid var(--border);
-      padding: 24px 0;
-    }
-    .type-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .type-meta {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .type-sample-700 { font-weight: 700; color: var(--text); }
-    .type-sample-500 { font-weight: 500; color: var(--text); }
-    .type-sample-400 { font-weight: 400; color: var(--muted); }
+            /* ── Typography ── */
+            .type-specimen {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 40px;
+            }
+            .type-row {
+                border-bottom: 1px solid var(--border);
+                padding: 24px 0;
+            }
+            .type-row:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+            .type-meta {
+                font-size: 11px;
+                font-family: var(--mono);
+                color: var(--muted);
+                margin-bottom: 8px;
+            }
+            .type-sample-700 {
+                font-weight: 700;
+                color: var(--text);
+            }
+            .type-sample-500 {
+                font-weight: 500;
+                color: var(--text);
+            }
+            .type-sample-400 {
+                font-weight: 400;
+                color: var(--muted);
+            }
 
-    /* ── Developer Reference ── */
-    .dev-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      align-items: start;
-    }
-    .code-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.8;
-      overflow-x: auto;
-    }
-    .code-block .kw  { color: var(--indigo); }
-    .code-block .str { color: var(--green); }
-    .code-block .key { color: var(--cyan); }
-    .code-block .num { color: #F59E0B; }
-    .file-tree {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    .file-tree-title {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-    .file-row {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(51,65,85,0.4);
-    }
-    .file-row:last-child { border-bottom: none; }
-    .file-name {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--cyan);
-      white-space: nowrap;
-      min-width: 170px;
-    }
-    .file-desc {
-      font-size: 12px;
-      color: var(--muted);
-    }
+            /* ── Developer Reference ── */
+            .dev-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+                align-items: start;
+            }
+            .code-block {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 24px;
+                font-family: var(--mono);
+                font-size: 12px;
+                color: var(--muted);
+                line-height: 1.8;
+                overflow-x: auto;
+            }
+            .code-block .kw {
+                color: var(--indigo);
+            }
+            .code-block .str {
+                color: var(--green);
+            }
+            .code-block .key {
+                color: var(--cyan);
+            }
+            .code-block .num {
+                color: #f59e0b;
+            }
+            .file-tree {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 24px;
+            }
+            .file-tree-title {
+                font-size: 11px;
+                font-family: var(--mono);
+                color: var(--muted);
+                margin-bottom: 16px;
+            }
+            .file-row {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+                padding: 6px 0;
+                border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            }
+            .file-row:last-child {
+                border-bottom: none;
+            }
+            .file-name {
+                font-family: var(--mono);
+                font-size: 12px;
+                color: var(--cyan);
+                white-space: nowrap;
+                min-width: 170px;
+            }
+            .file-desc {
+                font-size: 12px;
+                color: var(--muted);
+            }
 
-    /* ── Footer ── */
-    footer {
-      padding: 40px 24px;
-      text-align: center;
-      border-top: 1px solid var(--border);
-    }
-    footer .footer-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    footer .footer-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
+            /* ── Footer ── */
+            footer {
+                padding: 40px 24px;
+                text-align: center;
+                border-top: 1px solid var(--border);
+            }
+            footer .footer-name {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--text);
+            }
+            footer .footer-sub {
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 4px;
+                letter-spacing: 1px;
+            }
 
-    @media (max-width: 700px) {
-      .concept-grid, .variants-grid, .palette-grid, .dev-grid {
-        grid-template-columns: 1fr;
-      }
-      .variants-grid .full-width { grid-column: 1; }
-      .palette-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-  </style>
-</head>
-<body>
-
-<!-- ── Hero ── -->
-<div class="hero">
-  <div class="hero-mark">
-    <!-- Inline SVG of the canonical mark for glow effect -->
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="96" height="96">
-      <rect width="64" height="64" rx="14" fill="#0F172A"/>
-      <circle cx="14" cy="50" r="3" fill="#10B981"/>
-      <circle cx="14" cy="50" r="5.5" fill="#10B981" opacity="0.15"/>
-      <path d="M 14 50 C 14 38, 24 28, 36 28" stroke="#10B981" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <path d="M 14 50 C 14 30, 28 14, 46 14" stroke="#06B6D4" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>
-      <path d="M 14 50 C 14 22, 34 6, 56 6" stroke="#818CF8" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
-      <circle cx="36" cy="28" r="2" fill="#10B981" opacity="0.6"/>
-      <circle cx="46" cy="14" r="2" fill="#06B6D4" opacity="0.5"/>
-      <circle cx="56" cy="6" r="2" fill="#818CF8" opacity="0.4"/>
-    </svg>
-  </div>
-  <div class="hero-label">Brand Identity</div>
-  <h1>ContextStats</h1>
-  <p class="hero-tagline">Understand how you use Claude Code — and spend less doing it.</p>
-</div>
-
-<div class="container">
-
-  <!-- ── Design Concept ── -->
-  <section>
-    <div class="section-label">Design Concept</div>
-    <div class="section-title">Three layers of insight</div>
-    <div class="concept-grid">
-      <div class="concept-mark-card">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="160" height="160">
-          <rect width="64" height="64" rx="14" fill="#0F172A"/>
-          <circle cx="14" cy="50" r="3" fill="#10B981"/>
-          <circle cx="14" cy="50" r="5.5" fill="#10B981" opacity="0.15"/>
-          <path d="M 14 50 C 14 38, 24 28, 36 28" stroke="#10B981" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M 14 50 C 14 30, 28 14, 46 14" stroke="#06B6D4" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>
-          <path d="M 14 50 C 14 22, 34 6, 56 6" stroke="#818CF8" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
-          <circle cx="36" cy="28" r="2" fill="#10B981" opacity="0.6"/>
-          <circle cx="46" cy="14" r="2" fill="#06B6D4" opacity="0.5"/>
-          <circle cx="56" cy="6" r="2" fill="#818CF8" opacity="0.4"/>
-        </svg>
-        <div class="concept-annotations">
-          <div class="annotation-row">
-            <div class="annotation-dot" style="background:#10B981"></div>
-            <span><strong style="color:#10B981">Green arc</strong> — Live layer: real-time token feedback</span>
-          </div>
-          <div class="annotation-row">
-            <div class="annotation-dot" style="background:#06B6D4"></div>
-            <span><strong style="color:#06B6D4">Cyan arc</strong> — Session layer: per-session analytics</span>
-          </div>
-          <div class="annotation-row">
-            <div class="annotation-dot" style="background:#818CF8"></div>
-            <span><strong style="color:#818CF8">Indigo arc</strong> — Report layer: multi-week cost trends</span>
-          </div>
-          <div class="annotation-row">
-            <div class="annotation-dot" style="background:#10B981; border: 2px solid #0F172A; box-shadow: 0 0 0 1px #10B981"></div>
-            <span><strong style="color:#F1F5F9">Origin dot</strong> — The present moment / current session</span>
-          </div>
+            @media (max-width: 700px) {
+                .concept-grid,
+                .variants-grid,
+                .palette-grid,
+                .dev-grid {
+                    grid-template-columns: 1fr;
+                }
+                .variants-grid .full-width {
+                    grid-column: 1;
+                }
+                .palette-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ── Hero ── -->
+        <div class="hero">
+            <div class="hero-mark">
+                <!-- Inline SVG of the canonical mark for glow effect -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="96" height="96">
+                    <rect width="64" height="64" rx="14" fill="#0F172A" />
+                    <circle cx="14" cy="50" r="3" fill="#10B981" />
+                    <circle cx="14" cy="50" r="5.5" fill="#10B981" opacity="0.15" />
+                    <path
+                        d="M 14 50 C 14 38, 24 28, 36 28"
+                        stroke="#10B981"
+                        stroke-width="3"
+                        fill="none"
+                        stroke-linecap="round"
+                    />
+                    <path
+                        d="M 14 50 C 14 30, 28 14, 46 14"
+                        stroke="#06B6D4"
+                        stroke-width="2.5"
+                        fill="none"
+                        stroke-linecap="round"
+                        opacity="0.85"
+                    />
+                    <path
+                        d="M 14 50 C 14 22, 34 6, 56 6"
+                        stroke="#818CF8"
+                        stroke-width="2"
+                        fill="none"
+                        stroke-linecap="round"
+                        opacity="0.7"
+                    />
+                    <circle cx="36" cy="28" r="2" fill="#10B981" opacity="0.6" />
+                    <circle cx="46" cy="14" r="2" fill="#06B6D4" opacity="0.5" />
+                    <circle cx="56" cy="6" r="2" fill="#818CF8" opacity="0.4" />
+                </svg>
+            </div>
+            <div class="hero-label">Brand Identity</div>
+            <h1>ContextStats</h1>
+            <p class="hero-tagline">
+                Understand how you use Claude Code — and spend less doing it.
+            </p>
         </div>
-      </div>
-      <div class="concept-prose">
-        <p>The mark is built from <strong>three concentric arcs</strong> emanating from a single origin point. Each arc represents a deeper layer of analytics — from the immediate (live token feedback) to the strategic (multi-week cost reporting).</p>
-        <p>The arcs sweep upward and to the right, suggesting <strong>expanding awareness</strong> over time. The further the arc, the broader the perspective. The origin dot anchors everything to the current moment.</p>
-        <p>The color progression moves from <strong>green</strong> (active, healthy, live) through <strong>cyan</strong> (analytical, processed, session) to <strong>indigo</strong> (historical, deep, report). This mirrors how data ages: raw signal becomes structured insight becomes strategic pattern.</p>
-        <p>Typography pairs <strong>Inter Bold</strong> for the product name with a spaced small-caps treatment for "STATS" — grounding the wordmark in data precision without sacrificing warmth.</p>
-      </div>
-    </div>
-  </section>
 
-  <!-- ── Logo Variants ── -->
-  <section>
-    <div class="section-label">Logo Variants</div>
-    <div class="section-title">All formats</div>
-    <div class="variants-grid">
+        <div class="container">
+            <!-- ── Design Concept ── -->
+            <section>
+                <div class="section-label">Design Concept</div>
+                <div class="section-title">Three layers of insight</div>
+                <div class="concept-grid">
+                    <div class="concept-mark-card">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 64 64"
+                            width="160"
+                            height="160"
+                        >
+                            <rect width="64" height="64" rx="14" fill="#0F172A" />
+                            <circle cx="14" cy="50" r="3" fill="#10B981" />
+                            <circle cx="14" cy="50" r="5.5" fill="#10B981" opacity="0.15" />
+                            <path
+                                d="M 14 50 C 14 38, 24 28, 36 28"
+                                stroke="#10B981"
+                                stroke-width="3"
+                                fill="none"
+                                stroke-linecap="round"
+                            />
+                            <path
+                                d="M 14 50 C 14 30, 28 14, 46 14"
+                                stroke="#06B6D4"
+                                stroke-width="2.5"
+                                fill="none"
+                                stroke-linecap="round"
+                                opacity="0.85"
+                            />
+                            <path
+                                d="M 14 50 C 14 22, 34 6, 56 6"
+                                stroke="#818CF8"
+                                stroke-width="2"
+                                fill="none"
+                                stroke-linecap="round"
+                                opacity="0.7"
+                            />
+                            <circle cx="36" cy="28" r="2" fill="#10B981" opacity="0.6" />
+                            <circle cx="46" cy="14" r="2" fill="#06B6D4" opacity="0.5" />
+                            <circle cx="56" cy="6" r="2" fill="#818CF8" opacity="0.4" />
+                        </svg>
+                        <div class="concept-annotations">
+                            <div class="annotation-row">
+                                <div class="annotation-dot" style="background: #10b981"></div>
+                                <span
+                                    ><strong style="color: #10b981">Green arc</strong> — Live layer:
+                                    real-time token feedback</span
+                                >
+                            </div>
+                            <div class="annotation-row">
+                                <div class="annotation-dot" style="background: #06b6d4"></div>
+                                <span
+                                    ><strong style="color: #06b6d4">Cyan arc</strong> — Session
+                                    layer: per-session analytics</span
+                                >
+                            </div>
+                            <div class="annotation-row">
+                                <div class="annotation-dot" style="background: #818cf8"></div>
+                                <span
+                                    ><strong style="color: #818cf8">Indigo arc</strong> — Report
+                                    layer: multi-week cost trends</span
+                                >
+                            </div>
+                            <div class="annotation-row">
+                                <div
+                                    class="annotation-dot"
+                                    style="
+                                        background: #10b981;
+                                        border: 2px solid #0f172a;
+                                        box-shadow: 0 0 0 1px #10b981;
+                                    "
+                                ></div>
+                                <span
+                                    ><strong style="color: #f1f5f9">Origin dot</strong> — The
+                                    present moment / current session</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                    <div class="concept-prose">
+                        <p>
+                            The mark is built from <strong>three concentric arcs</strong> emanating
+                            from a single origin point. Each arc represents a deeper layer of
+                            analytics — from the immediate (live token feedback) to the strategic
+                            (multi-week cost reporting).
+                        </p>
+                        <p>
+                            The arcs sweep upward and to the right, suggesting
+                            <strong>expanding awareness</strong> over time. The further the arc, the
+                            broader the perspective. The origin dot anchors everything to the
+                            current moment.
+                        </p>
+                        <p>
+                            The color progression moves from <strong>green</strong> (active,
+                            healthy, live) through <strong>cyan</strong> (analytical, processed,
+                            session) to <strong>indigo</strong> (historical, deep, report). This
+                            mirrors how data ages: raw signal becomes structured insight becomes
+                            strategic pattern.
+                        </p>
+                        <p>
+                            Typography pairs <strong>Inter Bold</strong> for the product name with a
+                            spaced small-caps treatment for "STATS" — grounding the wordmark in data
+                            precision without sacrificing warmth.
+                        </p>
+                    </div>
+                </div>
+            </section>
 
-      <!-- Full logo dark -->
-      <div class="variant-card dark-bg full-width">
-        <span class="variant-label">Full Logo · Dark</span>
-        <div class="variant-img">
-          <img src="logo-full.svg" alt="ContextStats full logo" height="56">
-        </div>
-        <div class="variant-filename">logo-full.svg</div>
-      </div>
+            <!-- ── Logo Variants ── -->
+            <section>
+                <div class="section-label">Logo Variants</div>
+                <div class="section-title">All formats</div>
+                <div class="variants-grid">
+                    <!-- Full logo dark -->
+                    <div class="variant-card dark-bg full-width">
+                        <span class="variant-label">Full Logo · Dark</span>
+                        <div class="variant-img">
+                            <img src="logo-full.svg" alt="ContextStats full logo" height="56" />
+                        </div>
+                        <div class="variant-filename">logo-full.svg</div>
+                    </div>
 
-      <!-- White on dark -->
-      <div class="variant-card dark-bg full-width" style="background:#1E293B">
-        <span class="variant-label">Full Logo · White</span>
-        <div class="variant-img">
-          <img src="logo-white.svg" alt="ContextStats white logo" height="56">
-        </div>
-        <div class="variant-filename">logo-white.svg</div>
-      </div>
+                    <!-- White on dark -->
+                    <div class="variant-card dark-bg full-width" style="background: #1e293b">
+                        <span class="variant-label">Full Logo · White</span>
+                        <div class="variant-img">
+                            <img src="logo-white.svg" alt="ContextStats white logo" height="56" />
+                        </div>
+                        <div class="variant-filename">logo-white.svg</div>
+                    </div>
 
-      <!-- Mark -->
-      <div class="variant-card dark-bg">
-        <span class="variant-label">Mark</span>
-        <div class="variant-img">
-          <img src="logo-mark.svg" alt="ContextStats mark" height="64">
-        </div>
-        <div class="variant-filename">logo-mark.svg</div>
-      </div>
+                    <!-- Mark -->
+                    <div class="variant-card dark-bg">
+                        <span class="variant-label">Mark</span>
+                        <div class="variant-img">
+                            <img src="logo-mark.svg" alt="ContextStats mark" height="64" />
+                        </div>
+                        <div class="variant-filename">logo-mark.svg</div>
+                    </div>
 
-      <!-- Icon -->
-      <div class="variant-card light-bg">
-        <span class="variant-label">App Icon</span>
-        <div class="variant-img">
-          <img src="logo-icon.svg" alt="ContextStats icon" height="80">
-        </div>
-        <div class="variant-filename">logo-icon.svg</div>
-      </div>
+                    <!-- Icon -->
+                    <div class="variant-card light-bg">
+                        <span class="variant-label">App Icon</span>
+                        <div class="variant-img">
+                            <img src="logo-icon.svg" alt="ContextStats icon" height="80" />
+                        </div>
+                        <div class="variant-filename">logo-icon.svg</div>
+                    </div>
 
-      <!-- Wordmark -->
-      <div class="variant-card dark-bg">
-        <span class="variant-label">Wordmark</span>
-        <div class="variant-img">
-          <img src="logo-wordmark.svg" alt="ContextStats wordmark" height="48">
-        </div>
-        <div class="variant-filename">logo-wordmark.svg</div>
-      </div>
+                    <!-- Wordmark -->
+                    <div class="variant-card dark-bg">
+                        <span class="variant-label">Wordmark</span>
+                        <div class="variant-img">
+                            <img src="logo-wordmark.svg" alt="ContextStats wordmark" height="48" />
+                        </div>
+                        <div class="variant-filename">logo-wordmark.svg</div>
+                    </div>
 
-      <!-- Favicon -->
-      <div class="variant-card dark-bg">
-        <span class="variant-label">Favicon</span>
-        <div class="variant-img" style="flex-direction:column;gap:8px">
-          <img src="favicon.svg" alt="ContextStats favicon" width="64" height="64">
-          <div class="favicon-note">Shown at 4× — actual size 16×16px</div>
-        </div>
-        <div class="variant-filename">favicon.svg</div>
-      </div>
+                    <!-- Favicon -->
+                    <div class="variant-card dark-bg">
+                        <span class="variant-label">Favicon</span>
+                        <div class="variant-img" style="flex-direction: column; gap: 8px">
+                            <img
+                                src="favicon.svg"
+                                alt="ContextStats favicon"
+                                width="64"
+                                height="64"
+                            />
+                            <div class="favicon-note">Shown at 4× — actual size 16×16px</div>
+                        </div>
+                        <div class="variant-filename">favicon.svg</div>
+                    </div>
 
-      <!-- Black on light -->
-      <div class="variant-card light-bg full-width">
-        <span class="variant-label">Full Logo · Black</span>
-        <div class="variant-img">
-          <img src="logo-black.svg" alt="ContextStats black logo" height="56">
-        </div>
-        <div class="variant-filename">logo-black.svg</div>
-      </div>
+                    <!-- Black on light -->
+                    <div class="variant-card light-bg full-width">
+                        <span class="variant-label">Full Logo · Black</span>
+                        <div class="variant-img">
+                            <img src="logo-black.svg" alt="ContextStats black logo" height="56" />
+                        </div>
+                        <div class="variant-filename">logo-black.svg</div>
+                    </div>
+                </div>
+            </section>
 
-    </div>
-  </section>
+            <!-- ── Color Palette ── -->
+            <section>
+                <div class="section-label">Color Palette</div>
+                <div class="section-title">Brand colors</div>
+                <div class="palette-grid">
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #0f172a">
+                            <span class="color-hex" style="color: #334155">#0F172A</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Background</div>
+                            <div class="color-role">Deep navy · base canvas</div>
+                        </div>
+                    </div>
 
-  <!-- ── Color Palette ── -->
-  <section>
-    <div class="section-label">Color Palette</div>
-    <div class="section-title">Brand colors</div>
-    <div class="palette-grid">
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #1e293b">
+                            <span class="color-hex" style="color: #475569">#1E293B</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Surface</div>
+                            <div class="color-role">Cards, elevated elements</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#0F172A">
-          <span class="color-hex" style="color:#334155">#0F172A</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Background</div>
-          <div class="color-role">Deep navy · base canvas</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #334155">
+                            <span class="color-hex" style="color: #64748b">#334155</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Border</div>
+                            <div class="color-role">Dividers, outlines</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#1E293B">
-          <span class="color-hex" style="color:#475569">#1E293B</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Surface</div>
-          <div class="color-role">Cards, elevated elements</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #94a3b8">
+                            <span class="color-hex" style="color: #0f172a">#94A3B8</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Muted</div>
+                            <div class="color-role">Secondary text, labels</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#334155">
-          <span class="color-hex" style="color:#64748B">#334155</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Border</div>
-          <div class="color-role">Dividers, outlines</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #f1f5f9">
+                            <span class="color-hex" style="color: #334155">#F1F5F9</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Text</div>
+                            <div class="color-role">Primary text</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#94A3B8">
-          <span class="color-hex" style="color:#0F172A">#94A3B8</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Muted</div>
-          <div class="color-role">Secondary text, labels</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #10b981">
+                            <span class="color-hex" style="color: #065f46">#10B981</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Green — Live</div>
+                            <div class="color-role">Accent · active · healthy</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#F1F5F9">
-          <span class="color-hex" style="color:#334155">#F1F5F9</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Text</div>
-          <div class="color-role">Primary text</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #06b6d4">
+                            <span class="color-hex" style="color: #164e63">#06B6D4</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Cyan — Session</div>
+                            <div class="color-role">Analytics · processed data</div>
+                        </div>
+                    </div>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#10B981">
-          <span class="color-hex" style="color:#065F46">#10B981</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Green — Live</div>
-          <div class="color-role">Accent · active · healthy</div>
-        </div>
-      </div>
+                    <div class="color-chip">
+                        <div class="color-swatch" style="background: #818cf8">
+                            <span class="color-hex" style="color: #312e81">#818CF8</span>
+                        </div>
+                        <div class="color-info">
+                            <div class="color-name">Indigo — Report</div>
+                            <div class="color-role">Historical · strategic view</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#06B6D4">
-          <span class="color-hex" style="color:#164E63">#06B6D4</span>
-        </div>
-        <div class="color-info">
-          <div class="color-name">Cyan — Session</div>
-          <div class="color-role">Analytics · processed data</div>
-        </div>
-      </div>
+            <!-- ── Typography ── -->
+            <section>
+                <div class="section-label">Typography</div>
+                <div class="section-title">Inter typeface</div>
+                <div class="type-specimen">
+                    <div class="type-row">
+                        <div class="type-meta">Inter 700 · Heading / Wordmark</div>
+                        <div class="type-sample-700" style="font-size: 36px; letter-spacing: -1px">
+                            ContextStats
+                        </div>
+                    </div>
+                    <div class="type-row">
+                        <div class="type-meta">Inter 600 · Subheading</div>
+                        <div class="type-sample-700" style="font-size: 22px">
+                            Understand how you use Claude Code
+                        </div>
+                    </div>
+                    <div class="type-row">
+                        <div class="type-meta">Inter 500 · Label / STATS</div>
+                        <div
+                            class="type-sample-500"
+                            style="font-size: 13px; letter-spacing: 3.5px; color: #10b981"
+                        >
+                            STATS &nbsp;·&nbsp; LIVE &nbsp;·&nbsp; SESSION &nbsp;·&nbsp; REPORT
+                        </div>
+                    </div>
+                    <div class="type-row">
+                        <div class="type-meta">Inter 400 · Body</div>
+                        <div class="type-sample-400" style="font-size: 15px">
+                            Track token consumption, monitor Model Intelligence decay, and identify
+                            cost patterns across all your Claude Code sessions.
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-      <div class="color-chip">
-        <div class="color-swatch" style="background:#818CF8">
-          <span class="color-hex" style="color:#312E81">#818CF8</span>
+            <!-- ── Developer Reference ── -->
+            <section>
+                <div class="section-label">Developer Reference</div>
+                <div class="section-title">Implementation</div>
+                <div class="dev-grid">
+                    <div>
+                        <div class="code-block">
+                            <span class="kw">// tailwind.config.js</span>
+                            <span class="kw">module</span>.<span class="key">exports</span> = {
+                            theme: { extend: { colors: { brand: { bg:
+                            <span class="str">'#0F172A'</span>, surface:
+                            <span class="str">'#1E293B'</span>, border:
+                            <span class="str">'#334155'</span>, muted:
+                            <span class="str">'#94A3B8'</span>, text:
+                            <span class="str">'#F1F5F9'</span>, green:
+                            <span class="str">'#10B981'</span>, cyan:
+                            <span class="str">'#06B6D4'</span>, indigo:
+                            <span class="str">'#818CF8'</span>, } } } } }
+                        </div>
+                    </div>
+                    <div class="file-tree">
+                        <div class="file-tree-title">assets/logo/</div>
+                        <div class="file-row">
+                            <span class="file-name">logo-mark.svg</span>
+                            <span class="file-desc">Canonical mark (64×64) — source of truth</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">logo-full.svg</span>
+                            <span class="file-desc">Mark + wordmark, dark bg (320×72)</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">logo-wordmark.svg</span>
+                            <span class="file-desc">Text only, transparent bg (180×40)</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">logo-icon.svg</span>
+                            <span class="file-desc">App icon, rounded square (512×512)</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">favicon.svg</span>
+                            <span class="file-desc">Simplified 2-arc mark (16×16)</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">logo-white.svg</span>
+                            <span class="file-desc">All-white, for dark backgrounds</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">logo-black.svg</span>
+                            <span class="file-desc">All-dark, for light backgrounds</span>
+                        </div>
+                        <div class="file-row">
+                            <span class="file-name">brand-showcase.html</span>
+                            <span class="file-desc">This page</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
-        <div class="color-info">
-          <div class="color-name">Indigo — Report</div>
-          <div class="color-role">Historical · strategic view</div>
-        </div>
-      </div>
 
-    </div>
-  </section>
-
-  <!-- ── Typography ── -->
-  <section>
-    <div class="section-label">Typography</div>
-    <div class="section-title">Inter typeface</div>
-    <div class="type-specimen">
-      <div class="type-row">
-        <div class="type-meta">Inter 700 · Heading / Wordmark</div>
-        <div class="type-sample-700" style="font-size:36px; letter-spacing:-1px">ContextStats</div>
-      </div>
-      <div class="type-row">
-        <div class="type-meta">Inter 600 · Subheading</div>
-        <div class="type-sample-700" style="font-size:22px">Understand how you use Claude Code</div>
-      </div>
-      <div class="type-row">
-        <div class="type-meta">Inter 500 · Label / STATS</div>
-        <div class="type-sample-500" style="font-size:13px; letter-spacing:3.5px; color:#10B981">STATS &nbsp;·&nbsp; LIVE &nbsp;·&nbsp; SESSION &nbsp;·&nbsp; REPORT</div>
-      </div>
-      <div class="type-row">
-        <div class="type-meta">Inter 400 · Body</div>
-        <div class="type-sample-400" style="font-size:15px">Track token consumption, monitor Model Intelligence decay, and identify cost patterns across all your Claude Code sessions.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Developer Reference ── -->
-  <section>
-    <div class="section-label">Developer Reference</div>
-    <div class="section-title">Implementation</div>
-    <div class="dev-grid">
-      <div>
-        <div class="code-block"><span class="kw">// tailwind.config.js</span>
-<span class="kw">module</span>.<span class="key">exports</span> = {
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          bg:      <span class="str">'#0F172A'</span>,
-          surface: <span class="str">'#1E293B'</span>,
-          border:  <span class="str">'#334155'</span>,
-          muted:   <span class="str">'#94A3B8'</span>,
-          text:    <span class="str">'#F1F5F9'</span>,
-          green:   <span class="str">'#10B981'</span>,
-          cyan:    <span class="str">'#06B6D4'</span>,
-          indigo:  <span class="str">'#818CF8'</span>,
-        }
-      }
-    }
-  }
-}</div>
-      </div>
-      <div class="file-tree">
-        <div class="file-tree-title">assets/logo/</div>
-        <div class="file-row">
-          <span class="file-name">logo-mark.svg</span>
-          <span class="file-desc">Canonical mark (64×64) — source of truth</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">logo-full.svg</span>
-          <span class="file-desc">Mark + wordmark, dark bg (320×72)</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">logo-wordmark.svg</span>
-          <span class="file-desc">Text only, transparent bg (180×40)</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">logo-icon.svg</span>
-          <span class="file-desc">App icon, rounded square (512×512)</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">favicon.svg</span>
-          <span class="file-desc">Simplified 2-arc mark (16×16)</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">logo-white.svg</span>
-          <span class="file-desc">All-white, for dark backgrounds</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">logo-black.svg</span>
-          <span class="file-desc">All-dark, for light backgrounds</span>
-        </div>
-        <div class="file-row">
-          <span class="file-name">brand-showcase.html</span>
-          <span class="file-desc">This page</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-</div>
-
-<!-- ── Footer ── -->
-<footer>
-  <div class="footer-name">ContextStats</div>
-  <div class="footer-sub">Brand Identity &nbsp;·&nbsp; context-stats</div>
-</footer>
-
-</body>
+        <!-- ── Footer ── -->
+        <footer>
+            <div class="footer-name">ContextStats</div>
+            <div class="footer-sub">Brand Identity &nbsp;·&nbsp; context-stats</div>
+        </footer>
+    </body>
 </html>

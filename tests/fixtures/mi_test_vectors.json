@@ -99,7 +99,7 @@
       "beta_override": 1.0
     },
     "expected": {
-      "mi": 0.500,
+      "mi": 0.5,
       "utilization": 0.5
     }
   }

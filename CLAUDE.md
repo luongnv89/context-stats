@@ -14,9 +14,9 @@ State files are append-only CSV at `~/.claude/statusline/statusline.<session_id>
 
 ## Statusline Script
 
-| Script | Language | State writes | Notes |
-|---|---|---|---|
-| `scripts/statusline.py` | Python 3 | Yes | Pip-installable via package |
+| Script                  | Language | State writes | Notes                       |
+| ----------------------- | -------- | ------------ | --------------------------- |
+| `scripts/statusline.py` | Python 3 | Yes          | Pip-installable via package |
 
 ## Test Commands
 
@@ -41,26 +41,26 @@ pytest tests/python/ -v
 
 The following logic is duplicated between the installable package (`src/`) and the standalone script (`scripts/statusline.py`) and **must be kept in sync** when modified:
 
-| Logic | Package (`src/`) | Standalone Python (`scripts/statusline.py`) |
-|---|---|---|
-| Config parsing | `core/config.py` | `read_config()` |
-| Color name map | `core/colors.py:COLOR_NAMES` | `_COLOR_NAMES` |
-| Color parser | `core/colors.py:parse_color()` | `_parse_color()` |
-| Git info | `core/git.py:get_git_info()` | `get_git_info()` |
-| State rotation | `core/state.py` | `maybe_rotate_state_file()` |
-| MI profiles | `graphs/intelligence.py:MODEL_PROFILES` | `MODEL_PROFILES` |
-| MI formula | `graphs/intelligence.py:calculate_context_pressure()` | `compute_mi()` |
-| MI colors | `graphs/intelligence.py:get_mi_color()` | `get_mi_color()` |
-| Zone indicator | `graphs/intelligence.py:get_context_zone()` | `get_context_zone()` |
-| Zone constants | `ZONE_1M_*`, `ZONE_STD_*`, `LARGE_MODEL_THRESHOLD` | same |
-| Per-property colors | `colors.py:ColorManager` props, `config.py:_COLOR_KEYS` | `_COLOR_KEYS`, per-property vars |
-| Compaction detection | `graphs/statistics.py:detect_compaction_events()` | `detect_compaction_events()` |
-| Compaction constants | `core/config.py:compaction_drop_threshold`, `compact_mi_warn_threshold` | `COMPACTION_DROP_THRESHOLD`, `COMPACT_MI_WARN_THRESHOLD` |
-| tok/s compute (rolling, token-weighted avg over N turns) | `graphs/statistics.py:compute_tps(samples, window)`, `format_tps()` | `compute_tps(samples, window)`, `format_tps()` |
-| tok/s config | `core/config.py:show_tps`, `tps_precision`, `tps_unit`, `tps_window` | `read_config()` `show_tps`/`tps_precision`/`tps_unit`/`tps_window` |
-| tok/s state field | `core/state.py:StateEntry.api_duration_ms` (CSV index 14) | `state_data` list + `csv_parts[14]` |
-| tok/s rolling read (bounded tail) | `cli/statusline.py` calls `core/state.py:StateFile.read_tail(_tps_tail_size(tps_window))` → `(output, api_duration_ms)` samples (NOT `read_history()`, which stays full for the CLI graph/export consumers) | tail-bounded loop over `file_lines[-_tps_tail_size(tps_window):]` building `tps_samples` from index 4 + 14 |
-| tok/s tail size helper | `cli/statusline.py:_tps_tail_size()`, `_TPS_TAIL_BUFFER` | `_tps_tail_size()`, `_TPS_TAIL_BUFFER` |
+| Logic                                                    | Package (`src/`)                                                                                                                                                                                            | Standalone Python (`scripts/statusline.py`)                                                                |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Config parsing                                           | `core/config.py`                                                                                                                                                                                            | `read_config()`                                                                                            |
+| Color name map                                           | `core/colors.py:COLOR_NAMES`                                                                                                                                                                                | `_COLOR_NAMES`                                                                                             |
+| Color parser                                             | `core/colors.py:parse_color()`                                                                                                                                                                              | `_parse_color()`                                                                                           |
+| Git info                                                 | `core/git.py:get_git_info()`                                                                                                                                                                                | `get_git_info()`                                                                                           |
+| State rotation                                           | `core/state.py`                                                                                                                                                                                             | `maybe_rotate_state_file()`                                                                                |
+| MI profiles                                              | `graphs/intelligence.py:MODEL_PROFILES`                                                                                                                                                                     | `MODEL_PROFILES`                                                                                           |
+| MI formula                                               | `graphs/intelligence.py:calculate_context_pressure()`                                                                                                                                                       | `compute_mi()`                                                                                             |
+| MI colors                                                | `graphs/intelligence.py:get_mi_color()`                                                                                                                                                                     | `get_mi_color()`                                                                                           |
+| Zone indicator                                           | `graphs/intelligence.py:get_context_zone()`                                                                                                                                                                 | `get_context_zone()`                                                                                       |
+| Zone constants                                           | `ZONE_1M_*`, `ZONE_STD_*`, `LARGE_MODEL_THRESHOLD`                                                                                                                                                          | same                                                                                                       |
+| Per-property colors                                      | `colors.py:ColorManager` props, `config.py:_COLOR_KEYS`                                                                                                                                                     | `_COLOR_KEYS`, per-property vars                                                                           |
+| Compaction detection                                     | `graphs/statistics.py:detect_compaction_events()`                                                                                                                                                           | `detect_compaction_events()`                                                                               |
+| Compaction constants                                     | `core/config.py:compaction_drop_threshold`, `compact_mi_warn_threshold`                                                                                                                                     | `COMPACTION_DROP_THRESHOLD`, `COMPACT_MI_WARN_THRESHOLD`                                                   |
+| tok/s compute (rolling, token-weighted avg over N turns) | `graphs/statistics.py:compute_tps(samples, window)`, `format_tps()`                                                                                                                                         | `compute_tps(samples, window)`, `format_tps()`                                                             |
+| tok/s config                                             | `core/config.py:show_tps`, `tps_precision`, `tps_unit`, `tps_window`                                                                                                                                        | `read_config()` `show_tps`/`tps_precision`/`tps_unit`/`tps_window`                                         |
+| tok/s state field                                        | `core/state.py:StateEntry.api_duration_ms` (CSV index 14)                                                                                                                                                   | `state_data` list + `csv_parts[14]`                                                                        |
+| tok/s rolling read (bounded tail)                        | `cli/statusline.py` calls `core/state.py:StateFile.read_tail(_tps_tail_size(tps_window))` → `(output, api_duration_ms)` samples (NOT `read_history()`, which stays full for the CLI graph/export consumers) | tail-bounded loop over `file_lines[-_tps_tail_size(tps_window):]` building `tps_samples` from index 4 + 14 |
+| tok/s tail size helper                                   | `cli/statusline.py:_tps_tail_size()`, `_TPS_TAIL_BUFFER`                                                                                                                                                    | `_tps_tail_size()`, `_TPS_TAIL_BUFFER`                                                                     |
 
 ## Cross-References
 

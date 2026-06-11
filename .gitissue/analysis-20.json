@@ -49,19 +49,31 @@
       "path": "src/claude_statusline/graphs/intelligence.py",
       "relevance": "critical",
       "role": "zone logic, MI formula, threshold constants",
-      "match_reasons": ["direct file reference", "function match: get_context_zone", "constant match: ZONE_1M_*"]
+      "match_reasons": [
+        "direct file reference",
+        "function match: get_context_zone",
+        "constant match: ZONE_1M_*"
+      ]
     },
     {
       "path": "scripts/statusline.py",
       "relevance": "critical",
       "role": "standalone Python implementation",
-      "match_reasons": ["direct file reference", "function match: compute_mi", "cross-impl sync point"]
+      "match_reasons": [
+        "direct file reference",
+        "function match: compute_mi",
+        "cross-impl sync point"
+      ]
     },
     {
       "path": "scripts/statusline.js",
       "relevance": "critical",
       "role": "standalone Node.js implementation",
-      "match_reasons": ["direct file reference", "function match: computeMI", "cross-impl sync point"]
+      "match_reasons": [
+        "direct file reference",
+        "function match: computeMI",
+        "cross-impl sync point"
+      ]
     },
     {
       "path": "tests/python/test_intelligence.py",
@@ -99,15 +111,27 @@
       "name": "Already implemented (PR #21)",
       "summary": "Five-state zone indicators with model-size-aware thresholds, synchronized across all implementations",
       "files_to_modify": [
-        {"path": "src/claude_statusline/graphs/intelligence.py", "changes": "Added ZoneInfo, get_context_zone(), zone constants"},
-        {"path": "scripts/statusline.py", "changes": "Added get_context_zone(), zone ANSI colors, zone display"},
-        {"path": "scripts/statusline.js", "changes": "Added getContextZone(), zone ANSI colors, zone display"},
-        {"path": "tests/python/test_intelligence.py", "changes": "24 new zone tests"},
-        {"path": "tests/node/intelligence.test.js", "changes": "16 new zone tests"},
-        {"path": "docs/MODEL_INTELLIGENCE.md", "changes": "Zone documentation"},
-        {"path": "CLAUDE.md", "changes": "Updated sync points table"},
-        {"path": "README.md", "changes": "Zone feature mention"},
-        {"path": "src/claude_statusline/cli/statusline.py", "changes": "Zone display in CLI output"}
+        {
+          "path": "src/claude_statusline/graphs/intelligence.py",
+          "changes": "Added ZoneInfo, get_context_zone(), zone constants"
+        },
+        {
+          "path": "scripts/statusline.py",
+          "changes": "Added get_context_zone(), zone ANSI colors, zone display"
+        },
+        {
+          "path": "scripts/statusline.js",
+          "changes": "Added getContextZone(), zone ANSI colors, zone display"
+        },
+        { "path": "tests/python/test_intelligence.py", "changes": "24 new zone tests" },
+        { "path": "tests/node/intelligence.test.js", "changes": "16 new zone tests" },
+        { "path": "docs/MODEL_INTELLIGENCE.md", "changes": "Zone documentation" },
+        { "path": "CLAUDE.md", "changes": "Updated sync points table" },
+        { "path": "README.md", "changes": "Zone feature mention" },
+        {
+          "path": "src/claude_statusline/cli/statusline.py",
+          "changes": "Zone display in CLI output"
+        }
       ],
       "files_to_create": [],
       "pros": [
@@ -116,9 +140,7 @@
         "MI formula unchanged — additive, non-breaking",
         "Cross-implementation sync maintained"
       ],
-      "cons": [
-        "Minor spec deviation: X zone is a range (250k–275k) rather than a point (250k)"
-      ],
+      "cons": ["Minor spec deviation: X zone is a range (250k–275k) rather than a point (250k)"],
       "complexity": "M",
       "risk": "Low",
       "risk_details": "Additive feature — existing MI formula and behavior unchanged"
@@ -179,9 +201,7 @@
       "author": "Luong NGUYEN",
       "date": "2026-03-20T16:10:28+01:00"
     },
-    "domain_experts": [
-      {"author": "Luong NGUYEN", "commit_count": 44}
-    ]
+    "domain_experts": [{ "author": "Luong NGUYEN", "commit_count": 44 }]
   },
   "cross_references": {
     "blocks": [],

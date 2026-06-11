@@ -11,6 +11,7 @@
 Three levels of analytics — live session awareness, per-session deep dives, and multi-week cost reports — so you can use Claude Code at its best and know exactly where your tokens go.
 
 [**Get Started →**](#installation)
+
 </div>
 
 ---
@@ -43,11 +44,11 @@ graph TD
     end
 ```
 
-| Level | Tool | What you learn |
-|---|---|---|
-| **Live** | Status line + graph dashboard + sessions list | Context zone, MI score, token delta — act now, not after it's too late |
-| **Session** | `context-stats export` | Cache efficiency, interaction timeline, zone history for one session |
-| **Report** | `context-stats report` | Cost breakdown, cache analysis, cross-project patterns across weeks or months |
+| Level       | Tool                                          | What you learn                                                                |
+| ----------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Live**    | Status line + graph dashboard + sessions list | Context zone, MI score, token delta — act now, not after it's too late        |
+| **Session** | `context-stats export`                        | Cache efficiency, interaction timeline, zone history for one session          |
+| **Report**  | `context-stats report`                        | Cost breakdown, cache analysis, cross-project patterns across weeks or months |
 
 ---
 
@@ -61,36 +62,36 @@ A single line in your Claude Code terminal updated on every refresh:
 my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
 ```
 
-| Element | What it tells you |
-|---|---|
-| `64,000 free (32.0%)` | Available tokens and utilization |
-| `Code` | Context zone — color-coded action signal |
-| `MI:0.918` | Model Intelligence score — how sharp the model still is |
-| `+2,500` | Tokens consumed since last refresh |
-| `tok/s` | Model generation throughput (optional — enable with `show_tps=true`) |
+| Element               | What it tells you                                                    |
+| --------------------- | -------------------------------------------------------------------- |
+| `64,000 free (32.0%)` | Available tokens and utilization                                     |
+| `Code`                | Context zone — color-coded action signal                             |
+| `MI:0.918`            | Model Intelligence score — how sharp the model still is              |
+| `+2,500`              | Tokens consumed since last refresh                                   |
+| `tok/s`               | Model generation throughput (optional — enable with `show_tps=true`) |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 
-| Green status | Warning state |
-|:---:|:---:|
+|                     Green status                      |                     Warning state                     |
+| :---------------------------------------------------: | :---------------------------------------------------: |
 | ![Green statusline](images/1.10/statusline-green.png) | ![Yellow statusline](images/1.10/1.10-statusline.png) |
 
 ### Context Zones
 
 Five zones tell you exactly what to do next:
 
-| Zone | Color | Meaning | Action |
-|---|:---:|---|---|
-| Planning | Green | Plenty of room | Keep planning and coding |
-| Code-only | Yellow | Context tightening | Finish current task, no new plans |
-| Dump | Orange | Quality declining | Wrap up and prepare to export |
-| ExDump | Dark red | Near hard limit | Start a new session |
-| Dead | Gray | Exhausted | Stop — nothing productive left |
+| Zone      |  Color   | Meaning            | Action                            |
+| --------- | :------: | ------------------ | --------------------------------- |
+| Planning  |  Green   | Plenty of room     | Keep planning and coding          |
+| Code-only |  Yellow  | Context tightening | Finish current task, no new plans |
+| Dump      |  Orange  | Quality declining  | Wrap up and prepare to export     |
+| ExDump    | Dark red | Near hard limit    | Start a new session               |
+| Dead      |   Gray   | Exhausted          | Stop — nothing productive left    |
 
 Thresholds are **model-size-aware**: 1M context models use absolute token counts; standard models use utilization ratios. Both are configurable.
 
-| Plan zone | Code zone | Dump zone |
-|:---:|:---:|:---:|
+|                 Plan zone                 |                 Code zone                 |                 Dump zone                 |
+| :---------------------------------------: | :---------------------------------------: | :---------------------------------------: |
 | ![Plan zone](images/1.12.0/plan-zone.png) | ![Code zone](images/1.12.0/code-zone.png) | ![Dump zone](images/1.12.0/dump-zone.png) |
 
 ### Model Intelligence (MI)
@@ -101,11 +102,11 @@ MI estimates how well Claude performs at the current fill level, calibrated from
 MI(u) = max(0, 1 - u^β)
 ```
 
-| Model | β | MI at 50% | MI at 75% |
-|---|---|---|---|
-| Opus 4.6 | 1.8 | 0.713 | 0.404 |
-| Sonnet 4.6 | 1.5 | 0.646 | 0.350 |
-| Haiku 4.5 | 1.2 | 0.565 | 0.292 |
+| Model      | β   | MI at 50% | MI at 75% |
+| ---------- | --- | --------- | --------- |
+| Opus 4.6   | 1.8 | 0.713     | 0.404     |
+| Sonnet 4.6 | 1.5 | 0.646     | 0.350     |
+| Haiku 4.5  | 1.2 | 0.565     | 0.292     |
 
 Color-coded: **green** (>0.70), **yellow** (0.40–0.70), **red** (<0.40 — start a new session). Override with `mi_curve_beta=1.5` in config.
 
@@ -129,23 +130,23 @@ context-stats graph --type tps          # Throughput (tokens/s) trend
 context-stats <session_id> graph        # Specific session
 ```
 
-| Graph | What it answers |
-|---|---|
-| `delta` | How many tokens each interaction consumed |
-| `cumulative` | Total context used over the session |
-| `cache` | Cache creation and read tokens, with 5-min TTL countdown |
-| `mi` | How MI degraded across the session |
-| `io` | Input/output token breakdown |
-| `tps` | Model generation throughput (tokens/s) over the session |
+| Graph        | What it answers                                          |
+| ------------ | -------------------------------------------------------- |
+| `delta`      | How many tokens each interaction consumed                |
+| `cumulative` | Total context used over the session                      |
+| `cache`      | Cache creation and read tokens, with 5-min TTL countdown |
+| `mi`         | How MI degraded across the session                       |
+| `io`         | Input/output token breakdown                             |
+| `tps`        | Model generation throughput (tokens/s) over the session  |
 
 Auto-refreshes every 2 seconds. Pass `-w 5` to slow down or `--no-watch` to show once.
 
-| Context growth | Cumulative graph | Cache activity |
-|:---:|:---:|:---:|
+|               Context growth               |                   Cumulative graph                   |                Cache activity                |
+| :----------------------------------------: | :--------------------------------------------------: | :------------------------------------------: |
 | ![Delta graph](images/1.10/1.10-delta.png) | ![Cumulative graph](images/1.10/1.10-cumulative.png) | ![Cache graph](images/1.16.0/1.16-cache.png) |
 
-| MI over time |
-|:---:|
+|                             MI over time                              |
+| :-------------------------------------------------------------------: |
 | ![Model Intelligence view](images/1.10/1.10.0-model-intelligence.png) |
 
 ---
@@ -159,25 +160,26 @@ context-stats export --output report.md              # Latest session
 context-stats <session_id> export --output report.md  # Specific session
 ```
 
-| Section | What you learn |
-|---|---|
-| Executive Snapshot | Model, project, duration, interactions, final zone |
-| Cache Activity | Cache creation vs. read ratio — did your session reuse the cache? |
-| Interaction Timeline | Per-interaction context, MI score, and zone history |
-| Visual Charts | Mermaid charts: context growth, zones, cache, token composition |
-| Key Takeaways | Short read of what changed |
+| Section              | What you learn                                                    |
+| -------------------- | ----------------------------------------------------------------- |
+| Executive Snapshot   | Model, project, duration, interactions, final zone                |
+| Cache Activity       | Cache creation vs. read ratio — did your session reuse the cache? |
+| Interaction Timeline | Per-interaction context, MI score, and zone history               |
+| Visual Charts        | Mermaid charts: context growth, zones, cache, token composition   |
+| Key Takeaways        | Short read of what changed                                        |
 
 Example output:
 
 ```markdown
 ## Executive Snapshot
-| Signal | Value | Why it matters |
-|--------|-------|----------------|
-| Model | claude-sonnet-4-6 | Which model produced the session |
-| Duration | 59m 32s | Relate context growth to session length |
-| Interactions | 135 | How active the session was |
-| Final usage | 129,755 (64.9%) | How close the session got to the limit |
-| Final zone | Dump zone | Whether the session stayed in a safe range |
+
+| Signal       | Value             | Why it matters                             |
+| ------------ | ----------------- | ------------------------------------------ |
+| Model        | claude-sonnet-4-6 | Which model produced the session           |
+| Duration     | 59m 32s           | Relate context growth to session length    |
+| Interactions | 135               | How active the session was                 |
+| Final usage  | 129,755 (64.9%)   | How close the session got to the limit     |
+| Final zone   | Dump zone         | Whether the session stayed in a safe range |
 ```
 
 See the full example in [`context-stats-export-output.md`](context-stats-export-output.md).
@@ -211,29 +213,29 @@ context-stats report --output report.md  # Write to file
 
 The report is a Markdown file with these sections:
 
-| Section | What you learn |
-|---|---|
-| Executive Summary | Total spend, sessions, projects, cache hit ratio, avg session cost, most expensive project |
-| Model Usage Breakdown | Cost and token share per model family (Opus / Sonnet / Haiku) with pie chart |
-| Cost Optimization | Top 10 costliest sessions, sessions with low cache efficiency, high-spend projects |
-| Cost Efficiency | Overall cache hit ratio, tokens per dollar, most and least efficient sessions |
-| Daily Activity Heatmap | Sessions by day-of-week and hour — see when you code and how that affects cost |
-| Weekly Trend | Spend and session count per week with charts |
-| Code Productivity | Lines changed per dollar and per 1k tokens across projects |
-| Projects Table | Per-project: sessions, cost, % of total, tokens, cache hit %, avg cost, dominant model |
+| Section                | What you learn                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| Executive Summary      | Total spend, sessions, projects, cache hit ratio, avg session cost, most expensive project |
+| Model Usage Breakdown  | Cost and token share per model family (Opus / Sonnet / Haiku) with pie chart               |
+| Cost Optimization      | Top 10 costliest sessions, sessions with low cache efficiency, high-spend projects         |
+| Cost Efficiency        | Overall cache hit ratio, tokens per dollar, most and least efficient sessions              |
+| Daily Activity Heatmap | Sessions by day-of-week and hour — see when you code and how that affects cost             |
+| Weekly Trend           | Spend and session count per week with charts                                               |
+| Code Productivity      | Lines changed per dollar and per 1k tokens across projects                                 |
+| Projects Table         | Per-project: sessions, cost, % of total, tokens, cache hit %, avg cost, dominant model     |
 
 Example executive summary:
 
 ```markdown
-| Metric | Value |
-|--------|-------|
-| Report Period | 2026-03-08 → 2026-04-07 |
-| Total Spend | $6,413.24 |
-| Total Sessions | 764 |
-| Projects Analyzed | 58 |
-| Cache Hit Ratio | 46.9% |
-| Avg Session Cost | $8.39 |
-| Avg Session Duration | 2h 1m 8s |
+| Metric                 | Value                                           |
+| ---------------------- | ----------------------------------------------- |
+| Report Period          | 2026-03-08 → 2026-04-07                         |
+| Total Spend            | $6,413.24                                       |
+| Total Sessions         | 764                                             |
+| Projects Analyzed      | 58                                              |
+| Cache Hit Ratio        | 46.9%                                           |
+| Avg Session Cost       | $8.39                                           |
+| Avg Session Duration   | 2h 1m 8s                                        |
 | Most Expensive Project | agent-skill-manager ($1,204.58, 18.8% of total) |
 ```
 

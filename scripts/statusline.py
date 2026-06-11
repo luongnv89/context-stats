@@ -18,6 +18,9 @@ Create/edit ~/.claude/statusline.conf and set:
   show_session=true  (show session_id in status line - default)
   show_session=false (hide session_id from status line)
 
+  show_pr=true   (show associated PR number like #42, requires gh CLI)
+  show_pr=false  (hide PR number, default)
+
 When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 
 State file format (CSV):
@@ -449,6 +452,65 @@ def fit_to_width(parts, max_width):
     return result
 
 
+def get_pr_number(project_dir: str) -> str:
+    """Look up the PR number for the current branch via gh CLI.
+
+    Returns a formatted string like ``#42`` when an open PR exists,
+    or an empty string when no PR is associated or gh CLI is unavailable.
+    """
+    if shutil.which("gh") is None:
+        return ""
+
+    try:
+        branch = subprocess.run(
+            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if branch.returncode != 0:
+            return ""
+        branch_name = branch.stdout.strip()
+        if not branch_name:
+            return ""
+
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch_name,
+                "--state",
+                "open",
+                "--json",
+                "number",
+                "--limit",
+                "1",
+            ],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return ""
+
+        try:
+            data = json.loads(result.stdout.strip())
+        except (json.JSONDecodeError, ValueError):
+            return ""
+
+        if data and len(data) > 0:
+            pr_num = data[0].get("number", "")
+            if pr_num:
+                return f"#{pr_num}"
+        return ""
+    except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
+        return ""
+
+
 def get_git_info(project_dir, magenta=None, cyan=None):
     """Get git branch and change count"""
     if magenta is None:
@@ -505,6 +567,7 @@ def read_config():
         "tps_precision": 1,
         "tps_unit": "tok/s",
         "tps_window": 5,
+        "show_pr": False,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -576,6 +639,12 @@ show_io_tokens=true
 #   false = animations enabled (default)
 #   true  = static display, no motion
 reduced_motion=false
+
+# Show the associated PR number for the current branch in the statusline.
+# Uses the GitHub CLI (gh) to look up open PRs. Requires gh to be installed.
+#   false = PR number hidden (default)
+#   true  = PR number visible (e.g., #42)
+show_pr=false
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -801,6 +870,8 @@ color_separator=dim
                         pass
                 elif key == "show_tps":
                     config["show_tps"] = value_lower != "false"
+                elif key == "show_pr":
+                    config["show_pr"] = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -909,6 +980,7 @@ def main():
     tps_precision = config["tps_precision"]
     tps_unit = config["tps_unit"]
     tps_window = config["tps_window"]
+    show_pr = config["show_pr"]
     # Note: show_io_tokens setting is read but not yet implemented
 
     # Apply color overrides from config
@@ -932,7 +1004,6 @@ def main():
     # Git info (use per-property branch color, fallback to green)
     git_info = get_git_info(project_dir, magenta=c_branch_name, cyan=c_cyan)
 
-    # Extract session_id once for reuse
     session_id = data.get("session_id")
 
     # Context window calculation
@@ -942,6 +1013,13 @@ def main():
     tps_info = ""
     zone_info = ""
     session_info = ""
+    pr_info = ""
+
+    # PR number lookup
+    if show_pr:
+        pr_num = get_pr_number(project_dir)
+        if pr_num:
+            pr_info = f" | {c_separator}{pr_num}{RESET}"
     total_size = data.get("context_window", {}).get("context_window_size", 0)
     current_usage = data.get("context_window", {}).get("current_usage")
     total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
@@ -1151,6 +1229,7 @@ def main():
     parts = [
         base,
         git_info,
+        pr_info,
         context_info,
         zone_info,
         mi_info,

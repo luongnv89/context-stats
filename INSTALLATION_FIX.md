@@ -12,7 +12,7 @@ python3.14 -m claude_statusline.cli.context_stats: error: unrecognized arguments
 
 ### Root Cause
 
-The `install.sh` script only installed the bash script to `~/.local/bin/context-stats`. It did NOT install the Python pip package `context-stats`. 
+The `install.sh` script only installed the bash script to `~/.local/bin/context-stats`. It did NOT install the Python pip package `context-stats`.
 
 When the bash script called `python3 -m claude_statusline.cli.context_stats`, it would use whatever Python package was installed globally. If it was an old version (e.g., v1.11.0), that version didn't have the `export` subcommand, so argparse rejected the session ID as an unrecognized argument.
 
@@ -29,6 +29,7 @@ Added `install_python_package()` function to `install.sh` that:
 This function is now called automatically during installation, right after the bash script is installed.
 
 **Installation output example:**
+
 ```
 ✓ Installed: /Users/montimage/.claude/statusline.sh (v1.17.0)
 ✓ Installed: /Users/montimage/.local/bin/context-stats (v1.17.0)
@@ -47,12 +48,14 @@ Updated the `dispatch_python_subcommand()` function in `scripts/context-stats.sh
 **Error messages:**
 
 If package is missing entirely:
+
 ```
 ✗ Python package 'context-stats' is not installed.
   Install it with: pip3 install context-stats==1.19.0
 ```
 
 If there's a version mismatch:
+
 ```
 ✗ Python package version mismatch:
     Script version:   1.17.0
@@ -67,11 +70,13 @@ Updated VERSION in `scripts/context-stats.sh` from 1.11.1 to 1.17.0 to match `py
 ## How This Solves the Problem
 
 **For new installations:**
+
 - Users run `curl ... | bash` and get both the bash script AND the Python package automatically
 - No additional steps required
 - `context-stats <session_id> export` works immediately
 
 **For existing users:**
+
 - If they upgrade and run the installer again, the Python package is automatically upgraded
 - If they try to use `context-stats <session_id> export` without the package, they see a clear error message with installation instructions
 - Version mismatches are caught and the user is informed
@@ -79,10 +84,12 @@ Updated VERSION in `scripts/context-stats.sh` from 1.11.1 to 1.17.0 to match `py
 ## Testing
 
 All tests pass:
+
 - **Python tests:** 306 tests ✓
 - **Bash integration tests:** 66 tests ✓
 
 Verified scenarios:
+
 - ✓ Fresh installation from curl includes Python package
 - ✓ `context-stats <session_id> export` works from any directory
 - ✓ Missing package shows helpful error message

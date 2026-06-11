@@ -4,23 +4,23 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 
 ## Field Specification
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | `timestamp` | integer | Unix timestamp in seconds |
-| 1 | `total_input_tokens` | integer | Cumulative input tokens for the session |
-| 2 | `total_output_tokens` | integer | Cumulative output tokens for the session |
-| 3 | `current_input_tokens` | integer | Input tokens for the current request |
-| 4 | `current_output_tokens` | integer | Output tokens for the current request |
-| 5 | `cache_creation` | integer | Cache creation input tokens |
-| 6 | `cache_read` | integer | Cache read input tokens |
-| 7 | `cost_usd` | float | Total session cost in USD |
-| 8 | `lines_added` | integer | Total lines added in session |
-| 9 | `lines_removed` | integer | Total lines removed in session |
-| 10 | `session_id` | string | Session identifier (UUID) |
-| 11 | `model_id` | string | Model identifier (e.g., `claude-opus-4-5`) |
-| 12 | `workspace_project_dir` | string | Project directory path (commas replaced with underscores) |
-| 13 | `context_window_size` | integer | Context window size in tokens |
-| 14 | `api_duration_ms` | integer | Cumulative API wait time in milliseconds (`cost.total_api_duration_ms`); powers the tok/s throughput display |
+| Index | Field                   | Type    | Description                                                                                                  |
+| ----- | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| 0     | `timestamp`             | integer | Unix timestamp in seconds                                                                                    |
+| 1     | `total_input_tokens`    | integer | Cumulative input tokens for the session                                                                      |
+| 2     | `total_output_tokens`   | integer | Cumulative output tokens for the session                                                                     |
+| 3     | `current_input_tokens`  | integer | Input tokens for the current request                                                                         |
+| 4     | `current_output_tokens` | integer | Output tokens for the current request                                                                        |
+| 5     | `cache_creation`        | integer | Cache creation input tokens                                                                                  |
+| 6     | `cache_read`            | integer | Cache read input tokens                                                                                      |
+| 7     | `cost_usd`              | float   | Total session cost in USD                                                                                    |
+| 8     | `lines_added`           | integer | Total lines added in session                                                                                 |
+| 9     | `lines_removed`         | integer | Total lines removed in session                                                                               |
+| 10    | `session_id`            | string  | Session identifier (UUID)                                                                                    |
+| 11    | `model_id`              | string  | Model identifier (e.g., `claude-opus-4-5`)                                                                   |
+| 12    | `workspace_project_dir` | string  | Project directory path (commas replaced with underscores)                                                    |
+| 13    | `context_window_size`   | integer | Context window size in tokens                                                                                |
+| 14    | `api_duration_ms`       | integer | Cumulative API wait time in milliseconds (`cost.total_api_duration_ms`); powers the tok/s throughput display |
 
 ## Constraints
 

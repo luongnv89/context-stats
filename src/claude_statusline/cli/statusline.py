@@ -25,10 +25,11 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
-from claude_statusline.core.git import get_git_info
+from claude_statusline.core.git import _get_pr_number, get_git_info
 from claude_statusline.core.state import StateEntry, StateFile
 from claude_statusline.formatters.layout import fit_to_width, get_terminal_width
 from claude_statusline.formatters.time import get_current_timestamp
@@ -94,6 +95,13 @@ def main() -> None:
     tps_info = ""
     zone_info = ""
     session_info = ""
+    pr_info = ""
+
+    # PR number lookup (after other initialisations so we have the config)
+    if config.show_pr:
+        pr_num = _get_pr_number(Path(project_dir))
+        if pr_num:
+            pr_info = f" | {colors.separator}{pr_num}{colors.reset}"
 
     total_size = data.get("context_window", {}).get("context_window_size", 0)
     current_usage = data.get("context_window", {}).get("current_usage")
@@ -263,6 +271,7 @@ def main() -> None:
     parts = [
         base,
         git_info,
+        pr_info,
         context_info,
         zone_info,
         mi_info,

@@ -55,7 +55,6 @@ cp scripts/statusline.py ~/.claude/statusline.py
 chmod +x ~/.claude/statusline.py
 ```
 
-
 ## Configure Claude Code
 
 Add to your Claude Code settings:

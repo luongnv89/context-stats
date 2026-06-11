@@ -214,3 +214,260 @@ class TestWidthTruncation:
         assert code == 0
         visible = strip_ansi(output)
         assert len(visible) <= 80
+
+
+class TestPRDisplay:
+    """Tests for PR number display feature (#77)."""
+
+    def test_pr_info_in_parts_order(self, sample_input):
+        """PR info should appear after git_info and before context_info in parts."""
+        from scripts import statusline as sl
+
+        # Verify the parts list ordering has pr_info between git_info and context_info
+        source = sl.__file__
+        content = Path(source).read_text(encoding="utf-8")
+        # Find the parts = [ ... ] block in main() by searching for the
+        # distinctive pattern 'parts = [\n        base,' which is how the statusline builds the parts list.
+        parts_start = content.index("parts = [")
+        # Find the closing bracket of this list
+        parts_block = content[parts_start : parts_start + 2000]
+        assert "git_info" in parts_block, "git_info missing from parts list"
+        assert "pr_info" in parts_block, "pr_info missing from parts list"
+        assert "context_info" in parts_block, "context_info missing from parts list"
+        # pr_info must come after git_info and before context_info
+        git_idx = parts_block.index("git_info")
+        pr_idx = parts_block.index("pr_info")
+        ctx_idx = parts_block.index("context_info")
+        assert pr_idx > git_idx, "pr_info must come after git_info in parts list"
+        assert pr_idx < ctx_idx, "pr_info must come before context_info in parts list"
+
+    def test_show_pr_default_is_false(self, sample_input, tmp_path, monkeypatch):
+        """show_pr should default to False — PR hidden without explicit enable."""
+        # Create a config file with show_pr=false (default)
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text(
+            "# default config\nshow_session=true\nshow_pr=false\n",
+            encoding="utf-8",
+        )
+        # Override config path via environment or by patching read_config
+        # We use a simpler approach: directly test the Config class
+        from claude_statusline.core.config import Config
+
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pr is False
+
+    def test_show_pr_true_parsed(self, sample_input, tmp_path, monkeypatch):
+        """show_pr=true in config should be parsed correctly."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text(
+            "show_pr=true\n",
+            encoding="utf-8",
+        )
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pr is True
+
+    def test_show_pr_false_parsed(self, sample_input, tmp_path, monkeypatch):
+        """show_pr=false in config should be parsed correctly."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text(
+            "show_pr=false\n",
+            encoding="utf-8",
+        )
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pr is False
+
+    def test_show_pr_case_insensitive(self, sample_input, tmp_path, monkeypatch):
+        """show_pr value should be case-insensitive."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text(
+            "show_pr=TRUE\n",
+            encoding="utf-8",
+        )
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pr is True
+
+        config_file.write_text(
+            "show_pr=False\n",
+            encoding="utf-8",
+        )
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pr is False
+
+    def test_get_pr_number_gh_not_installed(self, tmp_path, monkeypatch):
+        """_get_pr_number should return empty string when gh CLI is not installed."""
+        from claude_statusline.core.git import _get_pr_number
+
+        # Mock shutil.which to return None (gh not found)
+        monkeypatch.setattr("shutil.which", lambda x: None if x == "gh" else "/usr/bin/git")
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_get_pr_number_no_open_pr(self, tmp_path, monkeypatch):
+        """_get_pr_number should return empty when no open PR for branch."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            # Git commands succeed to get branch
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            # gh pr list returns no PRs
+            result = subprocess.CompletedProcess(cmd, 0, stdout="[]", stderr="")
+            return result
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_get_pr_number_with_open_pr(self, tmp_path, monkeypatch):
+        """_get_pr_number should return formatted PR number when open PR exists."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            # gh returns a JSON array with one PR
+            result = subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 42}]', stderr="")
+            return result
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == "#42"
+
+    def test_get_pr_number_timeout_graceful(self, tmp_path, monkeypatch):
+        """_get_pr_number should return empty string on subprocess timeout."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            raise subprocess.TimeoutExpired(cmd, 5)
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_get_pr_number_os_error_graceful(self, tmp_path, monkeypatch):
+        """_get_pr_number should return empty string on OSError."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_get_pr_number_invalid_json(self, tmp_path, monkeypatch):
+        """_get_pr_number should handle invalid JSON from gh gracefully."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            # gh returns invalid JSON
+            result = subprocess.CompletedProcess(cmd, 0, stdout="not json", stderr="")
+            return result
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_get_pr_number_non_zero_exit(self, tmp_path, monkeypatch):
+        """_get_pr_number should return empty when gh exits non-zero."""
+        from claude_statusline.core.git import _get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            # gh exits non-zero
+            result = subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error")
+            return result
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = _get_pr_number(tmp_path)
+        assert result == ""
+
+    def test_standalone_script_has_show_pr_config(self):
+        """Standalone script should include show_pr in its config default dict."""
+        content = SCRIPT_PATH.read_text(encoding="utf-8")
+        # Check that show_pr is in the config default dict
+        assert '"show_pr": False' in content or "'show_pr': False" in content
+        # Check show_pr parsing
+        assert 'key == "show_pr"' in content or "key == 'show_pr'" in content
+
+    def test_config_has_show_pr_in_to_dict(self, tmp_path):
+        """Config.to_dict() should include show_pr key."""
+        from claude_statusline.core.config import Config
+
+        cfg = Config.load(str(tmp_path / "nonexistent"))
+        d = cfg.to_dict()
+        assert "show_pr" in d
+        assert d["show_pr"] is False
+
+    def test_minimal_config_fallback_has_show_pr(self):
+        """_MINIMAL_CONFIG_FALLBACK should include show_pr setting."""
+        from claude_statusline.core.config import _MINIMAL_CONFIG_FALLBACK
+
+        assert "show_pr" in _MINIMAL_CONFIG_FALLBACK
+
+    def test_pr_display_format_in_standalone(self, monkeypatch):
+        """Standalone get_pr_number should format PR as #N."""
+        from scripts.statusline import get_pr_number
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+                return result
+            result = subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 7}]', stderr="")
+            return result
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+        result = get_pr_number("/tmp")
+        assert result == "#7"
+
+    def test_pr_display_format_standalone_no_pr(self, monkeypatch):
+        """Standalone get_pr_number should return empty when no gh CLI."""
+        from scripts.statusline import get_pr_number
+
+        monkeypatch.setattr("shutil.which", lambda x: None)
+        result = get_pr_number("/tmp")
+        assert result == ""

@@ -56,6 +56,12 @@ show_io_tokens=true
 #   true  = static display, no motion
 reduced_motion=false
 
+# Show the associated PR number for the current branch in the statusline.
+# Uses the GitHub CLI (gh) to look up open PRs. Requires gh to be installed.
+#   false = PR number hidden (default)
+#   true  = PR number visible (e.g., #42)
+show_pr=false
+
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
 #
