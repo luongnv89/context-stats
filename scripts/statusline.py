@@ -37,7 +37,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 
 ROTATION_THRESHOLD = 10_000
 ROTATION_KEEP = 5_000
