@@ -341,9 +341,7 @@ class TestPRDisplay:
                 result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
                 return result
             # gh returns a JSON array with one PR
-            result = subprocess.CompletedProcess(
-                cmd, 0, stdout='[{"number": 42}]', stderr=""
-            )
+            result = subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 42}]', stderr="")
             return result
 
         monkeypatch.setattr("shutil.which", mock_which)
@@ -458,9 +456,7 @@ class TestPRDisplay:
             if "rev-parse" in cmd:
                 result = subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
                 return result
-            result = subprocess.CompletedProcess(
-                cmd, 0, stdout='[{"number": 7}]', stderr=""
-            )
+            result = subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 7}]', stderr="")
             return result
 
         monkeypatch.setattr("shutil.which", mock_which)
