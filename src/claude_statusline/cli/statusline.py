@@ -102,6 +102,10 @@ def main() -> None:
         if isinstance(model_data.get("thinking"), dict)
         else None
     )
+    # Reasoning effort level (low/medium/high/xhigh/max) if Claude Code sends it.
+    # `effort` is conditionally present and may arrive as explicit null, so guard
+    # with `or {}` (a {} default does not protect against an explicit null value).
+    effort_level = (data.get("effort") or {}).get("level")
     dir_name = cwd.rsplit("/", 1)[-1] if "/" in cwd else cwd or "~"
 
     # Read settings from config file
@@ -306,10 +310,14 @@ def main() -> None:
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(thinking_budget)
+    # Build the model suffix from any present indicators (thinking budget,
+    # reasoning effort). Effort hides gracefully when absent/null/disabled.
+    model_suffix = ""
     if thinking_text:
-        model_info = f" | {colors.model}{model} · {thinking_text}{colors.reset}"
-    else:
-        model_info = f" | {colors.model}{model}{colors.reset}"
+        model_suffix += f" · {thinking_text}"
+    if config.show_effort and effort_level:
+        model_suffix += f" · {effort_level}"
+    model_info = f" | {colors.model}{model}{model_suffix}{colors.reset}"
     max_width = get_terminal_width()
     parts = [
         base,

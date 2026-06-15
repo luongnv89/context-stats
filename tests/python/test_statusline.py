@@ -606,6 +606,120 @@ class TestThinkingDisplay:
         assert "thinking" not in output.lower()
 
 
+class TestEffortDisplay:
+    """Tests for reasoning effort display next to model name (#87).
+
+    Claude Code reports the live reasoning effort as ``effort.level`` (one of
+    low/medium/high/xhigh/max). It is shown next to the model name and hides
+    gracefully when absent, null, or disabled via ``show_effort=false``.
+    """
+
+    def _run_with_config(self, input_data, conf_text, tmp_path):
+        """Run the standalone script with HOME pointed at a tmp dir holding conf_text."""
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text(conf_text, encoding="utf-8")
+        return run_script(
+            input_data,
+            {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path), "COLUMNS": "200"},
+        )
+
+    def test_effort_shown_when_present(self, sample_input):
+        """effort.level should appear next to the model name when present."""
+        sample_input["effort"] = {"level": "high"}
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        visible = strip_ansi(output)
+        assert "high" in visible
+        # Rendered as a suffix on the model segment (· separator).
+        assert "· high" in visible
+
+    def test_effort_not_shown_when_missing(self, sample_input):
+        """No effort key → no effort suffix, statusline still renders."""
+        sample_input.pop("effort", None)
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        assert "· high" not in strip_ansi(output)
+
+    def test_effort_null_renders_without_crash(self, sample_input):
+        """An explicit null ``effort`` must not crash the render (regression).
+
+        ``data.get("effort", {})`` returns ``None`` (not ``{}``) when the key is
+        present with value ``null``; ``None.get("level")`` would raise
+        AttributeError and kill the whole statusline. The ``or {}`` guard handles it.
+        """
+        sample_input["effort"] = None
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        # sample_input has no thinking budget either, so the model segment has
+        # no "·" suffix at all when effort is null.
+        assert "·" not in strip_ansi(output)
+
+    def test_effort_level_null_renders_without_crash(self, sample_input):
+        """An explicit null ``effort.level`` must hide gracefully, not crash."""
+        sample_input["effort"] = {"level": None}
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        # None level is falsy → no suffix appended.
+        assert "None" not in strip_ansi(output)
+
+    def test_effort_hidden_when_disabled(self, sample_input, tmp_path):
+        """With show_effort=false, the effort level is not rendered."""
+        sample_input["effort"] = {"level": "high"}
+        output, code = self._run_with_config(sample_input, "show_effort=false\n", tmp_path)
+        assert code == 0
+        assert "· high" not in strip_ansi(output)
+
+    def test_effort_shown_when_enabled(self, sample_input, tmp_path):
+        """With show_effort=true (explicit), the effort level is rendered."""
+        sample_input["effort"] = {"level": "max"}
+        output, code = self._run_with_config(sample_input, "show_effort=true\n", tmp_path)
+        assert code == 0
+        assert "max" in strip_ansi(output)
+
+    def test_effort_info_position_in_parts(self):
+        """Effort renders inside the model segment, so model_info stays in parts."""
+        content = SCRIPT_PATH.read_text(encoding="utf-8")
+        # The effort level is appended to the model suffix, not a separate part.
+        assert "model_suffix" in content
+        assert "effort_level" in content
+
+    def test_show_effort_default_is_true(self, tmp_path):
+        """show_effort should default to True when not specified in config."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_session=true\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_effort is True
+
+    def test_show_effort_false_parsed(self, tmp_path):
+        """show_effort=false in config should be parsed correctly (package)."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_effort=false\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_effort is False
+
+    def test_show_effort_case_insensitive(self, tmp_path):
+        """show_effort value should be case-insensitive (package)."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_effort=FALSE\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_effort is False
+
+    def test_show_effort_in_to_dict(self):
+        """show_effort should be present in Config.to_dict() output (package)."""
+        from claude_statusline.core.config import Config
+
+        cfg = Config()
+        assert "show_effort" in cfg.to_dict()
+        assert cfg.to_dict()["show_effort"] is True
+
+
 class TestSessionCost:
     """Tests for the session cost display feature."""
 
