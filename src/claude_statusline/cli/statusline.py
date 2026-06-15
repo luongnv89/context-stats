@@ -126,6 +126,7 @@ def main() -> None:
     delta_info = ""
     mi_info = ""
     tps_info = ""
+    cost_info = ""
     zone_info = ""
     session_info = ""
     pr_info = ""
@@ -140,7 +141,7 @@ def main() -> None:
     current_usage = data.get("context_window", {}).get("current_usage")
     total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
     total_output_tokens = data.get("context_window", {}).get("total_output_tokens", 0)
-    cost_usd = data.get("cost", {}).get("total_cost_usd", 0)
+    cost_usd = data.get("cost", {}).get("total_cost_usd", 0) or 0
     lines_added = data.get("cost", {}).get("total_lines_added", 0)
     lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
     api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
@@ -292,11 +293,16 @@ def main() -> None:
             if not has_prev or used_tokens != prev_tokens:
                 state_file.append_entry(entry)
 
+    # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
+    # segment doesn't flicker in and out across the first few turns.
+    if config.show_cost:
+        cost_info = f" | {colors.cost}${cost_usd:.2f}{colors.reset}"
+
     # Display session_id if enabled
     if config.show_session and session_id:
         session_info = f" | {colors.session}{session_id}{colors.reset}"
 
-    # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [session_id]
+    # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | $cost | [Model] [session_id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(thinking_budget)
@@ -314,6 +320,7 @@ def main() -> None:
         mi_info,
         tps_info,
         delta_info,
+        cost_info,
         model_info,
         session_info,
     ]

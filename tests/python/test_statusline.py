@@ -479,10 +479,33 @@ class TestThinkingDisplay:
     def test_thinking_shown_when_present(self):
         """Should show thinking budget next to model name when configured."""
         input_data = {
-            "model": {"display_name": "Opus 4.5", "api_name": "claude-opus-4-5", "thinking_budget": 20000},
-            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
-            "context_window": {"context_window_size": 200000, "total_input_tokens": 75000, "total_output_tokens": 8500, "current_usage": {"input_tokens": 50000, "output_tokens": 5000, "cache_creation_input_tokens": 10000, "cache_read_input_tokens": 20000}},
-            "cost": {"total_cost_usd": 0.05, "total_duration_ms": 120000, "total_api_duration_ms": 5000, "total_lines_added": 250, "total_lines_removed": 45},
+            "model": {
+                "display_name": "Opus 4.5",
+                "api_name": "claude-opus-4-5",
+                "thinking_budget": 20000,
+            },
+            "workspace": {
+                "current_dir": "/home/user/my-project",
+                "project_dir": "/home/user/my-project",
+            },
+            "context_window": {
+                "context_window_size": 200000,
+                "total_input_tokens": 75000,
+                "total_output_tokens": 8500,
+                "current_usage": {
+                    "input_tokens": 50000,
+                    "output_tokens": 5000,
+                    "cache_creation_input_tokens": 10000,
+                    "cache_read_input_tokens": 20000,
+                },
+            },
+            "cost": {
+                "total_cost_usd": 0.05,
+                "total_duration_ms": 120000,
+                "total_api_duration_ms": 5000,
+                "total_lines_added": 250,
+                "total_lines_removed": 45,
+            },
             "session_id": "test-session-123",
         }
         output, code = run_script(input_data, {"COLUMNS": "200"})
@@ -494,15 +517,36 @@ class TestThinkingDisplay:
         """Should not show thinking text when budget is not present."""
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
-        assert "thinking" not in output.lower().replace("claud", "")  # avoid false positive in other context
+        assert "thinking" not in output.lower().replace(
+            "claud", ""
+        )  # avoid false positive in other context
 
     def test_thinking_zero_budget_not_shown(self):
         """Should not show thinking when budget is zero."""
         input_data = {
             "model": {"display_name": "Sonnet", "thinking_budget": 0},
-            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
-            "context_window": {"context_window_size": 200000, "total_input_tokens": 10000, "total_output_tokens": 1000, "current_usage": {"input_tokens": 5000, "output_tokens": 500, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}},
-            "cost": {"total_cost_usd": 0.01, "total_duration_ms": 5000, "total_api_duration_ms": 1000, "total_lines_added": 10, "total_lines_removed": 2},
+            "workspace": {
+                "current_dir": "/home/user/my-project",
+                "project_dir": "/home/user/my-project",
+            },
+            "context_window": {
+                "context_window_size": 200000,
+                "total_input_tokens": 10000,
+                "total_output_tokens": 1000,
+                "current_usage": {
+                    "input_tokens": 5000,
+                    "output_tokens": 500,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                },
+            },
+            "cost": {
+                "total_cost_usd": 0.01,
+                "total_duration_ms": 5000,
+                "total_api_duration_ms": 1000,
+                "total_lines_added": 10,
+                "total_lines_removed": 2,
+            },
         }
         output, code = run_script(input_data)
         assert code == 0
@@ -512,9 +556,28 @@ class TestThinkingDisplay:
         """Should show exact token count for small budgets."""
         input_data = {
             "model": {"display_name": "Sonnet", "thinking_budget": 4096},
-            "workspace": {"current_dir": "/home/user/my-project", "project_dir": "/home/user/my-project"},
-            "context_window": {"context_window_size": 200000, "total_input_tokens": 10000, "total_output_tokens": 1000, "current_usage": {"input_tokens": 5000, "output_tokens": 500, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}},
-            "cost": {"total_cost_usd": 0.01, "total_duration_ms": 5000, "total_api_duration_ms": 1000, "total_lines_added": 10, "total_lines_removed": 2},
+            "workspace": {
+                "current_dir": "/home/user/my-project",
+                "project_dir": "/home/user/my-project",
+            },
+            "context_window": {
+                "context_window_size": 200000,
+                "total_input_tokens": 10000,
+                "total_output_tokens": 1000,
+                "current_usage": {
+                    "input_tokens": 5000,
+                    "output_tokens": 500,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                },
+            },
+            "cost": {
+                "total_cost_usd": 0.01,
+                "total_duration_ms": 5000,
+                "total_api_duration_ms": 1000,
+                "total_lines_added": 10,
+                "total_lines_removed": 2,
+            },
         }
         output, code = run_script(input_data, {"COLUMNS": "200"})
         assert code == 0
@@ -541,3 +604,102 @@ class TestThinkingDisplay:
         assert code == 0
         assert "Claude" in output
         assert "thinking" not in output.lower()
+
+
+class TestSessionCost:
+    """Tests for the session cost display feature."""
+
+    def _run_with_config(self, input_data, conf_text, tmp_path):
+        """Run the standalone script with HOME pointed at a tmp dir holding conf_text."""
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text(conf_text, encoding="utf-8")
+        return run_script(
+            input_data,
+            {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path), "COLUMNS": "200"},
+        )
+
+    def test_cost_info_in_parts_order(self):
+        """cost_info should appear after delta_info and before model_info in parts."""
+        content = SCRIPT_PATH.read_text(encoding="utf-8")
+        parts_start = content.index("parts = [")
+        parts_block = content[parts_start : parts_start + 2000]
+        assert "delta_info" in parts_block, "delta_info missing from parts list"
+        assert "cost_info" in parts_block, "cost_info missing from parts list"
+        assert "model_info" in parts_block, "model_info missing from parts list"
+        delta_idx = parts_block.index("delta_info")
+        cost_idx = parts_block.index("cost_info")
+        model_idx = parts_block.index("model_info")
+        assert cost_idx > delta_idx, "cost_info must come after delta_info in parts list"
+        assert cost_idx < model_idx, "cost_info must come before model_info in parts list"
+
+    def test_cost_shown_when_enabled(self, sample_input, tmp_path):
+        """With show_cost=true and a cost value, the formatted dollar amount appears."""
+        sample_input["cost"] = {"total_cost_usd": 0.4234}
+        output, code = self._run_with_config(sample_input, "show_cost=true\n", tmp_path)
+        assert code == 0
+        assert "$0.42" in strip_ansi(output)
+
+    def test_cost_shown_at_zero_when_enabled(self, sample_input, tmp_path):
+        """With show_cost=true and no cost in input, $0.00 is still shown (no flicker)."""
+        output, code = self._run_with_config(sample_input, "show_cost=true\n", tmp_path)
+        assert code == 0
+        assert "$0.00" in strip_ansi(output)
+
+    def test_cost_null_renders_zero_without_crash(self, sample_input, tmp_path):
+        """An explicit null total_cost_usd must not crash the render (regression).
+
+        ``.get(..., 0)`` only fires on a *missing* key; an explicit ``null`` (which
+        Claude Code can emit on no-cost/first-render sessions) reaches the f-string
+        as ``None`` and would raise TypeError, killing the entire statusline. The
+        ``or 0`` guard coerces it to $0.00.
+        """
+        sample_input["cost"] = {"total_cost_usd": None}
+        output, code = self._run_with_config(sample_input, "show_cost=true\n", tmp_path)
+        assert code == 0
+        assert "$0.00" in strip_ansi(output)
+
+    def test_cost_hidden_when_disabled(self, sample_input, tmp_path):
+        """With show_cost=false, no dollar amount is rendered."""
+        sample_input["cost"] = {"total_cost_usd": 0.4234}
+        output, code = self._run_with_config(sample_input, "show_cost=false\n", tmp_path)
+        assert code == 0
+        assert "$0.42" not in strip_ansi(output)
+        assert "$" not in strip_ansi(output)
+
+    def test_show_cost_default_is_true(self, tmp_path):
+        """show_cost should default to True when not specified in config."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_session=true\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_cost is True
+
+    def test_show_cost_false_parsed(self, tmp_path):
+        """show_cost=false in config should be parsed correctly."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_cost=false\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_cost is False
+
+    def test_show_cost_case_insensitive(self, tmp_path):
+        """show_cost value should be case-insensitive."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_cost=False\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_cost is False
+
+    def test_color_cost_slot_resolves(self):
+        """color_cost should map to the 'cost' structural color slot."""
+        from claude_statusline.core.colors import ColorManager
+
+        cm = ColorManager(enabled=True, overrides={"cost": "\033[38;2;1;2;3m"})
+        assert cm.cost == "\033[38;2;1;2;3m"
+        # Without override it inherits the separator default
+        cm2 = ColorManager(enabled=True)
+        assert cm2.cost == cm2.separator

@@ -383,6 +383,7 @@ _COLOR_KEYS = {
     "color_separator": "separator",
     "color_tps": "tps",
     "color_delta": "delta",
+    "color_cost": "cost",
     "color_model": "model",
     "color_session": "session",
 }
@@ -572,6 +573,7 @@ def read_config():
         "tps_unit": "tok/s",
         "tps_window": 5,
         "show_pr": False,
+        "show_cost": True,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -649,6 +651,13 @@ reduced_motion=false
 #   false = PR number hidden (default)
 #   true  = PR number visible (e.g., #42)
 show_pr=false
+
+# Show the cumulative session cost in USD (e.g., $0.42).
+# Cost is reported by Claude Code (cost.total_cost_usd); the value is the
+# running total for the whole session, shown even at $0.00.
+#   true  = cost visible (default)
+#   false = cost hidden
+show_cost=true
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -889,6 +898,8 @@ color_separator=dim
                     config["show_tps"] = value_lower != "false"
                 elif key == "show_pr":
                     config["show_pr"] = value_lower != "false"
+                elif key == "show_cost":
+                    config["show_cost"] = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -1031,6 +1042,7 @@ def main():
     tps_unit = config["tps_unit"]
     tps_window = config["tps_window"]
     show_pr = config["show_pr"]
+    show_cost = config["show_cost"]
     # Note: show_io_tokens setting is read but not yet implemented
 
     # Apply color overrides from config
@@ -1055,6 +1067,7 @@ def main():
     # overridden independently (color_tps / color_delta / color_model / color_session).
     c_tps = c.get("tps", c_separator)
     c_delta = c.get("delta", c_separator)
+    c_cost = c.get("cost", c_separator)
     c_model = c.get("model", c_separator)
     c_session = c.get("session", c_separator)
 
@@ -1068,6 +1081,7 @@ def main():
     delta_info = ""
     mi_info = ""
     tps_info = ""
+    cost_info = ""
     zone_info = ""
     session_info = ""
     pr_info = ""
@@ -1081,7 +1095,7 @@ def main():
     current_usage = data.get("context_window", {}).get("current_usage")
     total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
     total_output_tokens = data.get("context_window", {}).get("total_output_tokens", 0)
-    cost_usd = data.get("cost", {}).get("total_cost_usd", 0)
+    cost_usd = data.get("cost", {}).get("total_cost_usd", 0) or 0
     lines_added = data.get("cost", {}).get("total_lines_added", 0)
     lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
     api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
@@ -1274,11 +1288,16 @@ def main():
                 except OSError as e:
                     sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
 
+    # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
+    # segment doesn't flicker in and out across the first few turns.
+    if show_cost:
+        cost_info = f" | {c_cost}${cost_usd:.2f}{RESET}"
+
     # Display session_id if enabled
     if show_session and session_id:
         session_info = f" | {c_session}{session_id}{RESET}"
 
-    # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | [Model] [id]
+    # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | $cost | [Model] [id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     thinking_text = _format_thinking_info(thinking_budget)
@@ -1296,6 +1315,7 @@ def main():
         mi_info,
         tps_info,
         delta_info,
+        cost_info,
         model_info,
         session_info,
     ]

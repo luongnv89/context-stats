@@ -168,6 +168,10 @@ class ColorManager:
         return self._get_structural("delta")
 
     @property
+    def cost(self) -> str:
+        return self._get_structural("cost")
+
+    @property
     def model(self) -> str:
         return self._get_structural("model")
 
