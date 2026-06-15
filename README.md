@@ -72,7 +72,7 @@ my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | $0.42 |
 | `$0.42`               | Cumulative session cost in USD (on by default — `show_cost=false` to hide) |
 | `Opus 4.6 · high`     | Reasoning effort level next to the model (on by default — `show_effort=false` to hide) |
 
-When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
+When the terminal is too narrow to fit everything on one line, the statusline wraps onto additional lines instead of dropping elements — so no information is lost on narrow screens. Lower-priority elements (model name, session id) wrap to a later line first, and the project name always starts the first line. Requires Claude Code v2.1.153+ (which reports the real terminal width); on a wide terminal it stays a single line.
 
 |                     Green status                      |                     Warning state                     |
 | :---------------------------------------------------: | :---------------------------------------------------: |
