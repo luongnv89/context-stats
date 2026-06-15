@@ -59,7 +59,7 @@ graph TD
 A single line in your Claude Code terminal updated on every refresh:
 
 ```
-my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.6 | abc-123
+my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | $0.42 | Opus 4.6 | abc-123
 ```
 
 | Element               | What it tells you                                                    |
@@ -69,6 +69,7 @@ my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | Opus 4.
 | `MI:0.918`            | Model Intelligence score — how sharp the model still is              |
 | `+2,500`              | Tokens consumed since last refresh                                   |
 | `tok/s`               | Model generation throughput (optional — enable with `show_tps=true`) |
+| `$0.42`               | Cumulative session cost in USD (on by default — `show_cost=false` to hide) |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 

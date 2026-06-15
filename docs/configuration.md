@@ -31,6 +31,10 @@ show_delta=false   # Disable delta display
 show_session=true  # (default) Show session ID
 show_session=false # Hide session ID
 
+# Show cumulative session cost in USD (reported by Claude Code)
+show_cost=true     # (default) Show session cost like $0.42
+show_cost=false    # Hide session cost
+
 # Disable rotating text animations
 reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
@@ -61,12 +65,17 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 | `42.5 tok/s`  | Model throughput         | Dim           | `color_tps`            |
 | `[+2,500]`    | Token delta              | Dim           | `color_delta`          |
 | `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
+| `$0.42`       | Cumulative session cost  | Dim           | `color_cost`           |
 | `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
 | `session_id`  | Current session          | Dim           | `color_session`        |
 
-The four structural elements — model, tok/s, delta, and session — default to
+The five structural elements — model, tok/s, delta, cost, and session — default to
 `color_separator` when their own key is not set, so they can be colored together
 (via `color_separator`) or each given a distinct color.
+
+The session cost is the cumulative total for the whole session as reported by
+Claude Code (`cost.total_cost_usd`), shown even at `$0.00`. It is on by default;
+set `show_cost=false` to hide it.
 
 ## Token Colors
 
@@ -168,11 +177,12 @@ color_project_name=cyan           # Which project you're in
 color_branch_name=green           # Git branch at a glance
 color_mi_score=yellow             # MI score
 color_zone=default                # Zone indicator (uses zone color by default)
-color_separator=dim               # tok/s, delta, model, session (visual structure)
+color_separator=dim               # tok/s, delta, cost, model, session (visual structure)
 
 # Structural elements — each defaults to color_separator, override for distinct colors
 color_tps=#6ED7D2                 # Model throughput (tok/s)
 color_delta=#FFF8DC               # Token delta since last refresh
+color_cost=#9ECE6A                # Session cost in USD
 color_model=#C0C0C0               # Model name
 color_session=#8B8682             # Session ID
 ```
