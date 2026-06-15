@@ -69,6 +69,13 @@ show_pr=false
 #   false = cost hidden
 show_cost=true
 
+# Show the current reasoning effort level next to the model name (e.g.,
+# "Opus 4.8 · high"). Claude Code reports effort.level as one of
+# low/medium/high/xhigh/max; the segment hides when no effort is reported.
+#   true  = effort visible (default)
+#   false = effort hidden
+show_effort=true
+
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
 #

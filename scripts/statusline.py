@@ -574,6 +574,7 @@ def read_config():
         "tps_window": 5,
         "show_pr": False,
         "show_cost": True,
+        "show_effort": True,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -658,6 +659,14 @@ show_pr=false
 #   true  = cost visible (default)
 #   false = cost hidden
 show_cost=true
+
+
+# Show the current reasoning effort level next to the model name (e.g.,
+# "Opus 4.8 · high"). Claude Code reports effort.level as one of
+# low/medium/high/xhigh/max; the segment hides when no effort is reported.
+#   true  = effort visible (default)
+#   false = effort hidden
+show_effort=true
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -900,6 +909,8 @@ color_separator=dim
                     config["show_pr"] = value_lower != "false"
                 elif key == "show_cost":
                     config["show_cost"] = value_lower != "false"
+                elif key == "show_effort":
+                    config["show_effort"] = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -1027,6 +1038,12 @@ def main():
         if isinstance(model_data.get("thinking"), dict)
         else None
     )
+    # Reasoning effort level (low/medium/high/xhigh/max) if Claude Code sends it.
+    # `effort` is conditionally present and may arrive as explicit null or an
+    # unexpected shape; guard with isinstance so a non-dict value cannot crash
+    # the whole statusline (mirrors the `thinking` extraction above).
+    effort_data = data.get("effort")
+    effort_level = effort_data.get("level") if isinstance(effort_data, dict) else None
     dir_name = os.path.basename(cwd) or "~"
 
     # Read settings from config file
@@ -1043,6 +1060,7 @@ def main():
     tps_window = config["tps_window"]
     show_pr = config["show_pr"]
     show_cost = config["show_cost"]
+    show_effort = config["show_effort"]
     # Note: show_io_tokens setting is read but not yet implemented
 
     # Apply color overrides from config
@@ -1301,10 +1319,14 @@ def main():
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     thinking_text = _format_thinking_info(thinking_budget)
+    # Build the model suffix from any present indicators (thinking budget,
+    # reasoning effort). Effort hides gracefully when absent/null/disabled.
+    model_suffix = ""
     if thinking_text:
-        model_info = f" | {c_model}{model} · {thinking_text}{RESET}"
-    else:
-        model_info = f" | {c_model}{model}{RESET}"
+        model_suffix += f" · {thinking_text}"
+    if show_effort and effort_level:
+        model_suffix += f" · {effort_level}"
+    model_info = f" | {c_model}{model}{model_suffix}{RESET}"
     max_width = get_terminal_width()
     parts = [
         base,

@@ -35,6 +35,10 @@ show_session=false # Hide session ID
 show_cost=true     # (default) Show session cost like $0.42
 show_cost=false    # Hide session cost
 
+# Show reasoning effort level next to the model name (reported by Claude Code)
+show_effort=true   # (default) Show effort like Opus 4.6 · high
+show_effort=false  # Hide effort level
+
 # Disable rotating text animations
 reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
@@ -66,6 +70,7 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 | `[+2,500]`    | Token delta              | Dim           | `color_delta`          |
 | `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
 | `$0.42`       | Cumulative session cost  | Dim           | `color_cost`           |
+| `· high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
 | `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
 | `session_id`  | Current session          | Dim           | `color_session`        |
 
@@ -76,6 +81,13 @@ The five structural elements — model, tok/s, delta, cost, and session — defa
 The session cost is the cumulative total for the whole session as reported by
 Claude Code (`cost.total_cost_usd`), shown even at `$0.00`. It is on by default;
 set `show_cost=false` to hide it.
+
+The reasoning effort level is reported by Claude Code (`effort.level`, one of
+`low`/`medium`/`high`/`xhigh`/`max`) and shown next to the model name, e.g.
+`Opus 4.6 · high`. It is on by default and hides automatically when Claude Code
+reports no effort (e.g. models without an effort setting); set
+`show_effort=false` to hide it. The effort label shares the model color
+(`color_model`).
 
 ## Token Colors
 
