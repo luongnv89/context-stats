@@ -19,6 +19,16 @@ def strip_ansi(s: str) -> str:
     return _ANSI_RE.sub("", s)
 
 
+def max_line_width(s: str) -> int:
+    """Return the widest visible line in possibly multi-line output.
+
+    With responsive reflow the statusline may span several lines; "fits
+    within N columns" means every individual line is <= N, not the total
+    character count.
+    """
+    return max((len(line) for line in strip_ansi(s).splitlines()), default=0)
+
+
 def run_script(input_data: dict, env_overrides: dict | None = None) -> tuple[str, int]:
     """Run the statusline.py script with the given input.
 
@@ -181,39 +191,54 @@ class TestSessionDisplay:
 
 
 class TestWidthTruncation:
-    """Tests for width truncation to fit terminal width."""
+    """Tests for responsive reflow that fits the statusline to terminal width.
 
-    def test_output_fits_80_columns(self, sample_input):
-        """Output should fit within 80 columns."""
+    Narrow terminals wrap the line onto additional rows instead of dropping
+    elements, so "fits within N columns" means every individual line is
+    <= N and no information is lost.
+    """
+
+    def test_each_line_fits_80_columns(self, sample_input):
+        """Every output line should fit within 80 columns."""
         sample_input["session_id"] = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         output, code = run_script(sample_input, {"COLUMNS": "80"})
         assert code == 0
-        visible = strip_ansi(output)
-        assert len(visible) <= 80
+        assert max_line_width(output) <= 80
 
-    def test_output_fits_narrow_terminal(self, sample_input):
-        """Output should fit within 40 columns, preserving dir and context over model."""
+    def test_narrow_terminal_wraps_without_dropping(self, sample_input):
+        """At 40 columns, content wraps onto multiple lines; nothing is dropped."""
+        sample_input["session_id"] = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         output, code = run_script(sample_input, {"COLUMNS": "40"})
         assert code == 0
         visible = strip_ansi(output)
-        assert len(visible) <= 40
+        # Each individual line fits the narrow width.
+        assert max_line_width(output) <= 40
+        # It actually wrapped.
+        assert "\n" in visible
+        # No information is lost — every element remains visible, including
+        # the lowest-priority model name and session id that the old
+        # drop-on-overflow behavior would have removed.
         assert "myproject" in visible
-        # Model name is lowest priority — truncated first in narrow terminals
-        assert "Claude 3.5 Sonnet" not in visible
+        assert "Claude 3.5 Sonnet" in visible
+        assert "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in visible
+        # No wrapped line begins with a dangling separator.
+        for line in visible.splitlines():
+            assert not line.startswith(" | ")
 
-    def test_wide_terminal_shows_all(self, sample_input):
-        """Wide terminal should show session_id."""
+    def test_wide_terminal_single_line_shows_all(self, sample_input):
+        """Wide terminal renders a single line containing every element."""
         sample_input["session_id"] = "test-wide-session-uuid"
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
+        # Single line when everything fits.
+        assert strip_ansi(output).count("\n") == 0
         assert "test-wide-session-uuid" in output
 
-    def test_full_input_truncated(self, valid_full_input):
-        """Full input with all features should fit within 80 columns."""
+    def test_full_input_each_line_fits_80_columns(self, valid_full_input):
+        """Full input with all features: every line fits within 80 columns."""
         output, code = run_script(valid_full_input, {"COLUMNS": "80"})
         assert code == 0
-        visible = strip_ansi(output)
-        assert len(visible) <= 80
+        assert max_line_width(output) <= 80
 
 
 class TestPRDisplay:
@@ -591,11 +616,10 @@ class TestThinkingDisplay:
         assert "20k tokens thinking" in output
 
     def test_output_still_fits_80_columns_with_thinking(self, with_thinking_input):
-        """Output with thinking should still fit within 80 columns."""
+        """Output with thinking: every line should still fit within 80 columns."""
         output, code = run_script(with_thinking_input, {"COLUMNS": "80"})
         assert code == 0
-        visible = strip_ansi(output)
-        assert len(visible) <= 80
+        assert max_line_width(output) <= 80
 
     def test_model_without_model_object_still_works(self):
         """Should handle input with no model object gracefully."""

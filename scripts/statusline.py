@@ -417,44 +417,73 @@ def visible_width(s):
 def get_terminal_width():
     """Return the terminal width in columns.
 
-    When running inside Claude Code's statusline subprocess, neither $COLUMNS
-    nor tput/shutil can detect the real terminal width (they always return 80).
-    If COLUMNS is not explicitly set and shutil falls back to 80, we use a
-    generous default of 200 so that no parts are unnecessarily dropped;
-    Claude Code's own UI handles any overflow/truncation.
+    Claude Code captures the statusline script's output rather than
+    connecting it to a TTY, so ``shutil.get_terminal_size()`` cannot read
+    the real width and falls back to 80. Since Claude Code v2.1.153, the
+    harness exports ``COLUMNS`` (and ``LINES``) with the real terminal
+    dimensions before running the script, so we trust ``COLUMNS`` when it
+    is set. When it is absent (older Claude Code, or a non-TTY context
+    where the width is genuinely undetectable), we use a generous default
+    of 200 so the single line is not wrapped or truncated on a fallback
+    artifact; Claude Code's own UI handles any overflow.
     """
-    # If COLUMNS is explicitly set, trust it (real terminal or test override)
+    # If COLUMNS is explicitly set, trust it (real terminal, Claude Code
+    # >= v2.1.153, or a test override).
     if os.environ.get("COLUMNS"):
         return shutil.get_terminal_size().columns
-    # No COLUMNS env var — likely a Claude Code subprocess with no real TTY.
-    # shutil will fall back to 80, which is too narrow. Use 200 instead.
+    # No COLUMNS env var — width is undetectable in this context.
+    # shutil falls back to 80, which is too narrow. Use 200 instead.
     cols = shutil.get_terminal_size(fallback=(200, 24)).columns
     return 200 if cols == 80 else cols
 
 
-def fit_to_width(parts, max_width):
-    """Assemble parts into a single line that fits within max_width.
+# Separator that prefixes every part except the base. When a part starts a
+# new line during reflow, this leading separator is stripped so wrapped
+# lines do not begin with a dangling " | ".
+_PART_SEPARATOR = " | "
 
-    Parts are added in priority order (first = highest priority).
-    The first part (base) is always included. Subsequent parts are
-    included only if adding them does not exceed max_width.
-    Empty parts are skipped.
+
+def fit_to_width(parts, max_width):
+    """Assemble parts into lines that each fit within max_width.
+
+    Parts are packed greedily in priority order (first = highest priority).
+    The first part (base) always starts the first line. Each subsequent
+    part is appended to the current line when it fits; otherwise it starts
+    a new line so no information is dropped on narrow terminals. Lines are
+    joined with newlines, which Claude Code renders as separate rows.
+
+    When all parts fit within ``max_width`` (e.g. the default width of 200),
+    the result is a single line, byte-identical to the legacy single-line
+    output. A part wider than ``max_width`` on its own is emitted whole on
+    its own line rather than truncated. Empty parts are skipped.
     """
     if not parts:
         return ""
 
-    result = parts[0]
-    current_width = visible_width(result)
+    lines = []
+    # Base part always starts the first line.
+    current = parts[0]
+    current_width = visible_width(current)
 
     for part in parts[1:]:
         if not part:
             continue
         part_width = visible_width(part)
         if current_width + part_width <= max_width:
-            result += part
+            current += part
             current_width += part_width
+        else:
+            # Part does not fit — flush the current line and start a new
+            # one with this part, stripping its leading separator so the
+            # wrapped line does not begin with " | ".
+            lines.append(current)
+            if part.startswith(_PART_SEPARATOR):
+                part = part[len(_PART_SEPARATOR) :]
+            current = part
+            current_width = visible_width(part)
 
-    return result
+    lines.append(current)
+    return "\n".join(lines)
 
 
 def get_pr_number(project_dir: str) -> str:
@@ -855,8 +884,11 @@ color_separator=dim
 # Example output:
 #   my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | 42.5 tok/s | +2,500 | Opus 4.6 | abc-123
 #
-# If the terminal is too narrow, lower-priority elements are dropped:
-#   1. session_id   (dropped first)
+# If the terminal is too narrow to fit everything on one line, the line
+# wraps onto additional lines instead of dropping elements — nothing is
+# lost. Priority controls which elements wrap to a later line first
+# (lowest priority wraps first); the base always starts line 1:
+#   1. session_id    (wraps to a new line first)
 #   2. model name
 #   3. token delta
 #   4. tok/s throughput
@@ -864,7 +896,7 @@ color_separator=dim
 #   6. zone indicator
 #   7. context info
 #   8. git info
-#   9. project name  (always shown, never dropped)
+#   9. project name  (base — always starts the first line)
 """
                 )
         except Exception as e:
@@ -1316,7 +1348,7 @@ def main():
         session_info = f" | {c_session}{session_id}{RESET}"
 
     # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | $cost | [Model] [id]
-    # Model name is lowest priority — truncated first when terminal is narrow
+    # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     thinking_text = _format_thinking_info(thinking_budget)
     # Build the model suffix from any present indicators (thinking budget,
