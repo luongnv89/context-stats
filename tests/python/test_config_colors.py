@@ -79,6 +79,21 @@ class TestConfigColorOverrides:
         config = Config.load(config_path=config_file)
         assert len(config.color_overrides) == 6
 
+    def test_structural_color_slots(self, tmp_path):
+        """color_tps/delta/model/session map to their own override slots."""
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text(
+            "color_tps=#6ED7D2\n"
+            "color_delta=#FFF8DC\n"
+            "color_model=#C0C0C0\n"
+            "color_session=#8B8682\n"
+        )
+        config = Config.load(config_path=config_file)
+        assert config.color_overrides["tps"] == "\033[38;2;110;215;210m"
+        assert config.color_overrides["delta"] == "\033[38;2;255;248;220m"
+        assert config.color_overrides["model"] == "\033[38;2;192;192;192m"
+        assert config.color_overrides["session"] == "\033[38;2;139;134;130m"
+
 
 class TestConfigDefaultRoundTrip:
     """Tests that the default config template can be written and read back."""

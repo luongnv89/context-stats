@@ -103,3 +103,50 @@ class TestColorManager:
         cm = ColorManager(enabled=True, overrides={"bold": "custom"})
         # bold is not in the _get path, it uses the hardcoded value
         assert cm.bold == "\033[1m"
+
+
+class TestStructuralColors:
+    """Tests for per-element structural colors (tps, delta, model, session).
+
+    Each defaults to the separator color but can be overridden independently.
+    """
+
+    STRUCTURAL = ("tps", "delta", "model", "session")
+
+    def test_default_to_separator(self):
+        """Without overrides, each structural element inherits the separator color."""
+        cm = ColorManager(enabled=True)
+        for slot in self.STRUCTURAL:
+            assert getattr(cm, slot) == cm.separator
+
+    def test_inherit_overridden_separator(self):
+        """When separator is overridden but the element is not, it follows separator."""
+        custom = "\033[38;2;1;2;3m"
+        cm = ColorManager(enabled=True, overrides={"separator": custom})
+        for slot in self.STRUCTURAL:
+            assert getattr(cm, slot) == custom
+
+    def test_override_each_independently(self):
+        overrides = {
+            "tps": "\033[38;2;110;215;210m",
+            "delta": "\033[38;2;255;248;220m",
+            "model": "\033[38;2;192;192;192m",
+            "session": "\033[38;2;139;134;130m",
+        }
+        cm = ColorManager(enabled=True, overrides=overrides)
+        for slot, code in overrides.items():
+            assert getattr(cm, slot) == code
+
+    def test_one_override_does_not_affect_others(self):
+        """Overriding model leaves tps/delta/session on the separator default."""
+        custom = "\033[38;2;192;192;192m"
+        cm = ColorManager(enabled=True, overrides={"model": custom})
+        assert cm.model == custom
+        assert cm.tps == cm.separator
+        assert cm.delta == cm.separator
+        assert cm.session == cm.separator
+
+    def test_disabled_returns_empty(self):
+        cm = ColorManager(enabled=False, overrides={"model": "\033[38;2;1;1;1m"})
+        for slot in self.STRUCTURAL:
+            assert getattr(cm, slot) == ""

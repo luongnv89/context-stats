@@ -52,16 +52,21 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 
 | Component     | Description              | Default Color | Config Key             |
 | ------------- | ------------------------ | ------------- | ---------------------- |
-| `[Opus 4.6]`  | Current AI model         | Dim           | `color_separator`      |
+| `[Opus 4.6]`  | Current AI model         | Dim           | `color_model`          |
 | `my-project`  | Current directory        | Cyan          | `color_project_name`   |
 | `main`        | Git branch               | Green         | `color_branch_name`    |
 | `[3]`         | Uncommitted changes      | Cyan          | `color_cyan`           |
 | `64,000 free` | Available tokens         | Bold White    | `color_context_length` |
 | `(32.0%)`     | Context usage percentage | -             | -                      |
-| `[+2,500]`    | Token delta              | Dim           | `color_separator`      |
+| `42.5 tok/s`  | Model throughput         | Dim           | `color_tps`            |
+| `[+2,500]`    | Token delta              | Dim           | `color_delta`          |
 | `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
 | `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
-| `session_id`  | Current session          | Dim           | `color_separator`      |
+| `session_id`  | Current session          | Dim           | `color_session`        |
+
+The four structural elements — model, tok/s, delta, and session — default to
+`color_separator` when their own key is not set, so they can be colored together
+(via `color_separator`) or each given a distinct color.
 
 ## Token Colors
 
@@ -163,7 +168,13 @@ color_project_name=cyan           # Which project you're in
 color_branch_name=green           # Git branch at a glance
 color_mi_score=yellow             # MI score
 color_zone=default                # Zone indicator (uses zone color by default)
-color_separator=dim               # Model name, delta, session (visual structure)
+color_separator=dim               # tok/s, delta, model, session (visual structure)
+
+# Structural elements — each defaults to color_separator, override for distinct colors
+color_tps=#6ED7D2                 # Model throughput (tok/s)
+color_delta=#FFF8DC               # Token delta since last refresh
+color_model=#C0C0C0               # Model name
+color_session=#8B8682             # Session ID
 ```
 
 **Fallback chain:** Per-property key → base color key → built-in default. For example, if `color_project_name` is not set, the `color_blue` value is used (if set), otherwise the built-in default (cyan).

@@ -149,6 +149,32 @@ class ColorManager:
     def separator(self) -> str:
         return self._get("separator", DIM if self.enabled else "")
 
+    def _get_structural(self, slot: str) -> str:
+        """Structural elements default to the separator color, but each can be
+        overridden independently (color_tps / color_delta / color_model /
+        color_session)."""
+        if not self.enabled:
+            return ""
+        if slot in self._overrides:
+            return self._overrides[slot]
+        return self.separator
+
+    @property
+    def tps(self) -> str:
+        return self._get_structural("tps")
+
+    @property
+    def delta(self) -> str:
+        return self._get_structural("delta")
+
+    @property
+    def model(self) -> str:
+        return self._get_structural("model")
+
+    @property
+    def session(self) -> str:
+        return self._get_structural("session")
+
     @property
     def bold(self) -> str:
         return BOLD if self.enabled else ""

@@ -381,6 +381,10 @@ _COLOR_KEYS = {
     "color_mi_score": "mi_score",
     "color_zone": "zone",
     "color_separator": "separator",
+    "color_tps": "tps",
+    "color_delta": "delta",
+    "color_model": "model",
+    "color_session": "session",
 }
 
 # Zone threshold config keys (integer token counts)
@@ -806,9 +810,17 @@ color_mi_score=#ff9e64
 # When not set, uses zone traffic-light color automatically.
 # color_zone=bright_green
 
-# Structural elements: model name, token delta, session ID.
+# Structural elements: tok/s, token delta, model name, session ID.
 # "dim" makes these visually recede so primary info stands out.
 color_separator=dim
+
+# Each structural element can also be colored independently. When unset, they
+# inherit color_separator above. Uncomment to give any of them its own color
+# (named colors or #rrggbb), so every value in the statusline can be distinct.
+# color_tps=#6ED7D2        # model throughput (e.g. "42.5 tok/s")
+# color_delta=#FFF8DC      # token delta since last refresh (e.g. "+2,500")
+# color_model=#C0C0C0      # model name (e.g. "Opus 4.8")
+# color_session=#8B8682    # session ID shown at the end
 
 
 # ─── Statusline Layout Reference ────────────────────────────────────────────
@@ -1034,6 +1046,13 @@ def main():
     c_branch_name = c.get("branch_name", c_magenta if "magenta" in c else GREEN)
     c_separator = c.get("separator", DIM)
 
+    # Structural elements default to the separator color, but each can be
+    # overridden independently (color_tps / color_delta / color_model / color_session).
+    c_tps = c.get("tps", c_separator)
+    c_delta = c.get("delta", c_separator)
+    c_model = c.get("model", c_separator)
+    c_session = c.get("session", c_separator)
+
     # Git info (use per-property branch color, fallback to green)
     git_info = get_git_info(project_dir, magenta=c_branch_name, cyan=c_cyan)
 
@@ -1197,7 +1216,7 @@ def main():
                         delta_display = f"{delta:,}"
                     else:
                         delta_display = f"{delta / 1000:.1f}k"
-                    delta_info = f" | {c_separator}+{delta_display}{RESET}"
+                    delta_info = f" | {c_delta}+{delta_display}{RESET}"
 
             # Calculate and display MI score if enabled
             if show_mi:
@@ -1217,7 +1236,7 @@ def main():
                 tps = compute_tps(samples, window=tps_window)
                 if tps is not None:
                     tps_display = format_tps(tps, tps_precision, tps_unit)
-                    tps_info = f" | {c_separator}{tps_display}{RESET}"
+                    tps_info = f" | {c_tps}{tps_display}{RESET}"
 
             # Only append if context usage changed (avoid duplicates from multiple refreshes)
             if not has_prev or used_tokens != prev_tokens:
@@ -1252,16 +1271,16 @@ def main():
 
     # Display session_id if enabled
     if show_session and session_id:
-        session_info = f" | {c_separator}{session_id}{RESET}"
+        session_info = f" | {c_session}{session_id}{RESET}"
 
     # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | [Model] [id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     thinking_text = _format_thinking_info(thinking_budget)
     if thinking_text:
-        model_info = f" | {c_separator}{model} · {thinking_text}{RESET}"
+        model_info = f" | {c_model}{model} · {thinking_text}{RESET}"
     else:
-        model_info = f" | {c_separator}{model}{RESET}"
+        model_info = f" | {c_model}{model}{RESET}"
     max_width = get_terminal_width()
     parts = [
         base,
