@@ -229,10 +229,15 @@ color_separator=dim
 # Each structural element can also be colored independently. When unset, they
 # inherit color_separator above. Uncomment to give any of them its own color
 # (named colors or #rrggbb), so every value in the statusline can be distinct.
-# color_tps=#6ED7D2        # model throughput (e.g. "42.5 tok/s")
-# color_delta=#FFF8DC      # token delta since last refresh (e.g. "+2,500")
-# color_model=#C0C0C0      # model name (e.g. "Opus 4.8")
-# color_session=#8B8682    # session ID shown at the end
+# Keep the value alone on the line — trailing inline comments are not stripped.
+# model throughput (e.g. "42.5 tok/s")
+# color_tps=#6ED7D2
+# token delta since last refresh (e.g. "+2,500")
+# color_delta=#FFF8DC
+# model name (e.g. "Opus 4.8")
+# color_model=#C0C0C0
+# session ID shown at the end
+# color_session=#8B8682
 
 
 # ─── Statusline Layout Reference ────────────────────────────────────────────

@@ -83,10 +83,7 @@ class TestConfigColorOverrides:
         """color_tps/delta/model/session map to their own override slots."""
         config_file = tmp_path / "statusline.conf"
         config_file.write_text(
-            "color_tps=#6ED7D2\n"
-            "color_delta=#FFF8DC\n"
-            "color_model=#C0C0C0\n"
-            "color_session=#8B8682\n"
+            "color_tps=#6ED7D2\ncolor_delta=#FFF8DC\ncolor_model=#C0C0C0\ncolor_session=#8B8682\n"
         )
         config = Config.load(config_path=config_file)
         assert config.color_overrides["tps"] == "\033[38;2;110;215;210m"
