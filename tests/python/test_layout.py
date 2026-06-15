@@ -179,3 +179,73 @@ class TestFitToWidth:
         # "C | D" on line 2. Order is preserved, nothing dropped.
         result = fit_to_width(parts, 12)
         assert result == "base | A | B\nC | D"
+
+
+class TestStandalonePackageParity:
+    """The reflow logic is duplicated between the installable package and the
+    standalone script and MUST stay in sync (see CLAUDE.md "Sync Points").
+    This guards against the two fit_to_width implementations diverging — a
+    subtle drift could otherwise pass each impl's own tests independently.
+    Acceptance criterion #4 of issue #88: identical behavior in both.
+    """
+
+    # Representative inputs: single-line fit, exact boundary, wrap with the
+    # separator-strip path, oversized single part, empty parts, and realistic
+    # ANSI-colored parts at both wide and narrow widths.
+    _CASES = [
+        ([], 80),
+        (["base"], 5),
+        (["base", " | git", " | ctx"], 80),
+        (["base", " | git", " | ctx", " | session-uuid-here"], 25),
+        (["12345", "67890"], 10),
+        (["12345", "678901"], 10),
+        (["base", " | this-part-is-way-too-long-to-fit"], 12),
+        (["base", "", " | ctx", "", " | session"], 30),
+        (["base", " | A", " | B", " | C", " | D"], 12),
+        (
+            [
+                "\033[2m[Claude]\033[0m \033[0;34mdir\033[0m",
+                " | \033[0;35mmain\033[0m",
+                " | \033[0;32m150.0k (75.0%)\033[0m",
+                " | \033[2mtest-session-uuid-1234\033[0m",
+            ],
+            40,
+        ),
+        (
+            [
+                "\033[2m[Claude]\033[0m \033[0;34mdir\033[0m",
+                " | \033[0;35mmain\033[0m",
+                " | \033[0;32m150.0k (75.0%)\033[0m",
+                " | \033[2mtest-session-uuid-1234\033[0m",
+            ],
+            200,
+        ),
+    ]
+
+    def test_fit_to_width_identical_across_impls(self):
+        # conftest.py puts the project root on sys.path so the standalone
+        # script imports as a module.
+        from scripts.statusline import fit_to_width as std_fit
+
+        from claude_statusline.formatters.layout import fit_to_width as pkg_fit
+
+        for parts, width in self._CASES:
+            assert pkg_fit(parts, width) == std_fit(parts, width), (
+                f"fit_to_width diverged between package and standalone for "
+                f"parts={parts!r} width={width}"
+            )
+
+    def test_visible_width_identical_across_impls(self):
+        from scripts.statusline import visible_width as std_vw
+
+        from claude_statusline.formatters.layout import visible_width as pkg_vw
+
+        for s in ["plain", "\033[0;32mgreen\033[0m", "", "○⚡"]:
+            assert pkg_vw(s) == std_vw(s)
+
+    def test_part_separator_identical_across_impls(self):
+        from scripts.statusline import _PART_SEPARATOR as std_sep
+
+        from claude_statusline.formatters.layout import _PART_SEPARATOR as pkg_sep
+
+        assert pkg_sep == std_sep == " | "
