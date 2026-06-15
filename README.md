@@ -70,6 +70,7 @@ my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | $0.42 |
 | `+2,500`              | Tokens consumed since last refresh                                   |
 | `tok/s`               | Model generation throughput (optional — enable with `show_tps=true`) |
 | `$0.42`               | Cumulative session cost in USD (on by default — `show_cost=false` to hide) |
+| `Opus 4.6 · high`     | Reasoning effort level next to the model (on by default — `show_effort=false` to hide) |
 
 When the terminal is narrow, lower-priority elements drop off in order — the project name is always shown.
 

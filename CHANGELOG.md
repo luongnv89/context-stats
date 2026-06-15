@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Reasoning effort display** — Show Claude Code's live reasoning effort (`effort.level`: `low`/`medium`/`high`/`xhigh`/`max`) next to the model name in the statusline, e.g. `Opus 4.8 · high`. On by default; hides gracefully when no effort is reported. Controlled by the new `show_effort` toggle and applied to both the installable package and the standalone script (#87)
+
 ## [1.22.0] - 2026-06-11
 
 ### Added
