@@ -646,7 +646,8 @@ class TestEffortDisplay:
 
         ``data.get("effort", {})`` returns ``None`` (not ``{}``) when the key is
         present with value ``null``; ``None.get("level")`` would raise
-        AttributeError and kill the whole statusline. The ``or {}`` guard handles it.
+        AttributeError and kill the whole statusline. The isinstance(dict) guard
+        handles it (None is not a dict → level stays None).
         """
         sample_input["effort"] = None
         output, code = run_script(sample_input, {"COLUMNS": "200"})
@@ -666,11 +667,11 @@ class TestEffortDisplay:
     def test_effort_non_dict_renders_without_crash(self, sample_input):
         """A non-dict ``effort`` (wrong shape) must not crash the statusline.
 
-        ``(data.get("effort") or {}).get(...)`` would raise AttributeError on a
-        bare string/list; the isinstance guard coerces unexpected shapes to no
-        suffix. CC's contract is dict|null|absent, but a defensive guard here
-        keeps the whole line alive if that ever changes (see project memory on
-        stdin-shape crashes).
+        A bare string/list would raise AttributeError on ``.get(...)``; the
+        isinstance(dict) guard coerces unexpected shapes to no suffix. CC's
+        contract is dict|null|absent, but a defensive guard here keeps the whole
+        line alive if that ever changes (see project memory on stdin-shape
+        crashes).
         """
         sample_input["effort"] = "high"  # string, not the expected dict
         output, code = run_script(sample_input, {"COLUMNS": "200"})
@@ -753,6 +754,35 @@ class TestEffortDisplay:
         out = strip_ansi(capsys.readouterr().out)
         assert "Opus 4.8" in out
         assert "· high" in out
+
+    def test_package_non_dict_effort_renders_without_crash(self, monkeypatch, capsys):
+        """The PACKAGE entry must also survive a non-dict effort (parity guard).
+
+        The standalone non-dict test runs via ``run_script``; this locks in the
+        same isinstance guard on the package side so dropping it from
+        ``cli/statusline.py`` alone would fail the suite (the cycle-1 crash mode).
+        """
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+
+        payload = json.dumps(
+            {
+                "model": {"display_name": "Opus 4.8"},
+                "effort": "high",  # non-dict — must not crash
+                "workspace": {"current_dir": "/x", "project_dir": "/x"},
+                "context_window": {
+                    "context_window_size": 200000,
+                    "current_usage": {"input_tokens": 5000},
+                },
+            }
+        )
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        monkeypatch.setenv("COLUMNS", "200")
+        pkg_statusline.main()  # must not raise
+        out = strip_ansi(capsys.readouterr().out)
+        assert "Opus 4.8" in out
+        assert "·" not in out
 
 
 class TestSessionCost:
