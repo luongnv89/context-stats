@@ -85,6 +85,10 @@ Each statusline element has its own configurable color with a fallback chain:
 | Git branch     | Green        | `color_branch_name`    | `color_magenta`    |
 | MI score       | Yellow       | `color_mi_score`       | MI-based color     |
 | Zone indicator | (zone color) | `color_zone`           | Dynamic zone color |
+| Model name     | Dim          | `color_model`          | `color_separator`  |
+| Throughput     | Dim          | `color_tps`            | `color_separator`  |
+| Token delta    | Dim          | `color_delta`          | `color_separator`  |
+| Session ID     | Dim          | `color_session`        | `color_separator`  |
 | Separator/dim  | Dim          | `color_separator`      | —                  |
 
 ### Base Colors

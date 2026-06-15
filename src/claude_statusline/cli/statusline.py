@@ -257,7 +257,7 @@ def main() -> None:
                 delta = used_tokens - prev_tokens
                 if has_prev and delta > 0:
                     delta_display = format_tokens(delta, config.token_detail)
-                    delta_info = f" | {colors.separator}+{delta_display}{colors.reset}"
+                    delta_info = f" | {colors.delta}+{delta_display}{colors.reset}"
 
             # Calculate MI score — pure function of utilization, no prev entry needed
             if config.show_mi:
@@ -286,7 +286,7 @@ def main() -> None:
                 tps = compute_tps(samples, window=config.tps_window)
                 if tps is not None:
                     tps_display = format_tps(tps, config.tps_precision, config.tps_unit)
-                    tps_info = f" | {colors.separator}{tps_display}{colors.reset}"
+                    tps_info = f" | {colors.tps}{tps_display}{colors.reset}"
 
             # Only append if context usage changed (avoid duplicates)
             if not has_prev or used_tokens != prev_tokens:
@@ -294,16 +294,16 @@ def main() -> None:
 
     # Display session_id if enabled
     if config.show_session and session_id:
-        session_info = f" | {colors.separator}{session_id}{colors.reset}"
+        session_info = f" | {colors.session}{session_id}{colors.reset}"
 
     # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | [Model] [session_id]
     # Model name is lowest priority — truncated first when terminal is narrow
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(thinking_budget)
     if thinking_text:
-        model_info = f" | {colors.separator}{model} · {thinking_text}{colors.reset}"
+        model_info = f" | {colors.model}{model} · {thinking_text}{colors.reset}"
     else:
-        model_info = f" | {colors.separator}{model}{colors.reset}"
+        model_info = f" | {colors.model}{model}{colors.reset}"
     max_width = get_terminal_width()
     parts = [
         base,

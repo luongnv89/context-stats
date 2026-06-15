@@ -275,6 +275,11 @@ Restart Claude Code. The status line, graph dashboard, session export, and repor
 color_project_name=bright_cyan
 color_branch_name=bright_magenta
 color_mi_score=#ff9e64
+# Each structural element can take its own color (else inherits color_separator):
+color_tps=#6ED7D2
+color_delta=#FFF8DC
+color_model=#C0C0C0
+color_session=#8B8682
 show_mi=true
 show_delta=true
 show_tps=true

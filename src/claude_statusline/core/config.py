@@ -25,6 +25,10 @@ _COLOR_KEYS: dict[str, str] = {
     "color_mi_score": "mi_score",
     "color_zone": "zone",
     "color_separator": "separator",
+    "color_tps": "tps",
+    "color_delta": "delta",
+    "color_model": "model",
+    "color_session": "session",
 }
 
 # Zone threshold config keys (integer token counts)
