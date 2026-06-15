@@ -663,6 +663,20 @@ class TestEffortDisplay:
         # None level is falsy → no suffix appended.
         assert "None" not in strip_ansi(output)
 
+    def test_effort_non_dict_renders_without_crash(self, sample_input):
+        """A non-dict ``effort`` (wrong shape) must not crash the statusline.
+
+        ``(data.get("effort") or {}).get(...)`` would raise AttributeError on a
+        bare string/list; the isinstance guard coerces unexpected shapes to no
+        suffix. CC's contract is dict|null|absent, but a defensive guard here
+        keeps the whole line alive if that ever changes (see project memory on
+        stdin-shape crashes).
+        """
+        sample_input["effort"] = "high"  # string, not the expected dict
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        assert "·" not in strip_ansi(output)
+
     def test_effort_hidden_when_disabled(self, sample_input, tmp_path):
         """With show_effort=false, the effort level is not rendered."""
         sample_input["effort"] = {"level": "high"}
@@ -718,6 +732,27 @@ class TestEffortDisplay:
         cfg = Config()
         assert "show_effort" in cfg.to_dict()
         assert cfg.to_dict()["show_effort"] is True
+
+    def test_package_renders_effort_from_fixture(self, fixtures_dir, monkeypatch, capsys):
+        """The PACKAGE entry point (cli.statusline.main) must render effort too.
+
+        ``run_script`` only exercises the standalone script; AC #3 requires the
+        package to behave identically. This invokes the package ``main()``
+        in-process against the with_effort.json fixture so package render drift
+        is caught, and consumes that fixture (which the standalone tests, which
+        mutate ``sample_input``, otherwise leave unused).
+        """
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+
+        payload = (fixtures_dir / "with_effort.json").read_text(encoding="utf-8")
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        monkeypatch.setenv("COLUMNS", "200")
+        pkg_statusline.main()
+        out = strip_ansi(capsys.readouterr().out)
+        assert "Opus 4.8" in out
+        assert "· high" in out
 
 
 class TestSessionCost:

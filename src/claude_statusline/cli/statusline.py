@@ -103,9 +103,11 @@ def main() -> None:
         else None
     )
     # Reasoning effort level (low/medium/high/xhigh/max) if Claude Code sends it.
-    # `effort` is conditionally present and may arrive as explicit null, so guard
-    # with `or {}` (a {} default does not protect against an explicit null value).
-    effort_level = (data.get("effort") or {}).get("level")
+    # `effort` is conditionally present and may arrive as explicit null or an
+    # unexpected shape; guard with isinstance so a non-dict value cannot crash
+    # the whole statusline (mirrors the `thinking` extraction above).
+    effort_data = data.get("effort")
+    effort_level = effort_data.get("level") if isinstance(effort_data, dict) else None
     dir_name = cwd.rsplit("/", 1)[-1] if "/" in cwd else cwd or "~"
 
     # Read settings from config file
