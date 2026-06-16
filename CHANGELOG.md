@@ -12,6 +12,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Responsive multi-line statusline** — When the terminal is too narrow to fit everything on one line, the statusline now wraps onto additional lines instead of dropping lower-priority elements, so no information is lost on narrow screens. Wide terminals still render a single line, byte-identical to before. Requires Claude Code v2.1.153+ (which exports the real terminal width via `COLUMNS`). Applied identically to both the installable package and the standalone script (#88)
 - **Reasoning effort display** — Show Claude Code's live reasoning effort (`effort.level`: `low`/`medium`/`high`/`xhigh`/`max`) next to the model name in the statusline, e.g. `Opus 4.8 · high`. On by default; hides gracefully when no effort is reported. Controlled by the new `show_effort` toggle and applied to both the installable package and the standalone script (#87)
 
+## [1.23.0] - 2026-06-16
+
+### Added
+
+- **Session cost display** — Show estimated session cost in USD next to the model name, defaulting to on. Controlled by the new `show_cost` toggle and applied to both the installable package and the standalone script (#89)
+- **Changelog page** — Interactive timeline of past releases with expandable sections, rendered as a dedicated HTML page (#84)
+- **Per-element structural colors** — Independent color customization for tps, delta, model, and session elements in the statusline, enabling more granular visual theming (#89)
+- **Logo redesign** — New brand logo with dedicated docs page and updated visual identity (#89)
+- **SEO & AI bot optimization** — Enhanced landing page with structured data, sitemap, robots.txt, llms.txt, and Open Graph / Twitter Card metadata for better search visibility (#82)
+
+### Fixed
+
+- **Structural color comment parsing** — Handle own-line comments in structural-color examples without breaking the parser; update related test (#89)
+- **Export report demo notation** — Correct MI triple and MI band notation in the export-report demo zone (#89)
+
+[1.23.0]: https://github.com/luongnv89/context-stats/compare/v1.22.0...v1.23.0
+
 ## [1.22.0] - 2026-06-11
 
 ### Added
