@@ -59,7 +59,7 @@
                 position: sticky;
                 top: 0;
                 z-index: 50;
-                background: rgba(15, 23, 42, 0.88);
+                background: rgba(15, 23, 42, 0.92);
                 backdrop-filter: blur(16px);
                 border-bottom: 1px solid var(--border);
             }
@@ -70,15 +70,16 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                gap: 40px;
             }
-            .nav-logo { display: flex; align-items: center; }
+            .nav-logo { display: flex; align-items: center; flex-shrink: 0; }
             .nav-logo img { height: 32px; display: block; }
-            .nav-links { list-style: none; display: flex; align-items: center; gap: 32px; font-size: 14px; font-weight: 500; }
+            .nav-links { list-style: none; display: flex; align-items: center; gap: 36px; font-size: 14px; font-weight: 500; }
             .nav-links a { color: var(--text-muted); transition: color 0.15s; }
             .nav-links a:hover { color: var(--text); }
             .nav-back {
-                display: inline-flex; align-items: center; gap: 6px;
-                font-size: 13px; font-weight: 500; color: var(--text-muted);
+                display: inline-flex; align-items: center; gap: 8px;
+                font-size: 14px; font-weight: 500; color: var(--text-muted);
                 transition: color 0.15s;
             }
             .nav-back:hover { color: var(--green); }
@@ -292,35 +293,6 @@
             }
             .release-link:hover { color: var(--green); }
 
-            /* ── Search ──────────────────────────────────── */
-            .search-wrap {
-                max-width: 400px;
-                margin: 0 auto 48px;
-                position: relative;
-            }
-            .search-input {
-                width: 100%;
-                padding: 12px 16px 12px 42px;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                color: var(--text);
-                font-size: 14px;
-                font-family: inherit;
-                outline: none;
-                transition: border-color 0.15s;
-            }
-            .search-input:focus { border-color: var(--green); }
-            .search-input::placeholder { color: var(--text-dim); }
-            .search-icon {
-                position: absolute;
-                left: 14px;
-                top: 50%;
-                transform: translateY(-50%);
-                color: var(--text-dim);
-                pointer-events: none;
-            }
-
             /* ── Footer ──────────────────────────────────── */
             footer {
                 border-top: 1px solid var(--border);
@@ -415,16 +387,6 @@
             </div>
         </div>
 
-        <!-- ── SEARCH ─────────────────────────────────── -->
-        <div class="container">
-            <div class="search-wrap">
-                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <input class="search-input" type="text" id="searchInput" placeholder="Search changes…" autocomplete="off" />
-            </div>
-        </div>
-
         <!-- ── COUNTERS ───────────────────────────────── -->
         <div class="container">
             <div class="counters">
@@ -493,7 +455,7 @@
                         <div class="release-header" onclick="toggleRelease(this)">
                             <div class="release-meta">
                                 <span class="release-version">v1.22.0</span>
-                                <span class="release-badge latest">Latest</span>
+                                <span class="release-badge version">1.22.0</span>
                                 <span class="release-date">2026-06-11</span>
                             </div>
                             <span class="release-arrow">▾</span>
@@ -1410,15 +1372,6 @@
 
             </div><!-- /timeline -->
 
-            <div class="no-results" id="noResults">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.5">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                    <path d="M8 11h6"/>
-                </svg>
-                <p>No changes match your search.</p>
-            </div>
-        </div>
-
         <!-- ── FOOTER ─────────────────────────────────── -->
         <footer>
             <div class="container">
@@ -1444,35 +1397,9 @@
                 release.classList.toggle('open');
             }
 
-            /* ── Search / filter ────────────────────────── */
-            const searchInput = document.getElementById('searchInput');
-            const releases = document.querySelectorAll('.release');
-            const noResults = document.getElementById('noResults');
-            const timeline = document.getElementById('timeline');
-
-            searchInput.addEventListener('input', function () {
-                const query = this.value.toLowerCase().trim();
-                let visibleCount = 0;
-
-                releases.forEach(function (release) {
-                    const card = release.querySelector('.release-card');
-                    const text = card.textContent.toLowerCase();
-
-                    if (!query || text.includes(query)) {
-                        release.style.display = '';
-                        visibleCount++;
-                        // Auto-expand if searching
-                        if (query) release.classList.add('open');
-                    } else {
-                        release.style.display = 'none';
-                    }
-                });
-
-                noResults.classList.toggle('visible', visibleCount === 0 && query.length > 0);
-            });
-
             /* ── Counters ───────────────────────────────── */
             (function () {
+                let releases = document.querySelectorAll('.release');
                 let featureCount = 0;
                 let fixCount = 0;
                 releases.forEach(function (r) {
@@ -1485,15 +1412,6 @@
                 document.getElementById('featureCount').textContent = featureCount;
                 document.getElementById('fixCount').textContent = fixCount;
             })();
-
-            /* ── Keyboard: Escape closes search ─────────── */
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && document.activeElement === searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input'));
-                    searchInput.blur();
-                }
-            });
         </script>
     </body>
 </html>
