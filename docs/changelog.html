@@ -59,25 +59,21 @@
                 position: sticky;
                 top: 0;
                 z-index: 50;
-                background: rgba(15, 23, 42, 0.82);
-                backdrop-filter: blur(12px);
+                background: rgba(15, 23, 42, 0.88);
+                backdrop-filter: blur(16px);
                 border-bottom: 1px solid var(--border);
             }
             .nav-inner {
                 max-width: var(--maxw);
                 margin: 0 auto;
-                padding: 14px 24px;
+                padding: 12px 24px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
             }
-            .nav-logo { display: flex; align-items: center; gap: 11px; }
-            .nav-logo img { height: 34px; display: block; }
-            .nav-wordmark {
-                font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text);
-            }
-            .nav-wordmark .stats { color: var(--green); }
-            .nav-links { list-style: none; display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 500; }
+            .nav-logo { display: flex; align-items: center; }
+            .nav-logo img { height: 32px; display: block; }
+            .nav-links { list-style: none; display: flex; align-items: center; gap: 32px; font-size: 14px; font-weight: 500; }
             .nav-links a { color: var(--text-muted); transition: color 0.15s; }
             .nav-links a:hover { color: var(--text); }
             .nav-back {
@@ -86,6 +82,9 @@
                 transition: color 0.15s;
             }
             .nav-back:hover { color: var(--green); }
+            @media (max-width: 720px) {
+                .nav-inner { padding: 10px 16px; }
+            }
 
             /* ── Header ──────────────────────────────────── */
             .page-header {
@@ -397,8 +396,7 @@
         <nav>
             <div class="nav-inner">
                 <a class="nav-logo" href="../" aria-label="context-stats home">
-                    <img src="../assets/logo/logo-mark.svg" alt="context-stats" />
-                    <span class="nav-wordmark">Context<span class="stats">Stats</span></span>
+                    <img src="../assets/logo/navbar-logo.svg" alt="context-stats" />
                 </a>
                 <ul class="nav-links">
                     <li><a href="../" class="nav-back">← Back to home</a></li>
@@ -449,8 +447,47 @@
         <div class="container">
             <div class="timeline" id="timeline">
 
-                <!-- 1.22.0 — Latest -->
-                <div class="release latest open" data-version="1.22.0">
+                <!-- 1.23.0 — Latest -->
+                <div class="release latest open" data-version="1.23.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.23.0</span>
+                                <span class="release-badge latest">Latest</span>
+                                <span class="release-date">2026-06-16</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Session cost display</strong> — Show estimated session cost in USD next to the model name, defaulting to on. Controlled by the new <code>show_cost</code> toggle <span class="ref">#89</span></li>
+                                        <li><strong>Changelog page</strong> — Interactive timeline of past releases with expandable sections <span class="ref">#84</span></li>
+                                        <li><strong>Per-element structural colors</strong> — Independent color customization for tps, delta, model, and session elements <span class="ref">#89</span></li>
+                                        <li><strong>Logo redesign</strong> — New brand logo with dedicated docs page and updated visual identity <span class="ref">#89</span></li>
+                                        <li><strong>SEO &amp; AI bot optimization</strong> — Structured data, sitemap, robots.txt, llms.txt, Open Graph / Twitter Cards <span class="ref">#82</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li>Structural color comment parsing — Handle own-line comments in structural-color examples <span class="ref">#89</span></li>
+                                        <li>Export report demo notation — Correct MI triple and MI band notation <span class="ref">#89</span></li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.22.0...v1.23.0" target="_blank" rel="noopener">
+                                    Compare on GitHub →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.22.0 -->
+                <div class="release" data-version="1.22.0">
                     <div class="release-dot"></div>
                     <div class="release-card">
                         <div class="release-header" onclick="toggleRelease(this)">
@@ -1387,7 +1424,7 @@
             <div class="container">
                 <div class="footer-inner">
                     <div class="footer-logo">
-                        <img src="../assets/logo/logo-mark.svg" alt="context-stats" />
+                        <img src="../assets/logo/navbar-logo.svg" alt="context-stats" />
                         <span>context-stats · MIT License · Made by <a href="https://github.com/luongnv89">luongnv89</a></span>
                     </div>
                     <ul class="footer-links">

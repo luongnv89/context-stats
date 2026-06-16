@@ -168,14 +168,14 @@
                 position: sticky;
                 top: 0;
                 z-index: 50;
-                background: rgba(15, 23, 42, 0.82);
-                backdrop-filter: blur(12px);
+                background: rgba(15, 23, 42, 0.88);
+                backdrop-filter: blur(16px);
                 border-bottom: 1px solid var(--border);
             }
             .nav-inner {
                 max-width: var(--maxw);
                 margin: 0 auto;
-                padding: 14px 24px;
+                padding: 12px 24px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -183,26 +183,16 @@
             .nav-logo {
                 display: flex;
                 align-items: center;
-                gap: 11px;
             }
             .nav-logo img {
-                height: 34px;
+                height: 32px;
                 display: block;
-            }
-            .nav-wordmark {
-                font-size: 22px;
-                font-weight: 800;
-                letter-spacing: -0.02em;
-                color: var(--text);
-            }
-            .nav-wordmark .stats {
-                color: var(--green);
             }
             .nav-links {
                 list-style: none;
                 display: flex;
                 align-items: center;
-                gap: 28px;
+                gap: 32px;
                 font-size: 14px;
                 font-weight: 500;
             }
@@ -214,18 +204,27 @@
                 color: var(--text);
             }
             .nav-cta {
-                padding: 8px 16px;
+                padding: 8px 18px;
                 background: var(--green);
                 color: #04221a !important;
                 border-radius: 8px;
                 font-weight: 700;
+                transition: background 0.15s, transform 0.1s;
             }
             .nav-cta:hover {
                 background: #34d399;
+                transform: translateY(-1px);
+            }
+            @media (max-width: 900px) {
+                .nav-links li:nth-child(1),
+                .nav-links li:nth-child(2),
+                .nav-links li:nth-child(3) {
+                    display: none;
+                }
             }
             @media (max-width: 720px) {
-                .nav-links li:not(:last-child) {
-                    display: none;
+                .nav-inner {
+                    padding: 10px 16px;
                 }
             }
 
@@ -665,8 +664,7 @@
         <nav>
             <div class="nav-inner">
                 <a class="nav-logo" href="/context-stats/" aria-label="context-stats home">
-                    <img src="assets/logo/logo-mark.svg" alt="context-stats" />
-                    <span class="nav-wordmark">Context<span class="stats">Stats</span></span>
+                    <img src="assets/logo/navbar-logo.svg" alt="context-stats" />
                 </a>
                 <ul class="nav-links">
                     <li><a href="#levels">Features</a></li>
@@ -935,7 +933,7 @@
             <div class="container">
                 <div class="footer-inner">
                     <div class="footer-logo">
-                        <img src="assets/logo/logo-mark.svg" alt="context-stats" />
+                        <img src="assets/logo/navbar-logo.svg" alt="context-stats" />
                         <span
                             >context-stats · MIT License · Made by
                             <a href="https://github.com/luongnv89">luongnv89</a></span

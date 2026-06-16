@@ -1,10 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <!-- Palette -->
-    <!-- Base:   #0F172A slate    -->
-    <!-- Fill:   #10B981 green (consumed / live)   -->
-    <!-- Cursor: #06B6D4 cyan  (current position)  -->
-    <!-- Edge:   #818CF8 indigo (remaining / limit) -->
     <linearGradient id="ctxFill" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#10B981"/>
       <stop offset="1" stop-color="#06B6D4"/>
@@ -14,18 +9,18 @@
   <!-- Background tile -->
   <rect width="64" height="64" rx="14" fill="#0F172A"/>
 
-  <!-- Context window frame (rounded bracket outline) -->
+  <!-- Context window frame -->
   <rect x="13" y="22" width="38" height="20" rx="6" fill="none" stroke="#334155" stroke-width="2.5"/>
 
-  <!-- Consumed fill gauge (green→cyan), ~58% of inner width -->
+  <!-- Consumed fill gauge (green→cyan), ~58% -->
   <rect x="17" y="26" width="18" height="12" rx="3" fill="url(#ctxFill)"/>
 
-  <!-- Cursor — current position marker at the fill edge -->
+  <!-- Cursor — current position marker -->
   <rect x="36" y="24.5" width="2.5" height="15" rx="1.25" fill="#06B6D4"/>
 
-  <!-- Remaining capacity — indigo tick at the far edge -->
+  <!-- Remaining capacity — indigo tick -->
   <rect x="44" y="28" width="3" height="8" rx="1.5" fill="#818CF8" opacity="0.8"/>
 
-  <!-- Limit indicator dot above the window -->
+  <!-- Limit indicator dot -->
   <circle cx="48" cy="17" r="2.5" fill="#818CF8" opacity="0.7"/>
 </svg>
