@@ -309,7 +309,7 @@ def main() -> None:
         session_info = f" | {colors.session}{session_id}{colors.reset}"
 
     # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | $cost | [Model] [session_id]
-    # Model name is lowest priority — truncated first when terminal is narrow
+    # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(thinking_budget)
     # Build the model suffix from any present indicators (thinking budget,

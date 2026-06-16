@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Responsive multi-line statusline** — When the terminal is too narrow to fit everything on one line, the statusline now wraps onto additional lines instead of dropping lower-priority elements, so no information is lost on narrow screens. Wide terminals still render a single line, byte-identical to before. Requires Claude Code v2.1.153+ (which exports the real terminal width via `COLUMNS`). Applied identically to both the installable package and the standalone script (#88)
 - **Reasoning effort display** — Show Claude Code's live reasoning effort (`effort.level`: `low`/`medium`/`high`/`xhigh`/`max`) next to the model name in the statusline, e.g. `Opus 4.8 · high`. On by default; hides gracefully when no effort is reported. Controlled by the new `show_effort` toggle and applied to both the installable package and the standalone script (#87)
 
 ## [1.22.0] - 2026-06-11
