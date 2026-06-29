@@ -498,7 +498,7 @@ def _pr_cache_file():
     return os.path.join(os.path.expanduser("~/.claude/statusline"), "pr_number_cache.json")
 
 
-def _pr_cache_get(key):
+def _pr_cache_get(key: str) -> "str | None":
     """Return the cached PR string for ``key`` if present and unexpired.
 
     Returns ``None`` on any miss (no entry, expired, or read error) so the
