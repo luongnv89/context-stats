@@ -77,7 +77,7 @@ show_tps=false
 tps_precision=1
 tps_unit=tok/s
 tps_window=5
-show_pr=false
+show_pr=true
 show_cost=true
 show_effort=true
 """
@@ -117,7 +117,7 @@ class Config:
     show_tps: bool = False
 
     # PR number display — shows associated PR number from gh CLI
-    show_pr: bool = False
+    show_pr: bool = True
 
     # Session cost display (cumulative session cost in USD, e.g. $0.42)
     show_cost: bool = True

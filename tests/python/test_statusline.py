@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 SCRIPT_PATH = Path(__file__).parent.parent.parent / "scripts" / "statusline.py"
 
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
@@ -244,6 +246,20 @@ class TestWidthTruncation:
 class TestPRDisplay:
     """Tests for PR number display feature (#77)."""
 
+    @pytest.fixture(autouse=True)
+    def _isolate_pr_cache(self, tmp_path, monkeypatch):
+        """Redirect the PR-number cache into the test's tmp dir.
+
+        Keeps the per-branch cache (used by both the package and the standalone
+        script) out of the real ``~/.claude`` directory and starts every test
+        from an empty cache.
+        """
+        cache_file = tmp_path / "pr_cache" / "pr_number_cache.json"
+        monkeypatch.setattr("claude_statusline.core.git._pr_cache_file", lambda: cache_file)
+        from scripts import statusline as sl
+
+        monkeypatch.setattr(sl, "_pr_cache_file", lambda: str(cache_file))
+
     def test_pr_info_in_parts_order(self, sample_input):
         """PR info should appear after git_info and before context_info in parts."""
         from scripts import statusline as sl
@@ -266,12 +282,12 @@ class TestPRDisplay:
         assert pr_idx > git_idx, "pr_info must come after git_info in parts list"
         assert pr_idx < ctx_idx, "pr_info must come before context_info in parts list"
 
-    def test_show_pr_default_is_false(self, sample_input, tmp_path, monkeypatch):
-        """show_pr should default to False — PR hidden without explicit enable."""
-        # Create a config file with show_pr=false (default)
+    def test_show_pr_default_is_true(self, sample_input, tmp_path, monkeypatch):
+        """show_pr should default to True — PR shown unless explicitly disabled."""
+        # Create a config file that does not mention show_pr at all
         config_file = tmp_path / "statusline.conf"
         config_file.write_text(
-            "# default config\nshow_session=true\nshow_pr=false\n",
+            "# default config\nshow_session=true\n",
             encoding="utf-8",
         )
         # Override config path via environment or by patching read_config
@@ -279,7 +295,7 @@ class TestPRDisplay:
         from claude_statusline.core.config import Config
 
         cfg = Config.load(str(config_file))
-        assert cfg.show_pr is False
+        assert cfg.show_pr is True
 
     def test_show_pr_true_parsed(self, sample_input, tmp_path, monkeypatch):
         """show_pr=true in config should be parsed correctly."""
@@ -447,11 +463,102 @@ class TestPRDisplay:
         result = _get_pr_number(tmp_path)
         assert result == ""
 
+    def test_get_pr_number_uses_cache_on_second_call(self, tmp_path, monkeypatch):
+        """A second lookup within the TTL must not re-invoke gh (cached)."""
+        from claude_statusline.core.git import _get_pr_number
+
+        calls = {"gh": 0}
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 42}]', stderr="")
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert _get_pr_number(tmp_path) == "#42"
+        assert _get_pr_number(tmp_path) == "#42"
+        # gh was hit once; the second call was served from the cache.
+        assert calls["gh"] == 1
+
+    def test_get_pr_number_caches_empty_result(self, tmp_path, monkeypatch):
+        """A 'no open PR' result is cached too, avoiding repeat gh calls."""
+        from claude_statusline.core.git import _get_pr_number
+
+        calls = {"gh": 0}
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, 0, stdout="[]", stderr="")
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert _get_pr_number(tmp_path) == ""
+        assert _get_pr_number(tmp_path) == ""
+        assert calls["gh"] == 1
+
+    def test_get_pr_number_refreshes_expired_cache(self, tmp_path, monkeypatch):
+        """An expired cache entry is ignored and refreshed by a live lookup."""
+        from claude_statusline.core import git as git_mod
+
+        # Seed the cache with an already-expired entry for this branch.
+        cache_file = git_mod._pr_cache_file()
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        key = f"{tmp_path}\tfeature-branch"
+        cache_file.write_text(json.dumps({key: {"pr": "#7", "exp": 1.0}}), encoding="utf-8")
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            return subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 42}]', stderr="")
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        # The stale #7 entry is bypassed; the live lookup returns #42.
+        assert git_mod._get_pr_number(tmp_path) == "#42"
+
+    def test_standalone_get_pr_number_uses_cache(self, tmp_path, monkeypatch):
+        """Standalone get_pr_number caches the lookup across calls too."""
+        from scripts import statusline as sl
+
+        calls = {"gh": 0}
+
+        def mock_which(cmd):
+            return "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, 0, stdout='[{"number": 99}]', stderr="")
+
+        monkeypatch.setattr("shutil.which", mock_which)
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert sl.get_pr_number(str(tmp_path)) == "#99"
+        assert sl.get_pr_number(str(tmp_path)) == "#99"
+        assert calls["gh"] == 1
+
     def test_standalone_script_has_show_pr_config(self):
         """Standalone script should include show_pr in its config default dict."""
         content = SCRIPT_PATH.read_text(encoding="utf-8")
         # Check that show_pr is in the config default dict
-        assert '"show_pr": False' in content or "'show_pr': False" in content
+        assert '"show_pr": True' in content or "'show_pr': True" in content
         # Check show_pr parsing
         assert 'key == "show_pr"' in content or "key == 'show_pr'" in content
 
@@ -462,7 +569,7 @@ class TestPRDisplay:
         cfg = Config.load(str(tmp_path / "nonexistent"))
         d = cfg.to_dict()
         assert "show_pr" in d
-        assert d["show_pr"] is False
+        assert d["show_pr"] is True
 
     def test_minimal_config_fallback_has_show_pr(self):
         """_MINIMAL_CONFIG_FALLBACK should include show_pr setting."""

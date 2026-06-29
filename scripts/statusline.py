@@ -18,8 +18,8 @@ Create/edit ~/.claude/statusline.conf and set:
   show_session=true  (show session_id in status line - default)
   show_session=false (hide session_id from status line)
 
-  show_pr=true   (show associated PR number like #42, requires gh CLI)
-  show_pr=false  (hide PR number, default)
+  show_pr=true   (show associated PR number like #42, requires gh CLI - default)
+  show_pr=false  (hide PR number)
 
 When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 
@@ -37,6 +37,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROTATION_THRESHOLD = 10_000
 ROTATION_KEEP = 5_000
@@ -486,6 +487,67 @@ def fit_to_width(parts, max_width):
     return "\n".join(lines)
 
 
+# PR-number lookups shell out to ``gh`` (a network call). Because the
+# statusline re-renders frequently, the result is cached per-branch for a
+# short TTL so the network round-trip happens at most once per window.
+_PR_CACHE_TTL_SECONDS = 60
+
+
+def _pr_cache_file():
+    """Location of the shared PR-number cache file."""
+    return os.path.join(os.path.expanduser("~/.claude/statusline"), "pr_number_cache.json")
+
+
+def _pr_cache_get(key: str) -> "str | None":
+    """Return the cached PR string for ``key`` if present and unexpired.
+
+    Returns ``None`` on any miss (no entry, expired, or read error) so the
+    caller falls through to a live lookup. Never raises.
+    """
+    try:
+        with open(_pr_cache_file(), encoding="utf-8") as fh:
+            cache = json.load(fh)
+        entry = cache.get(key)
+        if isinstance(entry, dict) and entry.get("exp", 0) > time.time():
+            return str(entry.get("pr", ""))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _pr_cache_set(key, pr):
+    """Store ``pr`` for ``key`` with a TTL, pruning expired entries.
+
+    Best-effort and atomic: any IO error is swallowed so a render never fails
+    on a cache write.
+    """
+    try:
+        path = _pr_cache_file()
+        now = time.time()
+        try:
+            with open(path, encoding="utf-8") as fh:
+                cache = json.load(fh)
+            if not isinstance(cache, dict):
+                cache = {}
+        except (OSError, ValueError):
+            cache = {}
+        cache = {k: v for k, v in cache.items() if isinstance(v, dict) and v.get("exp", 0) > now}
+        cache[key] = {"pr": pr, "exp": now + _PR_CACHE_TTL_SECONDS}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(cache, fh)
+            os.replace(tmp, path)
+        except OSError:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
 def get_pr_number(project_dir: str) -> str:
     """Look up the PR number for the current branch via gh CLI.
 
@@ -508,6 +570,11 @@ def get_pr_number(project_dir: str) -> str:
         branch_name = branch.stdout.strip()
         if not branch_name:
             return ""
+
+        cache_key = f"{project_dir}\t{branch_name}"
+        cached = _pr_cache_get(cache_key)
+        if cached is not None:
+            return cached
 
         result = subprocess.run(
             [
@@ -536,11 +603,13 @@ def get_pr_number(project_dir: str) -> str:
         except (json.JSONDecodeError, ValueError):
             return ""
 
+        pr_str = ""
         if data and len(data) > 0:
             pr_num = data[0].get("number", "")
             if pr_num:
-                return f"#{pr_num}"
-        return ""
+                pr_str = f"#{pr_num}"
+        _pr_cache_set(cache_key, pr_str)
+        return pr_str
     except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
         return ""
 
@@ -601,7 +670,7 @@ def read_config():
         "tps_precision": 1,
         "tps_unit": "tok/s",
         "tps_window": 5,
-        "show_pr": False,
+        "show_pr": True,
         "show_cost": True,
         "show_effort": True,
         "colors": {},
@@ -678,9 +747,9 @@ reduced_motion=false
 
 # Show the associated PR number for the current branch in the statusline.
 # Uses the GitHub CLI (gh) to look up open PRs. Requires gh to be installed.
-#   false = PR number hidden (default)
-#   true  = PR number visible (e.g., #42)
-show_pr=false
+#   false = PR number hidden
+#   true  = PR number visible (e.g., #42) (default)
+show_pr=true
 
 # Show the cumulative session cost in USD (e.g., $0.42).
 # Cost is reported by Claude Code (cost.total_cost_usd); the value is the
