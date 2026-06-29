@@ -266,12 +266,12 @@ class TestPRDisplay:
         assert pr_idx > git_idx, "pr_info must come after git_info in parts list"
         assert pr_idx < ctx_idx, "pr_info must come before context_info in parts list"
 
-    def test_show_pr_default_is_false(self, sample_input, tmp_path, monkeypatch):
-        """show_pr should default to False — PR hidden without explicit enable."""
-        # Create a config file with show_pr=false (default)
+    def test_show_pr_default_is_true(self, sample_input, tmp_path, monkeypatch):
+        """show_pr should default to True — PR shown unless explicitly disabled."""
+        # Create a config file that does not mention show_pr at all
         config_file = tmp_path / "statusline.conf"
         config_file.write_text(
-            "# default config\nshow_session=true\nshow_pr=false\n",
+            "# default config\nshow_session=true\n",
             encoding="utf-8",
         )
         # Override config path via environment or by patching read_config
@@ -279,7 +279,7 @@ class TestPRDisplay:
         from claude_statusline.core.config import Config
 
         cfg = Config.load(str(config_file))
-        assert cfg.show_pr is False
+        assert cfg.show_pr is True
 
     def test_show_pr_true_parsed(self, sample_input, tmp_path, monkeypatch):
         """show_pr=true in config should be parsed correctly."""
@@ -451,7 +451,7 @@ class TestPRDisplay:
         """Standalone script should include show_pr in its config default dict."""
         content = SCRIPT_PATH.read_text(encoding="utf-8")
         # Check that show_pr is in the config default dict
-        assert '"show_pr": False' in content or "'show_pr': False" in content
+        assert '"show_pr": True' in content or "'show_pr': True" in content
         # Check show_pr parsing
         assert 'key == "show_pr"' in content or "key == 'show_pr'" in content
 
@@ -462,7 +462,7 @@ class TestPRDisplay:
         cfg = Config.load(str(tmp_path / "nonexistent"))
         d = cfg.to_dict()
         assert "show_pr" in d
-        assert d["show_pr"] is False
+        assert d["show_pr"] is True
 
     def test_minimal_config_fallback_has_show_pr(self):
         """_MINIMAL_CONFIG_FALLBACK should include show_pr setting."""

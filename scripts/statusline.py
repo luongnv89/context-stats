@@ -18,8 +18,8 @@ Create/edit ~/.claude/statusline.conf and set:
   show_session=true  (show session_id in status line - default)
   show_session=false (hide session_id from status line)
 
-  show_pr=true   (show associated PR number like #42, requires gh CLI)
-  show_pr=false  (hide PR number, default)
+  show_pr=true   (show associated PR number like #42, requires gh CLI - default)
+  show_pr=false  (hide PR number)
 
 When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 
@@ -601,7 +601,7 @@ def read_config():
         "tps_precision": 1,
         "tps_unit": "tok/s",
         "tps_window": 5,
-        "show_pr": False,
+        "show_pr": True,
         "show_cost": True,
         "show_effort": True,
         "colors": {},
@@ -678,9 +678,9 @@ reduced_motion=false
 
 # Show the associated PR number for the current branch in the statusline.
 # Uses the GitHub CLI (gh) to look up open PRs. Requires gh to be installed.
-#   false = PR number hidden (default)
-#   true  = PR number visible (e.g., #42)
-show_pr=false
+#   false = PR number hidden
+#   true  = PR number visible (e.g., #42) (default)
+show_pr=true
 
 # Show the cumulative session cost in USD (e.g., $0.42).
 # Cost is reported by Claude Code (cost.total_cost_usd); the value is the
