@@ -134,6 +134,7 @@ def main() -> None:
     tps_info = ""
     cost_info = ""
     zone_info = ""
+    pacman_info = ""
     session_info = ""
     pr_info = ""
 
@@ -210,6 +211,14 @@ def main() -> None:
         prop_zone_color = config.color_overrides.get("zone")
         effective_zone_color = prop_zone_color if prop_zone_color else zone_color
         zone_info = f" | {effective_zone_color}{zone_result.zone}{colors.reset}"
+
+        # Pacman-style icon reflecting the same zone — off by default.
+        if config.show_pacman:
+            from claude_statusline.graphs.intelligence import get_pacman_icon
+
+            pacman_glyph = get_pacman_icon(zone_result.zone)
+            if pacman_glyph:
+                pacman_info = f" | {effective_zone_color}{pacman_glyph}{colors.reset}"
 
         # State file management for delta/MI/throughput display and history.
         # tok/s also needs the previous row (for the API-time delta) and must
@@ -327,6 +336,7 @@ def main() -> None:
         pr_info,
         context_info,
         zone_info,
+        pacman_info,
         mi_info,
         tps_info,
         delta_info,
