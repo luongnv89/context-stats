@@ -83,18 +83,18 @@ _ZONE_RECOMMENDATIONS = {
     "Dead": "Start a new session with `/clear`",
 }
 
-# Pacman-style icon per zone — a quick emotional cue alongside the zone text.
-# Glyphs are single-codepoint, width-1 characters (Canadian Aboriginal
-# Syllabics, matching the historical activity-tier icons removed in #13) so
-# they render predictably in any terminal and are counted correctly by
-# visible_width()'s plain len() (no east_asian_width handling).
-# Expression escalates from "happy" (Plan) to "game over" (Dead).
+# Pacman-style icon per zone — a distinct glyph per zone alongside the zone
+# text, from a healthy default (Plan) to a "game over" marker (Dead). Glyphs
+# are single-codepoint, width-1 characters (Canadian Aboriginal Syllabics,
+# matching the historical activity-tier icons removed in #13) so they render
+# predictably in any terminal and are counted correctly by visible_width()'s
+# plain len() (no east_asian_width handling).
 PACMAN_ICONS = {
-    "Plan": "ᗧ",  # healthy, open-mouth pacman
-    "Code": "ᗤ",  # still fine, eating normally
-    "Dump": "ᗣ",  # warning, looking stressed
-    "ExDump": "ᗢ",  # critical, very distressed
-    "Dead": "×",  # game over
+    "Plan": "ᗧ",  # healthy default
+    "Code": "ᗤ",  # distinct orientation, still fine
+    "Dump": "ᗣ",  # distinct orientation, warning
+    "ExDump": "ᗢ",  # distinct orientation, critical
+    "Dead": "×",  # outside the pacman family — game over
 }
 
 
