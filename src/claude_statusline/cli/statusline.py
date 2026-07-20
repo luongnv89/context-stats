@@ -83,8 +83,29 @@ def _format_thinking_info(budget) -> str:
     return f"{tokens} tokens thinking"
 
 
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default.
+
+    Guarded with getattr because pytest's CaptureIO (and StringIO stand-ins used
+    by tests) do not implement reconfigure().
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = getattr(stream, "encoding", None)
+        if encoding and encoding.lower().replace("-", "") == "utf8":
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - detached/closed stream
+            pass
+
+
 def main() -> None:
     """Main entry point for claude-statusline CLI."""
+    _ensure_utf8_stdout()
+
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:

@@ -50,6 +50,7 @@ def run_script(input_data: dict, env_overrides: dict | None = None) -> tuple[str
         input=json.dumps(input_data),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
     )
     return result.stdout.strip(), result.returncode
@@ -1189,6 +1190,8 @@ class TestPacmanDisplay:
         claude_dir.mkdir()
         (claude_dir / "statusline.conf").write_text("show_pacman=true\n", encoding="utf-8")
         monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
         monkeypatch.setenv("COLUMNS", "200")
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input(zone))))
         pkg_statusline.main()
@@ -1206,6 +1209,8 @@ class TestPacmanDisplay:
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir()
         monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
         monkeypatch.setenv("COLUMNS", "200")
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
         pkg_statusline.main()
@@ -1254,3 +1259,38 @@ class TestPacmanDisplay:
         # Dark red RGB ANSI sequence used for the "dark_red" zone color.
         assert "\033[38;2;139;0;0m" in output
         assert "ᗢ" in strip_ansi(output)
+
+    def test_pacman_survives_non_utf8_stdout_encoding(self, tmp_path):
+        """The script still emits output when stdout defaults to cp1252 (Windows).
+
+        Claude Code invokes the statusline with a piped stdout, where Python
+        picks the locale codec. The pacman glyphs are Canadian Aboriginal
+        Syllabics and are not encodable in cp1252, so without a UTF-8 guard in
+        main() print() raises UnicodeEncodeError and the statusline emits
+        nothing at all. PYTHONUTF8 is popped deliberately: setting it is what
+        masks this failure mode.
+        """
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text("show_pacman=true\n", encoding="utf-8")
+
+        env = os.environ.copy()
+        env.pop("PYTHONUTF8", None)
+        env.update(
+            {
+                "HOME": str(tmp_path),
+                "USERPROFILE": str(tmp_path),
+                "COLUMNS": "200",
+                "PYTHONIOENCODING": "cp1252",
+            }
+        )
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT_PATH)],
+            input=json.dumps(self._zone_input("Plan")),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+        )
+        assert result.returncode == 0, f"statusline crashed: {result.stderr}"
+        assert result.stdout.strip(), "statusline emitted no output under cp1252 stdout"
