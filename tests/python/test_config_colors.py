@@ -118,6 +118,7 @@ class TestConfigDefaultRoundTrip:
         assert config1.show_delta == config2.show_delta
         assert config1.show_session == config2.show_session
         assert config1.show_mi == config2.show_mi
+        assert config1.show_pacman == config2.show_pacman
         assert config1.color_overrides == config2.color_overrides
 
     def test_default_config_matches_example(self, tmp_path):
@@ -142,6 +143,7 @@ class TestConfigDefaultRoundTrip:
             "show_session=",
             "show_mi=",
             "mi_curve_beta=",
+            "show_pacman=",
         ):
             assert key in content, f"Default config should contain '{key}'"
 
