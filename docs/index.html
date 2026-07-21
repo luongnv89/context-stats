@@ -240,6 +240,8 @@
                 font-size: 15px;
                 transition: all 0.18s;
                 cursor: pointer;
+                border: none;
+                font-family: inherit;
             }
             .btn-primary {
                 background: var(--green);
@@ -258,6 +260,82 @@
             .btn-secondary:hover {
                 border-color: var(--border-hover);
                 background: var(--bg-subtle);
+            }
+
+            /* ── Copyable commands ────────────────────────────── */
+            .copy-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: min(100%, 420px);
+                padding: 10px 12px 10px 16px;
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                text-align: left;
+            }
+            .hero-actions .copy-row {
+                width: min(100%, 360px);
+            }
+            .copy-row code {
+                flex: 1;
+                min-width: 0;
+                overflow-x: auto;
+                white-space: nowrap;
+                font-size: 14px;
+                color: var(--cyan);
+                scrollbar-width: none;
+            }
+            .copy-row code::-webkit-scrollbar {
+                display: none;
+            }
+            .copy-btn {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 12px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--bg-card);
+                color: var(--text-muted);
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: color 0.15s, border-color 0.15s, background 0.15s;
+            }
+            .copy-btn:hover {
+                color: var(--text);
+                border-color: var(--border-hover);
+                background: var(--bg-subtle);
+            }
+            .copy-btn.copied {
+                color: #04221a;
+                background: var(--green);
+                border-color: var(--green);
+            }
+            .copy-btn svg {
+                width: 14px;
+                height: 14px;
+                flex-shrink: 0;
+            }
+            .cmd-copy {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                max-width: 100%;
+            }
+            .cmd-copy code {
+                max-width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            .cmd-copy .copy-btn {
+                padding: 5px 8px;
+            }
+            .cmd-copy .copy-btn .copy-label {
+                display: none;
             }
 
             /* ── Hero ──────────────────────────────────────────── */
@@ -544,14 +622,58 @@
                 font-size: 0.97rem;
                 margin-bottom: 18px;
             }
-            .level-card code {
-                display: inline-block;
+            .level-card .cmd-copy {
+                width: 100%;
                 background: var(--bg-deep);
                 border: 1px solid var(--border);
-                border-radius: 6px;
-                padding: 6px 10px;
+                border-radius: 8px;
+                padding: 8px 8px 8px 10px;
+            }
+            .level-card .cmd-copy code {
+                display: block;
+                background: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
                 font-size: 12.5px;
                 color: var(--cyan);
+            }
+
+            /* ── Install section ──────────────────────────────── */
+            .install-grid {
+                display: grid;
+                grid-template-columns: 1.1fr 0.9fr;
+                gap: 20px;
+                align-items: stretch;
+            }
+            .install-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 28px;
+            }
+            .install-card h3 {
+                font-size: 1.15rem;
+                font-weight: 700;
+                margin-bottom: 8px;
+            }
+            .install-card p {
+                color: var(--text-muted);
+                font-size: 0.95rem;
+                margin-bottom: 18px;
+            }
+            .install-card .copy-row {
+                width: 100%;
+            }
+            .install-note {
+                margin-top: 18px;
+                font-size: 13.5px;
+                color: var(--text-dim);
+            }
+            @media (max-width: 820px) {
+                .install-grid {
+                    grid-template-columns: 1fr;
+                }
             }
             @media (max-width: 820px) {
                 .levels {
@@ -701,12 +823,17 @@
                 </p>
 
                 <div class="hero-actions">
-                    <a href="https://pypi.org/project/context-stats/" class="btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M12 5v14M5 12l7 7 7-7" />
-                        </svg>
-                        pip install context-stats
-                    </a>
+                    <div class="copy-row" data-copy="pip install context-stats">
+                        <code>$ pip install context-stats</code>
+                        <button type="button" class="copy-btn" aria-label="Copy install command">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            <span class="copy-label">Copy</span>
+                        </button>
+                    </div>
+                    <a href="#install" class="btn-primary">Get started free</a>
                     <a href="docs.html" class="btn-secondary">Read the docs →</a>
                 </div>
 
@@ -813,6 +940,52 @@
                         }
                     })
                     .catch(() => {});
+
+                async function copyText(text) {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                        return;
+                    }
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.setAttribute('readonly', '');
+                    ta.style.position = 'fixed';
+                    ta.style.top = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+
+                document.addEventListener('click', async (event) => {
+                    const btn = event.target.closest('.copy-btn');
+                    if (!btn) return;
+                    const host = btn.closest('[data-copy]');
+                    if (!host) return;
+                    const text = host.getAttribute('data-copy') || '';
+                    if (!text) return;
+
+                    try {
+                        await copyText(text);
+                        const label = btn.querySelector('.copy-label');
+                        const prev = label ? label.textContent : '';
+                        const prevAria = btn.getAttribute('aria-label') || 'Copy';
+                        btn.classList.add('copied');
+                        btn.setAttribute('aria-label', 'Copied');
+                        if (label) label.textContent = 'Copied';
+                        window.setTimeout(() => {
+                            btn.classList.remove('copied');
+                            if (label) label.textContent = prev || 'Copy';
+                            btn.setAttribute('aria-label', prevAria);
+                        }, 1600);
+                    } catch (_) {
+                        const label = btn.querySelector('.copy-label');
+                        if (label) label.textContent = 'Failed';
+                        window.setTimeout(() => {
+                            if (label) label.textContent = 'Copy';
+                        }, 1600);
+                    }
+                });
             })();
         </script>
 
@@ -836,7 +1009,16 @@
                             Context zone, Model Intelligence score, and token delta on every
                             prompt — so you act now, not after the context is already gone.
                         </p>
-                        <code>context-stats graph</code>
+                        <div class="cmd-copy" data-copy="context-stats graph">
+                            <code>context-stats graph</code>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats graph">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="level-card cyan">
                         <span class="level-tag">Level 2 · Session</span>
@@ -845,7 +1027,16 @@
                             Export a full session to Markdown: cache efficiency, interaction
                             timeline, zone history, and the exact moments context compacted.
                         </p>
-                        <code>context-stats export</code>
+                        <div class="cmd-copy" data-copy="context-stats export">
+                            <code>context-stats export</code>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats export">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="level-card indigo">
                         <span class="level-tag">Level 3 · Report</span>
@@ -854,7 +1045,81 @@
                             Cost breakdown, cache analysis, and cross-project patterns over weeks
                             or months — so you know exactly where your tokens go.
                         </p>
-                        <code>context-stats report</code>
+                        <div class="cmd-copy" data-copy="context-stats report">
+                            <code>context-stats report</code>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats report">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── INSTALL ──────────────────────────────────────────── -->
+        <section id="install">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-label">Get started</span>
+                    <h2>Install in under 60 seconds.</h2>
+                    <p>
+                        Pure Python 3.9+, zero external dependencies. Copy a command, wire the
+                        statusline, restart Claude Code.
+                    </p>
+                </div>
+
+                <div class="install-grid">
+                    <div class="install-card">
+                        <h3>1. Install the package</h3>
+                        <p>Pick pip or uv — both install the same package from PyPI.</p>
+                        <div class="copy-row" data-copy="pip install context-stats" style="margin-bottom: 12px">
+                            <code>$ pip install context-stats</code>
+                            <button type="button" class="copy-btn" aria-label="Copy pip install command">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
+                        <div class="copy-row" data-copy="uv pip install context-stats">
+                            <code>$ uv pip install context-stats</code>
+                            <button type="button" class="copy-btn" aria-label="Copy uv install command">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="install-card">
+                        <h3>2. Wire the statusline</h3>
+                        <p>Add this to <span class="mono">~/.claude/settings.json</span>, then restart Claude Code.</p>
+                        <div class="copy-row" data-copy='{
+  "statusLine": {
+    "type": "command",
+    "command": "claude-statusline"
+  }
+}'>
+                            <code>{"statusLine": {"type": "command", "command": "claude-statusline"}}</code>
+                            <button type="button" class="copy-btn" aria-label="Copy Claude Code statusline settings">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
+                        <p class="install-note">
+                            Need the full walkthrough? See
+                            <a href="docs.html#install" style="color: var(--cyan)">Install in 60 seconds</a>.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -890,12 +1155,17 @@
                 </p>
 
                 <div class="hero-actions">
-                    <a href="https://pypi.org/project/context-stats/" class="btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M12 5v14M5 12l7 7 7-7" />
-                        </svg>
-                        pip install context-stats
-                    </a>
+                    <div class="copy-row" data-copy="pip install context-stats">
+                        <code>$ pip install context-stats</code>
+                        <button type="button" class="copy-btn" aria-label="Copy install command">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            <span class="copy-label">Copy</span>
+                        </button>
+                    </div>
+                    <a href="#install" class="btn-primary">Get started free</a>
                     <a href="https://github.com/luongnv89/context-stats" class="btn-secondary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />

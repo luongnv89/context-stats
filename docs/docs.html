@@ -323,6 +323,42 @@
                 font-size: 11.5px;
                 color: var(--text-dim);
                 font-family: 'JetBrains Mono', monospace;
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .term-bar .copy-btn {
+                margin-left: auto;
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 10px;
+                border: 1px solid var(--border);
+                border-radius: 7px;
+                background: var(--bg-deep);
+                color: var(--text-muted);
+                font-family: inherit;
+                font-size: 11.5px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: color 0.15s, border-color 0.15s, background 0.15s;
+            }
+            .term-bar .copy-btn:hover {
+                color: var(--text);
+                border-color: var(--border-hover);
+                background: var(--bg-subtle);
+            }
+            .term-bar .copy-btn.copied {
+                color: #04221a;
+                background: var(--green);
+                border-color: var(--green);
+            }
+            .term-bar .copy-btn svg {
+                width: 13px;
+                height: 13px;
             }
             .term pre {
                 padding: 18px 18px;
@@ -367,10 +403,48 @@
                 border-radius: 10px;
                 padding: 18px;
             }
+            .cmd-head {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
             .cmd code {
                 color: var(--green);
                 font-size: 13px;
                 font-weight: 600;
+                flex: 1;
+                min-width: 0;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            .cmd .copy-btn {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 30px;
+                height: 30px;
+                padding: 0;
+                border: 1px solid var(--border);
+                border-radius: 7px;
+                background: var(--bg-deep);
+                color: var(--text-muted);
+                cursor: pointer;
+                transition: color 0.15s, border-color 0.15s, background 0.15s;
+            }
+            .cmd .copy-btn:hover {
+                color: var(--text);
+                border-color: var(--border-hover);
+                background: var(--bg-subtle);
+            }
+            .cmd .copy-btn.copied {
+                color: #04221a;
+                background: var(--green);
+                border-color: var(--green);
+            }
+            .cmd .copy-btn svg {
+                width: 14px;
+                height: 14px;
             }
             .cmd p {
                 margin: 8px 0 0;
@@ -584,14 +658,39 @@
                 <section id="install">
                     <h2>Install in 60 seconds</h2>
                     <p>Pure Python 3.9+, zero external dependencies. macOS, Linux, and Windows.</p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">terminal</span></div>
+                    <div class="term" data-copy="pip install context-stats">
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">terminal</span>
+                            <button type="button" class="copy-btn" aria-label="Copy install command">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                         <pre><span class="g">$</span> pip install context-stats
-<span class="dm">Successfully installed context-stats-1.22.0</span></pre>
+<span class="dm">Successfully installed context-stats-1.24.0</span></pre>
                     </div>
                     <p>Then add the statusline to <span class="inline-code">~/.claude/settings.json</span>:</p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">~/.claude/settings.json</span></div>
+                    <div class="term" data-copy='{
+  "statusLine": {
+    "type": "command",
+    "command": "claude-statusline"
+  }
+}'>
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">~/.claude/settings.json</span>
+                            <button type="button" class="copy-btn" aria-label="Copy Claude Code statusline settings">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                         <pre>{
   <span class="c">"statusLine"</span>: {
     <span class="c">"type"</span>: <span class="g">"command"</span>,
@@ -608,14 +707,80 @@
                 <!-- COMMANDS -->
                 <section id="commands">
                     <h2>The commands</h2>
-                    <p>Run any of these any time — no session ID needed.</p>
+                    <p>Run any of these any time — no session ID needed. Click Copy to paste into your terminal.</p>
                     <div class="cmd-grid">
-                        <div class="cmd"><code>context-stats graph</code><p>Live ASCII dashboard — context, MI, cache, and delta per interaction.</p></div>
-                        <div class="cmd"><code>context-stats sessions</code><p>List recent sessions (last 5 minutes by default; <span class="inline-code">--minutes N</span> to widen).</p></div>
-                        <div class="cmd"><code>context-stats export</code><p>Export a full session report to Markdown — cache, timeline, zones.</p></div>
-                        <div class="cmd"><code>context-stats report</code><p>Multi-project cost analytics (<span class="inline-code">--since-days 30</span>).</p></div>
-                        <div class="cmd"><code>context-stats &lt;id&gt; cache-warm on</code><p>Keep the prompt cache alive during idle gaps (heartbeat every 4 min).</p></div>
-                        <div class="cmd"><code>context-stats explain</code><p>Explain the raw JSON Claude Code pipes to the statusline.</p></div>
+                        <div class="cmd" data-copy="context-stats graph">
+                            <div class="cmd-head">
+                                <code>context-stats graph</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats graph">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Live ASCII dashboard — context, MI, cache, and delta per interaction.</p>
+                        </div>
+                        <div class="cmd" data-copy="context-stats sessions">
+                            <div class="cmd-head">
+                                <code>context-stats sessions</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats sessions">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>List recent sessions (last 5 minutes by default; <span class="inline-code">--minutes N</span> to widen).</p>
+                        </div>
+                        <div class="cmd" data-copy="context-stats export">
+                            <div class="cmd-head">
+                                <code>context-stats export</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats export">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Export a full session report to Markdown — cache, timeline, zones.</p>
+                        </div>
+                        <div class="cmd" data-copy="context-stats report">
+                            <div class="cmd-head">
+                                <code>context-stats report</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats report">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Multi-project cost analytics (<span class="inline-code">--since-days 30</span>).</p>
+                        </div>
+                        <div class="cmd" data-copy="context-stats cache-warm on 30m">
+                            <div class="cmd-head">
+                                <code>context-stats cache-warm on 30m</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats cache-warm on 30m">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Keep the prompt cache alive during idle gaps (heartbeat every 4 min).</p>
+                        </div>
+                        <div class="cmd" data-copy="context-stats explain">
+                            <div class="cmd-head">
+                                <code>context-stats explain</code>
+                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats explain">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p>Explain the raw JSON Claude Code pipes to the statusline.</p>
+                        </div>
                     </div>
                 </section>
 
@@ -657,8 +822,18 @@
 
                     <h3>The graph dashboard</h3>
                     <p>An on-demand ASCII view of cumulative usage, per-interval delta, and summary stats:</p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">context-stats graph</span></div>
+                    <div class="term" data-copy="context-stats graph">
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">context-stats graph</span>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats graph">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                         <pre><span class="g">$</span> context-stats graph
 
 <span class="dm">Token Usage Graphs (Session: a3f9c12d…)</span>
@@ -694,8 +869,18 @@
                         interaction timeline (with MI and zone per step), context growth, and cache
                         statistics — then prints a short confirmation:
                     </p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">context-stats export</span></div>
+                    <div class="term" data-copy="context-stats export --output report.md">
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">context-stats export</span>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats export --output report.md">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                         <pre><span class="g">$</span> context-stats export --output report.md
 
 <span class="g">Exported to report.md</span>
@@ -813,9 +998,19 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                         4 minutes, keeping the cache alive for up to 30 minutes. The savings show
                         up directly in your <span class="inline-code">context-stats export</span> report.
                     </div>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">cache keep-warm</span></div>
-                        <pre><span class="g">$</span> context-stats &lt;session_id&gt; cache-warm on
+                    <div class="term" data-copy="context-stats cache-warm on 30m">
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">cache keep-warm</span>
+                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats cache-warm on 30m">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
+                        <pre><span class="g">$</span> context-stats cache-warm on 30m
 
 <span class="g">Cache-warm activated for session a3f9c12d….</span>
 <span class="dm">Heartbeat every 4 minutes, auto-stops in 30m.</span></pre>
@@ -844,8 +1039,26 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                         colors (or hex codes), toggle MI display, token detail, delta tracking,
                         session ID, motion effects, tok/s, and more.
                     </p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">~/.claude/statusline.conf</span></div>
+                    <div class="term" data-copy="# Display toggles
+show_mi=true
+show_delta=true
+show_tps=true
+show_session_id=false
+
+# Colors (named or #hex)
+color_zone_code=yellow
+color_mi_high=#10B981">
+                        <div class="term-bar">
+                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                            <span class="ttl">~/.claude/statusline.conf</span>
+                            <button type="button" class="copy-btn" aria-label="Copy sample statusline.conf">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span class="copy-label">Copy</span>
+                            </button>
+                        </div>
                         <pre><span class="dm"># Display toggles</span>
 show_mi=<span class="g">true</span>
 show_delta=<span class="g">true</span>
@@ -918,5 +1131,55 @@ color_mi_high=<span class="g">#10B981</span></pre>
                 </div>
             </div>
         </footer>
+
+        <script>
+            (function () {
+                async function copyText(text) {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                        return;
+                    }
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.setAttribute('readonly', '');
+                    ta.style.position = 'fixed';
+                    ta.style.top = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+
+                document.addEventListener('click', async (event) => {
+                    const btn = event.target.closest('.copy-btn');
+                    if (!btn) return;
+                    const host = btn.closest('[data-copy]');
+                    if (!host) return;
+                    const text = host.getAttribute('data-copy') || '';
+                    if (!text) return;
+
+                    try {
+                        await copyText(text);
+                        const label = btn.querySelector('.copy-label');
+                        const prev = label ? label.textContent : '';
+                        const prevAria = btn.getAttribute('aria-label') || 'Copy';
+                        btn.classList.add('copied');
+                        btn.setAttribute('aria-label', 'Copied');
+                        if (label) label.textContent = 'Copied';
+                        window.setTimeout(() => {
+                            btn.classList.remove('copied');
+                            if (label) label.textContent = prev || 'Copy';
+                            btn.setAttribute('aria-label', prevAria);
+                        }, 1600);
+                    } catch (_) {
+                        const label = btn.querySelector('.copy-label');
+                        if (label) label.textContent = 'Failed';
+                        window.setTimeout(() => {
+                            if (label) label.textContent = 'Copy';
+                        }, 1600);
+                    }
+                });
+            })();
+        </script>
     </body>
 </html>
