@@ -1231,11 +1231,35 @@ class TestPacmanDisplay:
         out = strip_ansi(capsys.readouterr().out)
         assert PACMAN_ICONS["ExDump"] in out, "Icon should appear by default (package)"
 
+    def test_pacman_hidden_when_disabled_package(self, monkeypatch, capsys, tmp_path):
+        """The PACKAGE entry point honors an explicit show_pacman=false opt-out.
+
+        The opt-out test above (test_pacman_hidden_when_disabled) shells out to
+        the standalone script only; without this the package side has no
+        coverage that the toggle can turn the icon back off.
+        """
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+        from claude_statusline.graphs.intelligence import PACMAN_ICONS
+
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text("show_pacman=false\n", encoding="utf-8")
+        monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("COLUMNS", "200")
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
+        pkg_statusline.main()
+        out = strip_ansi(capsys.readouterr().out)
+        assert PACMAN_ICONS["ExDump"] not in out, "Icon should be hidden when disabled (package)"
+
     # --- Structural checks ---------------------------------------------------
 
     def test_pacman_info_in_parts_list_standalone(self):
         """pacman_info should be present in the standalone script's parts list,
-        positioned after zone_info (it's a zone-derived sibling segment)."""
+        concatenated after zone_info within the single context-group part."""
         content = SCRIPT_PATH.read_text(encoding="utf-8")
         parts_start = content.index("parts = [")
         parts_block = content[parts_start : parts_start + 2000]
@@ -1246,7 +1270,8 @@ class TestPacmanDisplay:
         assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
 
     def test_pacman_info_in_parts_list_package(self):
-        """pacman_info should also be present in the package's parts list."""
+        """pacman_info should also be concatenated after zone_info within the
+        package's single context-group part."""
         package_path = (
             Path(__file__).parent.parent.parent
             / "src"

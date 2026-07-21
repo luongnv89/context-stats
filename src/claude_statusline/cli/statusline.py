@@ -233,7 +233,7 @@ def main() -> None:
         effective_zone_color = prop_zone_color if prop_zone_color else zone_color
         zone_info = f"·{effective_zone_color}{zone_result.zone}{colors.reset}"
 
-        # Pacman-style icon reflecting the same zone — off by default.
+        # Pacman-style icon reflecting the same zone — on by default.
         if config.show_pacman:
             from claude_statusline.graphs.intelligence import get_pacman_icon
 
@@ -338,7 +338,7 @@ def main() -> None:
     if config.show_session and session_id:
         session_info = f" | {colors.session}{session_id}{colors.reset}"
 
-    # Output: directory | branch [changes] | XXk free (XX%) | zone | MI | +delta | $cost | [Model] [session_id]
+    # Output: directory | branch [changes] | XXk free (XX%)·zone·pacman | MI | +delta | $cost | [Model] [session_id]
     # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{colors.project_name}{dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(thinking_budget)

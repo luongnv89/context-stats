@@ -784,7 +784,7 @@ show_cost=true
 
 
 # Show the current reasoning effort level next to the model name (e.g.,
-# "Opus 4.8 · high"). Claude Code reports effort.level as one of
+# "Opus 4.8·high"). Claude Code reports effort.level as one of
 # low/medium/high/xhigh/max; the segment hides when no effort is reported.
 #   true  = effort visible (default)
 #   false = effort hidden
@@ -1322,7 +1322,7 @@ def main():
         effective_zone_color = c.get("zone", zone_ansi)
         zone_info = f"·{effective_zone_color}{zone_word}{RESET}"
 
-        # Pacman-style icon reflecting the same zone — off by default.
+        # Pacman-style icon reflecting the same zone — on by default.
         if show_pacman:
             pacman_glyph = get_pacman_icon(zone_word)
             if pacman_glyph:
@@ -1478,7 +1478,7 @@ def main():
     if show_session and session_id:
         session_info = f" | {c_session}{session_id}{RESET}"
 
-    # Output: dir | branch [changes] | XXk free (XX%) | zone | MI | tok/s | +delta | $cost | [Model] [id]
+    # Output: dir | branch [changes] | XXk free (XX%)·zone·pacman | MI | tok/s | +delta | $cost | [Model] [id]
     # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{c_project_name}{dir_name}{RESET}"
     thinking_text = _format_thinking_info(thinking_budget)

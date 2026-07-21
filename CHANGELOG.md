@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Grouped statusline separators** — Context usage, context zone, and the pacman icon are now one visual group joined by an unspaced `·` (`64,000 free (32.0%)·Code·ᗤ`) instead of ` | `, and the model's effort suffix is likewise unspaced (`Opus 4.6·high`). Groups remain separated by ` | `. Saves horizontal room and keeps related elements together, including when the statusline wraps on narrow terminals
+- **Grouped statusline separators** — Context usage, context zone, and the pacman icon are now one visual group joined by an unspaced `·` (`64,000 free (32.0%)·Code·ᗤ`) instead of ` | `. Groups remain separated by ` | `. Saves horizontal room and keeps related elements together, including when the statusline wraps on narrow terminals
 
 ### Added
 

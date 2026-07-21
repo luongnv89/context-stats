@@ -124,7 +124,7 @@ class Config:
     show_cost: bool = True
 
     # Reasoning effort display — shows CC's effort.level (low/medium/high/
-    # xhigh/max) next to the model name, e.g. "Opus 4.8 · high"
+    # xhigh/max) next to the model name, e.g. "Opus 4.8·high"
     show_effort: bool = True
 
     # Pacman-style icon reflecting the current context zone (Plan/Code/Dump/

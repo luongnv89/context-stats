@@ -172,6 +172,22 @@ class TestFitToWidth:
         for line in result.split("\n"):
             assert not line.startswith(" | ")
 
+    def test_no_wrapped_line_starts_with_group_separator(self):
+        """A `·`-joined group is one atomic part, so a wrapped line can never
+        begin with a dangling `·`.
+
+        This is the whole justification for keeping context+zone+pacman in a
+        single parts entry: were they three separate parts, the reflow would
+        strip only the leading " | " and a line could start with "·Code".
+        """
+        parts = ["base", " | aaaa", " | a·b·c", " | dddd"]
+        result = fit_to_width(parts, 12)
+        assert "\n" in result, "test width must force a wrap"
+        assert "a·b·c" in result, "the group must survive intact"
+        for line in result.split("\n"):
+            assert not line.startswith("·")
+            assert not line.startswith(" | ")
+
     def test_priority_order_preserved_across_lines(self):
         parts = ["base", " | A", " | B", " | C", " | D"]
         # base=4, " | A"=4, " | B"=4, " | C"=4, " | D"=4.
