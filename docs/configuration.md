@@ -36,7 +36,7 @@ show_cost=true     # (default) Show session cost like $0.42
 show_cost=false    # Hide session cost
 
 # Show reasoning effort level next to the model name (reported by Claude Code)
-show_effort=true   # (default) Show effort like Opus 4.6 · high
+show_effort=true   # (default) Show effort like Opus 4.6·high
 show_effort=false  # Hide effort level
 
 # Disable rotating text animations
@@ -59,7 +59,7 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 ## Status Line Components
 
 ```
-[Opus 4.6] my-project | main [3] | 64,000 free (32.0%) [+2,500] MI:0.918 [AC:45k] session_id
+my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
 | Component     | Description              | Default Color | Config Key             |
@@ -75,7 +75,7 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 | `ᗧ`           | Pacman context-zone icon | Zone color    | `color_zone`           |
 | `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
 | `$0.42`       | Cumulative session cost  | Dim           | `color_cost`           |
-| `· high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
+| `·high`       | Reasoning effort level   | Dim (model)   | `color_model`          |
 | `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
 | `session_id`  | Current session          | Dim           | `color_session`        |
 
@@ -89,10 +89,16 @@ set `show_cost=false` to hide it.
 
 The reasoning effort level is reported by Claude Code (`effort.level`, one of
 `low`/`medium`/`high`/`xhigh`/`max`) and shown next to the model name, e.g.
-`Opus 4.6 · high`. It is on by default and hides automatically when Claude Code
+`Opus 4.6·high`. It is on by default and hides automatically when Claude Code
 reports no effort (e.g. models without an effort setting); set
 `show_effort=false` to hide it. The effort label shares the model color
 (`color_model`).
+
+Related elements are grouped with a thin `·` separator instead of the `|`
+used between groups: context usage, zone, and pacman icon form one group
+(`64,000 free (32.0%)·Code·ᗤ`), and the model carries its effort suffix
+(`Opus 4.6·high`). The `·` is unspaced to save horizontal room. A group is
+kept together when the statusline wraps on a narrow terminal.
 
 The pacman icon is a quick emotional cue for the current context zone,
 shown next to the zone label. Each of the five zones maps to a distinct

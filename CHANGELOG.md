@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Grouped statusline separators** — Context usage, context zone, and the pacman icon are now one visual group joined by an unspaced `·` (`64,000 free (32.0%)·Code·ᗤ`) instead of ` | `, and the model's effort suffix is likewise unspaced (`Opus 4.6·high`). Groups remain separated by ` | `. Saves horizontal room and keeps related elements together, including when the statusline wraps on narrow terminals
+
 ### Added
 
 - **Pacman context-zone icon** — Show a pacman-style glyph next to the zone label that reflects the current context zone (Plan/Code/Dump/ExDump/Dead), sharing the zone's traffic-light color. On by default; controlled by the new `show_pacman` toggle and applied to both the installable package and the standalone script (#98)
 - **Responsive multi-line statusline** — When the terminal is too narrow to fit everything on one line, the statusline now wraps onto additional lines instead of dropping lower-priority elements, so no information is lost on narrow screens. Wide terminals still render a single line, byte-identical to before. Requires Claude Code v2.1.153+ (which exports the real terminal width via `COLUMNS`). Applied identically to both the installable package and the standalone script (#88)
-- **Reasoning effort display** — Show Claude Code's live reasoning effort (`effort.level`: `low`/`medium`/`high`/`xhigh`/`max`) next to the model name in the statusline, e.g. `Opus 4.8 · high`. On by default; hides gracefully when no effort is reported. Controlled by the new `show_effort` toggle and applied to both the installable package and the standalone script (#87)
+- **Reasoning effort display** — Show Claude Code's live reasoning effort (`effort.level`: `low`/`medium`/`high`/`xhigh`/`max`) next to the model name in the statusline, e.g. `Opus 4.8·high`. On by default; hides gracefully when no effort is reported. Controlled by the new `show_effort` toggle and applied to both the installable package and the standalone script (#87)
 
 ## [1.23.0] - 2026-06-16
 

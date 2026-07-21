@@ -979,10 +979,10 @@ color_separator=dim
 #
 # The statusline elements are displayed in this order (highest priority first):
 #
-#   project_name | branch [changes] | tokens_free (%) | Zone | MI:score | tok/s | +delta | Model | session_id
+#   project_name | branch [changes] | tokens_free (%)·Zone·pacman | MI:score | tok/s | +delta | Model·effort | session_id
 #
 # Example output:
-#   my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | 42.5 tok/s | +2,500 | Opus 4.6 | abc-123
+#   my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | 42.5 tok/s | +2,500 | Opus 4.6·high | abc-123
 #
 # If the terminal is too narrow to fit everything on one line, the line
 # wraps onto additional lines instead of dropping elements — nothing is
@@ -1320,13 +1320,13 @@ def main():
 
         # Zone label uses same color, with per-property override
         effective_zone_color = c.get("zone", zone_ansi)
-        zone_info = f" | {effective_zone_color}{zone_word}{RESET}"
+        zone_info = f"·{effective_zone_color}{zone_word}{RESET}"
 
         # Pacman-style icon reflecting the same zone — off by default.
         if show_pacman:
             pacman_glyph = get_pacman_icon(zone_word)
             if pacman_glyph:
-                pacman_info = f" | {effective_zone_color}{pacman_glyph}{RESET}"
+                pacman_info = f"·{effective_zone_color}{pacman_glyph}{RESET}"
 
         # Read previous entry if needed for delta, MI, or throughput (tok/s).
         # tok/s needs the previous row (for the API-time delta) and persists
@@ -1486,18 +1486,20 @@ def main():
     # reasoning effort). Effort hides gracefully when absent/null/disabled.
     model_suffix = ""
     if thinking_text:
-        model_suffix += f" · {thinking_text}"
+        model_suffix += f"·{thinking_text}"
     if show_effort and effort_level:
-        model_suffix += f" · {effort_level}"
+        model_suffix += f"·{effort_level}"
     model_info = f" | {c_model}{model}{model_suffix}{RESET}"
     max_width = get_terminal_width()
     parts = [
         base,
         git_info,
         pr_info,
-        context_info,
-        zone_info,
-        pacman_info,
+        # Context group: tokens·zone·pacman. Joined with "·" (no spaces) and
+        # kept as ONE atomic part so the group never splits across lines on a
+        # narrow terminal — fit_to_width() only strips a leading " | ", so a
+        # "·"-prefixed part starting a wrapped line would show a stray "·".
+        context_info + zone_info + pacman_info,
         mi_info,
         tps_info,
         delta_info,

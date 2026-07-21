@@ -231,7 +231,7 @@ def main() -> None:
         # Zone label uses same color, with per-property override
         prop_zone_color = config.color_overrides.get("zone")
         effective_zone_color = prop_zone_color if prop_zone_color else zone_color
-        zone_info = f" | {effective_zone_color}{zone_result.zone}{colors.reset}"
+        zone_info = f"·{effective_zone_color}{zone_result.zone}{colors.reset}"
 
         # Pacman-style icon reflecting the same zone — off by default.
         if config.show_pacman:
@@ -239,7 +239,7 @@ def main() -> None:
 
             pacman_glyph = get_pacman_icon(zone_result.zone)
             if pacman_glyph:
-                pacman_info = f" | {effective_zone_color}{pacman_glyph}{colors.reset}"
+                pacman_info = f"·{effective_zone_color}{pacman_glyph}{colors.reset}"
 
         # State file management for delta/MI/throughput display and history.
         # tok/s also needs the previous row (for the API-time delta) and must
@@ -346,18 +346,20 @@ def main() -> None:
     # reasoning effort). Effort hides gracefully when absent/null/disabled.
     model_suffix = ""
     if thinking_text:
-        model_suffix += f" · {thinking_text}"
+        model_suffix += f"·{thinking_text}"
     if config.show_effort and effort_level:
-        model_suffix += f" · {effort_level}"
+        model_suffix += f"·{effort_level}"
     model_info = f" | {colors.model}{model}{model_suffix}{colors.reset}"
     max_width = get_terminal_width()
     parts = [
         base,
         git_info,
         pr_info,
-        context_info,
-        zone_info,
-        pacman_info,
+        # Context group: tokens·zone·pacman. Joined with "·" (no spaces) and
+        # kept as ONE atomic part so the group never splits across lines on a
+        # narrow terminal — fit_to_width() only strips a leading " | ", so a
+        # "·"-prefixed part starting a wrapped line would show a stray "·".
+        context_info + zone_info + pacman_info,
         mi_info,
         tps_info,
         delta_info,

@@ -56,6 +56,19 @@ def run_script(input_data: dict, env_overrides: dict | None = None) -> tuple[str
     return result.stdout.strip(), result.returncode
 
 
+def model_segment(visible: str, model_name: str) -> str:
+    """Return the ``" | "``-delimited segment containing the model name.
+
+    The context group (tokens·zone·pacman) also uses "·" as its separator, so a
+    bare ``"·" not in output`` assertion no longer isolates the model suffix.
+    Callers that mean "the model has no · suffix" must scope to this segment.
+    """
+    for segment in visible.split(" | "):
+        if model_name in segment:
+            return segment
+    raise AssertionError(f"model {model_name!r} not found in {visible!r}")
+
+
 class TestStatuslineScript:
     """Tests for the statusline.py script execution."""
 
@@ -764,14 +777,14 @@ class TestEffortDisplay:
         visible = strip_ansi(output)
         assert "high" in visible
         # Rendered as a suffix on the model segment (· separator).
-        assert "· high" in visible
+        assert "·high" in visible
 
     def test_effort_not_shown_when_missing(self, sample_input):
         """No effort key → no effort suffix, statusline still renders."""
         sample_input.pop("effort", None)
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
-        assert "· high" not in strip_ansi(output)
+        assert "·high" not in strip_ansi(output)
 
     def test_effort_null_renders_without_crash(self, sample_input):
         """An explicit null ``effort`` must not crash the render (regression).
@@ -786,7 +799,7 @@ class TestEffortDisplay:
         assert code == 0
         # sample_input has no thinking budget either, so the model segment has
         # no "·" suffix at all when effort is null.
-        assert "·" not in strip_ansi(output)
+        assert "·" not in model_segment(strip_ansi(output), "Claude 3.5 Sonnet")
 
     def test_effort_level_null_renders_without_crash(self, sample_input):
         """An explicit null ``effort.level`` must hide gracefully, not crash."""
@@ -808,14 +821,14 @@ class TestEffortDisplay:
         sample_input["effort"] = "high"  # string, not the expected dict
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
-        assert "·" not in strip_ansi(output)
+        assert "·" not in model_segment(strip_ansi(output), "Claude 3.5 Sonnet")
 
     def test_effort_hidden_when_disabled(self, sample_input, tmp_path):
         """With show_effort=false, the effort level is not rendered."""
         sample_input["effort"] = {"level": "high"}
         output, code = self._run_with_config(sample_input, "show_effort=false\n", tmp_path)
         assert code == 0
-        assert "· high" not in strip_ansi(output)
+        assert "·high" not in strip_ansi(output)
 
     def test_effort_shown_when_enabled(self, sample_input, tmp_path):
         """With show_effort=true (explicit), the effort level is rendered."""
@@ -885,7 +898,7 @@ class TestEffortDisplay:
         pkg_statusline.main()
         out = strip_ansi(capsys.readouterr().out)
         assert "Opus 4.8" in out
-        assert "· high" in out
+        assert "·high" in out
 
     def test_package_non_dict_effort_renders_without_crash(self, monkeypatch, capsys):
         """The PACKAGE entry must also survive a non-dict effort (parity guard).
@@ -914,7 +927,7 @@ class TestEffortDisplay:
         pkg_statusline.main()  # must not raise
         out = strip_ansi(capsys.readouterr().out)
         assert "Opus 4.8" in out
-        assert "·" not in out
+        assert "·" not in model_segment(out, "Opus 4.8")
 
 
 class TestSessionCost:
