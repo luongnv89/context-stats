@@ -36,7 +36,7 @@ show_cost=true     # (default) Show session cost like $0.42
 show_cost=false    # Hide session cost
 
 # Show reasoning effort level next to the model name (reported by Claude Code)
-show_effort=true   # (default) Show effort like Opus 4.6 · high
+show_effort=true   # (default) Show effort like Opus 4.6·high
 show_effort=false  # Hide effort level
 
 # Disable rotating text animations
@@ -44,8 +44,8 @@ reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
 
 # Pacman-style icon reflecting the current context zone (Plan/Code/Dump/ExDump/Dead)
-show_pacman=false  # (default) Icon hidden
-show_pacman=true   # Show icon next to the zone label
+show_pacman=true   # (default) Show icon next to the zone label
+show_pacman=false  # Icon hidden
 
 # Model Intelligence (MI) score display
 show_mi=false  # (default) MI score hidden
@@ -59,25 +59,25 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 ## Status Line Components
 
 ```
-[Opus 4.6] my-project | main [3] | 64,000 free (32.0%) [+2,500] MI:0.918 [AC:45k] session_id
+my-project | main [3] | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
 | Component     | Description              | Default Color | Config Key             |
 | ------------- | ------------------------ | ------------- | ---------------------- |
-| `[Opus 4.6]`  | Current AI model         | Dim           | `color_model`          |
+| `Opus 4.6`    | Current AI model         | Dim           | `color_model`          |
 | `my-project`  | Current directory        | Cyan          | `color_project_name`   |
 | `main`        | Git branch               | Green         | `color_branch_name`    |
 | `[3]`         | Uncommitted changes      | Cyan          | `color_cyan`           |
-| `64,000 free` | Available tokens         | Bold White    | `color_context_length` |
-| `(32.0%)`     | Context usage percentage | -             | -                      |
+| `130,000`     | Available tokens         | Bold White    | `color_context_length` |
+| `(65.0%)`     | Context usage percentage | -             | -                      |
 | `42.5 tok/s`  | Model throughput         | Dim           | `color_tps`            |
-| `[+2,500]`    | Token delta              | Dim           | `color_delta`          |
-| `ᗧ`           | Pacman context-zone icon | Zone color    | `color_zone`           |
-| `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
+| `+2,500`      | Token delta              | Dim           | `color_delta`          |
+| `Code`        | Context zone             | Zone color    | `color_zone`           |
+| `ᗤ`           | Pacman context-zone icon | Zone color    | `color_zone`           |
+| `MI:0.849`    | Model Intelligence score | Yellow        | `color_mi_score`       |
 | `$0.42`       | Cumulative session cost  | Dim           | `color_cost`           |
-| `· high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
-| `[AC:45k]`    | Autocompact buffer       | Dim           | -                      |
-| `session_id`  | Current session          | Dim           | `color_session`        |
+| `·high`       | Reasoning effort level   | Dim (model)   | `color_model`          |
+| `abc-123`     | Current session          | Dim           | `color_session`        |
 
 The five structural elements — model, tok/s, delta, cost, and session — default to
 `color_separator` when their own key is not set, so they can be colored together
@@ -89,16 +89,22 @@ set `show_cost=false` to hide it.
 
 The reasoning effort level is reported by Claude Code (`effort.level`, one of
 `low`/`medium`/`high`/`xhigh`/`max`) and shown next to the model name, e.g.
-`Opus 4.6 · high`. It is on by default and hides automatically when Claude Code
+`Opus 4.6·high`. It is on by default and hides automatically when Claude Code
 reports no effort (e.g. models without an effort setting); set
 `show_effort=false` to hide it. The effort label shares the model color
 (`color_model`).
 
+Related elements are grouped with a thin `·` separator instead of the `|`
+used between groups: context usage, zone, and pacman icon form one group
+(`64,000 free (32.0%)·Code·ᗤ`), and the model carries its effort suffix
+(`Opus 4.6·high`). The `·` is unspaced to save horizontal room. A group is
+kept together when the statusline wraps on a narrow terminal.
+
 The pacman icon is a quick emotional cue for the current context zone,
 shown next to the zone label. Each of the five zones maps to a distinct
 glyph — `ᗧ` (Plan), `ᗤ` (Code), `ᗣ` (Dump), `ᗢ` (ExDump), `×` (Dead) — and
-shares the zone's traffic-light color (`color_zone`). It is off by default
-to keep the status line compact; set `show_pacman=true` to enable it.
+shares the zone's traffic-light color (`color_zone`). It is on by default;
+set `show_pacman=false` to hide it and keep the status line more compact.
 
 ## Token Colors
 

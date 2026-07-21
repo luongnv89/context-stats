@@ -631,14 +631,19 @@
                     <p>A single line rendered by Claude Code on every prompt:</p>
                     <div class="term">
                         <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">Claude Code statusline</span></div>
-                        <pre><span class="g">meta-app</span><span class="dm"> | </span><span class="c">feat/85-catalog-visibility-toggle</span> <span class="c">[3]</span><span class="dm"> | </span><span class="yl">132,944 (66.5%)</span><span class="dm"> | </span><span class="dm">Code | 3.3 tok/s | Sonnet 4.6 | baaff3c8-2b25-458b-adcd-96ebdeb5125d</span></pre>
+                        <pre><span class="g">meta-app</span><span class="dm"> | </span><span class="c">feat/85-catalog-visibility-toggle</span> <span class="c">[3]</span><span class="dm"> | </span><span class="yl">132,944 (66.5%)·Code·ᗤ</span><span class="dm"> | 3.3 tok/s | Sonnet 4.6 | baaff3c8-2b25-458b-adcd-96ebdeb5125d</span></pre>
                     </div>
-                    <p>Each <span class="inline-code">|</span>-separated segment, left to right:</p>
+                    <p>
+                        Each <span class="inline-code">|</span>-separated segment, left to right — closely
+                        related elements are grouped inside a segment with an unspaced
+                        <span class="inline-code">·</span> instead:
+                    </p>
                     <ul>
                         <li><strong>meta-app</strong> — current project directory.</li>
                         <li><strong>feat/85-… [3]</strong> — git branch and uncommitted change count.</li>
                         <li><strong>132,944 (66.5%)</strong> — remaining context window, colored by zone.</li>
                         <li><strong>Code</strong> — current context zone.</li>
+                        <li><strong>ᗤ</strong> — pacman icon mirroring that zone, in the same color.</li>
                         <li><strong>3.3 tok/s</strong> — rolling model throughput over the last 5 turns.</li>
                         <li><strong>Sonnet 4.6</strong> — active model.</li>
                         <li><strong>baaff3c8-…</strong> — session ID.</li>

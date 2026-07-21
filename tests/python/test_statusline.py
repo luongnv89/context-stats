@@ -56,6 +56,19 @@ def run_script(input_data: dict, env_overrides: dict | None = None) -> tuple[str
     return result.stdout.strip(), result.returncode
 
 
+def model_segment(visible: str, model_name: str) -> str:
+    """Return the ``" | "``-delimited segment containing the model name.
+
+    The context group (tokens·zone·pacman) also uses "·" as its separator, so a
+    bare ``"·" not in output`` assertion no longer isolates the model suffix.
+    Callers that mean "the model has no · suffix" must scope to this segment.
+    """
+    for segment in visible.split(" | "):
+        if model_name in segment:
+            return segment
+    raise AssertionError(f"model {model_name!r} not found in {visible!r}")
+
+
 class TestStatuslineScript:
     """Tests for the statusline.py script execution."""
 
@@ -764,14 +777,14 @@ class TestEffortDisplay:
         visible = strip_ansi(output)
         assert "high" in visible
         # Rendered as a suffix on the model segment (· separator).
-        assert "· high" in visible
+        assert "·high" in visible
 
     def test_effort_not_shown_when_missing(self, sample_input):
         """No effort key → no effort suffix, statusline still renders."""
         sample_input.pop("effort", None)
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
-        assert "· high" not in strip_ansi(output)
+        assert "·high" not in strip_ansi(output)
 
     def test_effort_null_renders_without_crash(self, sample_input):
         """An explicit null ``effort`` must not crash the render (regression).
@@ -786,7 +799,7 @@ class TestEffortDisplay:
         assert code == 0
         # sample_input has no thinking budget either, so the model segment has
         # no "·" suffix at all when effort is null.
-        assert "·" not in strip_ansi(output)
+        assert "·" not in model_segment(strip_ansi(output), "Claude 3.5 Sonnet")
 
     def test_effort_level_null_renders_without_crash(self, sample_input):
         """An explicit null ``effort.level`` must hide gracefully, not crash."""
@@ -808,14 +821,14 @@ class TestEffortDisplay:
         sample_input["effort"] = "high"  # string, not the expected dict
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
-        assert "·" not in strip_ansi(output)
+        assert "·" not in model_segment(strip_ansi(output), "Claude 3.5 Sonnet")
 
     def test_effort_hidden_when_disabled(self, sample_input, tmp_path):
         """With show_effort=false, the effort level is not rendered."""
         sample_input["effort"] = {"level": "high"}
         output, code = self._run_with_config(sample_input, "show_effort=false\n", tmp_path)
         assert code == 0
-        assert "· high" not in strip_ansi(output)
+        assert "·high" not in strip_ansi(output)
 
     def test_effort_shown_when_enabled(self, sample_input, tmp_path):
         """With show_effort=true (explicit), the effort level is rendered."""
@@ -885,7 +898,7 @@ class TestEffortDisplay:
         pkg_statusline.main()
         out = strip_ansi(capsys.readouterr().out)
         assert "Opus 4.8" in out
-        assert "· high" in out
+        assert "·high" in out
 
     def test_package_non_dict_effort_renders_without_crash(self, monkeypatch, capsys):
         """The PACKAGE entry must also survive a non-dict effort (parity guard).
@@ -914,7 +927,7 @@ class TestEffortDisplay:
         pkg_statusline.main()  # must not raise
         out = strip_ansi(capsys.readouterr().out)
         assert "Opus 4.8" in out
-        assert "·" not in out
+        assert "·" not in model_segment(out, "Opus 4.8")
 
 
 class TestSessionCost:
@@ -1021,8 +1034,8 @@ class TestPacmanDisplay:
 
     A pacman-style glyph reflects the current context zone (Plan/Code/Dump/
     ExDump/Dead) as a quick emotional cue alongside the existing zone text.
-    Off by default (``show_pacman=false``) to avoid reintroducing statusline
-    clutter; opt-in via ``show_pacman=true``.
+    On by default (``show_pacman=true``); opt out via ``show_pacman=false``
+    to keep the statusline more compact.
     """
 
     # 1M-class model (>= 500k context) so each zone boundary is reached with
@@ -1061,32 +1074,33 @@ class TestPacmanDisplay:
             },
         }
 
-    # --- Default-off behavior -------------------------------------------------
+    # --- Default-on behavior --------------------------------------------------
 
-    def test_pacman_not_shown_by_default(self, sample_input):
-        """With no config file at all, the pacman icon is hidden (default off)."""
+    def test_pacman_shown_by_default(self, sample_input):
+        """With no config file at all, the pacman icon is shown (default on)."""
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
         from claude_statusline.graphs.intelligence import PACMAN_ICONS
 
         visible = strip_ansi(output)
-        for icon in PACMAN_ICONS.values():
-            assert icon not in visible, f"Icon {icon!r} should not appear by default"
+        assert any(icon in visible for icon in PACMAN_ICONS.values()), (
+            "A pacman icon should appear by default"
+        )
 
-    def test_pacman_not_shown_when_config_silent(self, sample_input, tmp_path):
-        """An explicit config file that never mentions show_pacman still hides it."""
+    def test_pacman_shown_when_config_silent(self, sample_input, tmp_path):
+        """An explicit config file that never mentions show_pacman still shows it."""
         output, code = self._run_with_config(sample_input, "show_session=true\n", tmp_path)
         assert code == 0
-        assert "ᗧ" not in strip_ansi(output)
+        assert "ᗧ" in strip_ansi(output)
 
-    def test_show_pacman_default_is_false(self, tmp_path):
-        """show_pacman should default to False when not specified in config."""
+    def test_show_pacman_default_is_true(self, tmp_path):
+        """show_pacman should default to True when not specified in config."""
         from claude_statusline.core.config import Config
 
         config_file = tmp_path / "statusline.conf"
         config_file.write_text("show_session=true\n", encoding="utf-8")
         cfg = Config.load(str(config_file))
-        assert cfg.show_pacman is False
+        assert cfg.show_pacman is True
 
     # --- Config parsing ---------------------------------------------------
 
@@ -1122,12 +1136,12 @@ class TestPacmanDisplay:
         assert cfg2.show_pacman is True
 
     def test_show_pacman_in_to_dict(self):
-        """show_pacman should be present in Config.to_dict() output, default False."""
+        """show_pacman should be present in Config.to_dict() output, default True."""
         from claude_statusline.core.config import Config
 
         cfg = Config()
         assert "show_pacman" in cfg.to_dict()
-        assert cfg.to_dict()["show_pacman"] is False
+        assert cfg.to_dict()["show_pacman"] is True
 
     # --- Enabled: icon appears and changes per zone ------------------------
 
@@ -1199,8 +1213,8 @@ class TestPacmanDisplay:
         assert zone in out, f"Expected zone label {zone!r} in output"
         assert expected_icon in out, f"Expected icon {expected_icon!r} for zone {zone}"
 
-    def test_pacman_hidden_by_default_package(self, monkeypatch, capsys, tmp_path):
-        """The PACKAGE entry point also defaults show_pacman to off."""
+    def test_pacman_shown_by_default_package(self, monkeypatch, capsys, tmp_path):
+        """The PACKAGE entry point also defaults show_pacman to on."""
         import io
 
         from claude_statusline.cli import statusline as pkg_statusline
@@ -1215,14 +1229,37 @@ class TestPacmanDisplay:
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
         pkg_statusline.main()
         out = strip_ansi(capsys.readouterr().out)
-        for icon in PACMAN_ICONS.values():
-            assert icon not in out, f"Icon {icon!r} should not appear by default (package)"
+        assert PACMAN_ICONS["ExDump"] in out, "Icon should appear by default (package)"
+
+    def test_pacman_hidden_when_disabled_package(self, monkeypatch, capsys, tmp_path):
+        """The PACKAGE entry point honors an explicit show_pacman=false opt-out.
+
+        The opt-out test above (test_pacman_hidden_when_disabled) shells out to
+        the standalone script only; without this the package side has no
+        coverage that the toggle can turn the icon back off.
+        """
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+        from claude_statusline.graphs.intelligence import PACMAN_ICONS
+
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text("show_pacman=false\n", encoding="utf-8")
+        monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("COLUMNS", "200")
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
+        pkg_statusline.main()
+        out = strip_ansi(capsys.readouterr().out)
+        assert PACMAN_ICONS["ExDump"] not in out, "Icon should be hidden when disabled (package)"
 
     # --- Structural checks ---------------------------------------------------
 
     def test_pacman_info_in_parts_list_standalone(self):
         """pacman_info should be present in the standalone script's parts list,
-        positioned after zone_info (it's a zone-derived sibling segment)."""
+        concatenated after zone_info within the single context-group part."""
         content = SCRIPT_PATH.read_text(encoding="utf-8")
         parts_start = content.index("parts = [")
         parts_block = content[parts_start : parts_start + 2000]
@@ -1233,7 +1270,8 @@ class TestPacmanDisplay:
         assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
 
     def test_pacman_info_in_parts_list_package(self):
-        """pacman_info should also be present in the package's parts list."""
+        """pacman_info should also be concatenated after zone_info within the
+        package's single context-group part."""
         package_path = (
             Path(__file__).parent.parent.parent
             / "src"

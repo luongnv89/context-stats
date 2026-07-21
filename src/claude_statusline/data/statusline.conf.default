@@ -70,7 +70,7 @@ show_pr=true
 show_cost=true
 
 # Show the current reasoning effort level next to the model name (e.g.,
-# "Opus 4.8 · high"). Claude Code reports effort.level as one of
+# "Opus 4.8·high"). Claude Code reports effort.level as one of
 # low/medium/high/xhigh/max; the segment hides when no effort is reported.
 #   true  = effort visible (default)
 #   false = effort hidden
@@ -79,9 +79,9 @@ show_effort=true
 # Show a pacman-style icon reflecting the current context zone (Plan/Code/
 # Dump/ExDump/Dead) next to the zone label — a quick emotional cue for how
 # much context headroom remains, beyond the numeric/graph indicators.
-#   false = icon hidden (default)
-#   true  = icon visible
-show_pacman=false
+#   true  = icon visible (default)
+#   false = icon hidden
+show_pacman=true
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -267,10 +267,10 @@ color_separator=dim
 #
 # The statusline elements are displayed in this order (highest priority first):
 #
-#   project_name | branch [changes] | tokens_free (%) | Zone | MI:score | +delta | $cost | Model | session_id
+#   project_name | branch [changes] | tokens_free (%)·Zone·pacman | MI:score | +delta | $cost | Model·effort | session_id
 #
 # Example output:
-#   my-project | main [3] | 64,000 free (32.0%) | Code | MI:0.918 | +2,500 | $0.42 | Opus 4.6 | abc-123
+#   my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | +2,500 | $0.42 | Opus 4.6·high | abc-123
 #
 # If the terminal is too narrow, lower-priority elements drop out. Elements are
 # tried left-to-right (highest priority first) and each is kept only if it still

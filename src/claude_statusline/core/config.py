@@ -80,7 +80,7 @@ tps_window=5
 show_pr=true
 show_cost=true
 show_effort=true
-show_pacman=false
+show_pacman=true
 """
 
 
@@ -124,13 +124,13 @@ class Config:
     show_cost: bool = True
 
     # Reasoning effort display — shows CC's effort.level (low/medium/high/
-    # xhigh/max) next to the model name, e.g. "Opus 4.8 · high"
+    # xhigh/max) next to the model name, e.g. "Opus 4.8·high"
     show_effort: bool = True
 
     # Pacman-style icon reflecting the current context zone (Plan/Code/Dump/
     # ExDump/Dead) — an emotional at-a-glance cue alongside the zone text.
-    # Off by default to avoid reintroducing statusline clutter.
-    show_pacman: bool = False
+    # On by default; set show_pacman=false to hide it.
+    show_pacman: bool = True
     tps_precision: int = 1  # decimal places for the tok/s value
     tps_unit: str = "tok/s"  # unit label appended to the value
     tps_window: int = 5  # number of recent turns averaged for rolling tok/s
