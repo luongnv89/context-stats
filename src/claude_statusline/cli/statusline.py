@@ -83,8 +83,29 @@ def _format_thinking_info(budget) -> str:
     return f"{tokens} tokens thinking"
 
 
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default.
+
+    Guarded with getattr because pytest's CaptureIO (and StringIO stand-ins used
+    by tests) do not implement reconfigure().
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = getattr(stream, "encoding", None)
+        if encoding and encoding.lower().replace("-", "") == "utf8":
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - detached/closed stream
+            pass
+
+
 def main() -> None:
     """Main entry point for claude-statusline CLI."""
+    _ensure_utf8_stdout()
+
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
@@ -134,6 +155,7 @@ def main() -> None:
     tps_info = ""
     cost_info = ""
     zone_info = ""
+    pacman_info = ""
     session_info = ""
     pr_info = ""
 
@@ -210,6 +232,14 @@ def main() -> None:
         prop_zone_color = config.color_overrides.get("zone")
         effective_zone_color = prop_zone_color if prop_zone_color else zone_color
         zone_info = f" | {effective_zone_color}{zone_result.zone}{colors.reset}"
+
+        # Pacman-style icon reflecting the same zone — off by default.
+        if config.show_pacman:
+            from claude_statusline.graphs.intelligence import get_pacman_icon
+
+            pacman_glyph = get_pacman_icon(zone_result.zone)
+            if pacman_glyph:
+                pacman_info = f" | {effective_zone_color}{pacman_glyph}{colors.reset}"
 
         # State file management for delta/MI/throughput display and history.
         # tok/s also needs the previous row (for the API-time delta) and must
@@ -327,6 +357,7 @@ def main() -> None:
         pr_info,
         context_info,
         zone_info,
+        pacman_info,
         mi_info,
         tps_info,
         delta_info,

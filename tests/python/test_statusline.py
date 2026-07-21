@@ -50,6 +50,7 @@ def run_script(input_data: dict, env_overrides: dict | None = None) -> tuple[str
         input=json.dumps(input_data),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
     )
     return result.stdout.strip(), result.returncode
@@ -1013,3 +1014,283 @@ class TestSessionCost:
         # Without override it inherits the separator default
         cm2 = ColorManager(enabled=True)
         assert cm2.cost == cm2.separator
+
+
+class TestPacmanDisplay:
+    """Tests for the pacman-style context-zone icon (#98).
+
+    A pacman-style glyph reflects the current context zone (Plan/Code/Dump/
+    ExDump/Dead) as a quick emotional cue alongside the existing zone text.
+    Off by default (``show_pacman=false``) to avoid reintroducing statusline
+    clutter; opt-in via ``show_pacman=true``.
+    """
+
+    # 1M-class model (>= 500k context) so each zone boundary is reached with
+    # a clean, well-separated token count — mirrors TestZone1MRecalibration's
+    # test vectors in test_intelligence.py.
+    _ZONE_TOKENS = {
+        "Plan": 100_000,
+        "Code": 200_000,
+        "Dump": 300_000,
+        "ExDump": 420_000,
+        "Dead": 460_000,
+    }
+
+    def _run_with_config(self, input_data, conf_text, tmp_path):
+        """Run the standalone script with HOME pointed at a tmp dir holding conf_text."""
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text(conf_text, encoding="utf-8")
+        return run_script(
+            input_data,
+            {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path), "COLUMNS": "200"},
+        )
+
+    def _zone_input(self, zone):
+        """Build a 1M-model input dict that lands in the given zone."""
+        used = self._ZONE_TOKENS[zone]
+        return {
+            "model": {"display_name": "Claude Opus 4"},
+            "workspace": {
+                "current_dir": "/home/user/myproject",
+                "project_dir": "/home/user/myproject",
+            },
+            "context_window": {
+                "context_window_size": 1_000_000,
+                "current_usage": {"input_tokens": used},
+            },
+        }
+
+    # --- Default-off behavior -------------------------------------------------
+
+    def test_pacman_not_shown_by_default(self, sample_input):
+        """With no config file at all, the pacman icon is hidden (default off)."""
+        output, code = run_script(sample_input, {"COLUMNS": "200"})
+        assert code == 0
+        from claude_statusline.graphs.intelligence import PACMAN_ICONS
+
+        visible = strip_ansi(output)
+        for icon in PACMAN_ICONS.values():
+            assert icon not in visible, f"Icon {icon!r} should not appear by default"
+
+    def test_pacman_not_shown_when_config_silent(self, sample_input, tmp_path):
+        """An explicit config file that never mentions show_pacman still hides it."""
+        output, code = self._run_with_config(sample_input, "show_session=true\n", tmp_path)
+        assert code == 0
+        assert "ᗧ" not in strip_ansi(output)
+
+    def test_show_pacman_default_is_false(self, tmp_path):
+        """show_pacman should default to False when not specified in config."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_session=true\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pacman is False
+
+    # --- Config parsing ---------------------------------------------------
+
+    def test_show_pacman_true_parsed(self, tmp_path):
+        """show_pacman=true in config should be parsed correctly."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_pacman=true\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pacman is True
+
+    def test_show_pacman_false_parsed(self, tmp_path):
+        """show_pacman=false in config should be parsed correctly."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_pacman=false\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pacman is False
+
+    def test_show_pacman_case_insensitive(self, tmp_path):
+        """show_pacman value should be case-insensitive."""
+        from claude_statusline.core.config import Config
+
+        config_file = tmp_path / "statusline.conf"
+        config_file.write_text("show_pacman=FALSE\n", encoding="utf-8")
+        cfg = Config.load(str(config_file))
+        assert cfg.show_pacman is False
+
+        config_file.write_text("show_pacman=TRUE\n", encoding="utf-8")
+        cfg2 = Config.load(str(config_file))
+        assert cfg2.show_pacman is True
+
+    def test_show_pacman_in_to_dict(self):
+        """show_pacman should be present in Config.to_dict() output, default False."""
+        from claude_statusline.core.config import Config
+
+        cfg = Config()
+        assert "show_pacman" in cfg.to_dict()
+        assert cfg.to_dict()["show_pacman"] is False
+
+    # --- Enabled: icon appears and changes per zone ------------------------
+
+    def test_pacman_shown_when_enabled(self, sample_input, tmp_path):
+        """With show_pacman=true, an icon is rendered next to the zone."""
+        output, code = self._run_with_config(sample_input, "show_pacman=true\n", tmp_path)
+        assert code == 0
+        assert "ᗧ" in strip_ansi(output)  # sample_input is well within Plan zone
+
+    def test_pacman_hidden_when_disabled(self, sample_input, tmp_path):
+        """With show_pacman=false (explicit), the icon is not rendered."""
+        output, code = self._run_with_config(sample_input, "show_pacman=false\n", tmp_path)
+        assert code == 0
+        assert "ᗧ" not in strip_ansi(output)
+
+    @pytest.mark.parametrize(
+        ("zone", "expected_icon"),
+        [
+            ("Plan", "ᗧ"),
+            ("Code", "ᗤ"),
+            ("Dump", "ᗣ"),
+            ("ExDump", "ᗢ"),
+            ("Dead", "×"),
+        ],
+    )
+    def test_pacman_icon_changes_per_zone_standalone(self, zone, expected_icon, tmp_path):
+        """The standalone script renders the correct glyph for each of the 5 zones."""
+        output, code = self._run_with_config(
+            self._zone_input(zone), "show_pacman=true\n", tmp_path
+        )
+        assert code == 0
+        visible = strip_ansi(output)
+        assert zone in visible, f"Expected zone label {zone!r} in output"
+        assert expected_icon in visible, f"Expected icon {expected_icon!r} for zone {zone}"
+
+    @pytest.mark.parametrize(
+        ("zone", "expected_icon"),
+        [
+            ("Plan", "ᗧ"),
+            ("Code", "ᗤ"),
+            ("Dump", "ᗣ"),
+            ("ExDump", "ᗢ"),
+            ("Dead", "×"),
+        ],
+    )
+    def test_pacman_icon_changes_per_zone_package(
+        self, zone, expected_icon, monkeypatch, capsys, tmp_path
+    ):
+        """The PACKAGE entry point (cli.statusline.main) renders the same glyph per zone.
+
+        Exercises the package in-process (mirrors TestEffortDisplay's
+        test_package_renders_effort_from_fixture) so drift between the
+        standalone script and the installable package is caught.
+        """
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text("show_pacman=true\n", encoding="utf-8")
+        monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("COLUMNS", "200")
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input(zone))))
+        pkg_statusline.main()
+        out = strip_ansi(capsys.readouterr().out)
+        assert zone in out, f"Expected zone label {zone!r} in output"
+        assert expected_icon in out, f"Expected icon {expected_icon!r} for zone {zone}"
+
+    def test_pacman_hidden_by_default_package(self, monkeypatch, capsys, tmp_path):
+        """The PACKAGE entry point also defaults show_pacman to off."""
+        import io
+
+        from claude_statusline.cli import statusline as pkg_statusline
+        from claude_statusline.graphs.intelligence import PACMAN_ICONS
+
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        monkeypatch.setenv("HOME", str(tmp_path))
+        # Windows resolves Path.home() via USERPROFILE, never HOME.
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("COLUMNS", "200")
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
+        pkg_statusline.main()
+        out = strip_ansi(capsys.readouterr().out)
+        for icon in PACMAN_ICONS.values():
+            assert icon not in out, f"Icon {icon!r} should not appear by default (package)"
+
+    # --- Structural checks ---------------------------------------------------
+
+    def test_pacman_info_in_parts_list_standalone(self):
+        """pacman_info should be present in the standalone script's parts list,
+        positioned after zone_info (it's a zone-derived sibling segment)."""
+        content = SCRIPT_PATH.read_text(encoding="utf-8")
+        parts_start = content.index("parts = [")
+        parts_block = content[parts_start : parts_start + 2000]
+        assert "zone_info" in parts_block, "zone_info missing from parts list"
+        assert "pacman_info" in parts_block, "pacman_info missing from parts list"
+        zone_idx = parts_block.index("zone_info")
+        pacman_idx = parts_block.index("pacman_info")
+        assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
+
+    def test_pacman_info_in_parts_list_package(self):
+        """pacman_info should also be present in the package's parts list."""
+        package_path = (
+            Path(__file__).parent.parent.parent
+            / "src"
+            / "claude_statusline"
+            / "cli"
+            / "statusline.py"
+        )
+        content = package_path.read_text(encoding="utf-8")
+        parts_start = content.index("parts = [")
+        parts_block = content[parts_start : parts_start + 2000]
+        assert "zone_info" in parts_block, "zone_info missing from parts list"
+        assert "pacman_info" in parts_block, "pacman_info missing from parts list"
+        zone_idx = parts_block.index("zone_info")
+        pacman_idx = parts_block.index("pacman_info")
+        assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
+
+    def test_pacman_icon_uses_zone_color(self, tmp_path):
+        """The icon segment reuses the zone's traffic-light color (dark_red for ExDump)."""
+        output, code = self._run_with_config(
+            self._zone_input("ExDump"), "show_pacman=true\n", tmp_path
+        )
+        assert code == 0
+        # Dark red RGB ANSI sequence used for the "dark_red" zone color.
+        assert "\033[38;2;139;0;0m" in output
+        assert "ᗢ" in strip_ansi(output)
+
+    def test_pacman_survives_non_utf8_stdout_encoding(self, tmp_path):
+        """The script still emits output when stdout defaults to cp1252 (Windows).
+
+        Claude Code invokes the statusline with a piped stdout, where Python
+        picks the locale codec. The pacman glyphs are Canadian Aboriginal
+        Syllabics and are not encodable in cp1252, so without a UTF-8 guard in
+        main() print() raises UnicodeEncodeError and the statusline emits
+        nothing at all. PYTHONUTF8 is popped deliberately: setting it is what
+        masks this failure mode.
+        """
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "statusline.conf").write_text("show_pacman=true\n", encoding="utf-8")
+
+        env = os.environ.copy()
+        env.pop("PYTHONUTF8", None)
+        env.update(
+            {
+                "HOME": str(tmp_path),
+                "USERPROFILE": str(tmp_path),
+                "COLUMNS": "200",
+                "PYTHONIOENCODING": "cp1252",
+            }
+        )
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT_PATH)],
+            input=json.dumps(self._zone_input("Plan")),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+        )
+        assert result.returncode == 0, f"statusline crashed: {result.stderr}"
+        assert result.stdout.strip(), "statusline emitted no output under cp1252 stdout"

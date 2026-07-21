@@ -80,6 +80,20 @@ _ZONE_RECOMMENDATIONS: dict[str, str] = {
     "Dead": "Start a new session with `/clear`",
 }
 
+# Pacman-style icon per zone — a distinct glyph per zone alongside the zone
+# text, from a healthy default (Plan) to a "game over" marker (Dead). Glyphs
+# are single-codepoint, width-1 characters (Canadian Aboriginal Syllabics,
+# matching the historical activity-tier icons removed in #13) so they render
+# predictably in any terminal and are counted correctly by visible_width()'s
+# plain len() (no east_asian_width handling).
+PACMAN_ICONS: dict[str, str] = {
+    "Plan": "ᗧ",  # healthy default
+    "Code": "ᗤ",  # distinct orientation, still fine
+    "Dump": "ᗣ",  # distinct orientation, warning
+    "ExDump": "ᗢ",  # distinct orientation, critical
+    "Dead": "×",  # outside the pacman family — game over
+}
+
 
 @dataclass
 class IntelligenceScore:
@@ -299,6 +313,20 @@ def get_context_zone(
         label="Dead zone",
         recommendation=_ZONE_RECOMMENDATIONS["Dead"],
     )
+
+
+def get_pacman_icon(zone: str) -> str:
+    """Get the pacman-style icon for a context zone.
+
+    Args:
+        zone: Zone name ("Plan", "Code", "Dump", "ExDump", or "Dead")
+
+    Returns:
+        Single-character glyph for the zone, or "" for an unrecognized zone
+        (defensive default so an unexpected zone name cannot crash the
+        statusline render).
+    """
+    return PACMAN_ICONS.get(zone, "")
 
 
 def get_mi_color(mi: float, utilization: float = 0.0) -> str:

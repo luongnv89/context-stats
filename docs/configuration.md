@@ -43,6 +43,10 @@ show_effort=false  # Hide effort level
 reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
 
+# Pacman-style icon reflecting the current context zone (Plan/Code/Dump/ExDump/Dead)
+show_pacman=false  # (default) Icon hidden
+show_pacman=true   # Show icon next to the zone label
+
 # Model Intelligence (MI) score display
 show_mi=false  # (default) MI score hidden
 show_mi=true   # Enable MI display in status line and summary
@@ -68,6 +72,7 @@ mi_curve_beta=1.5  # Override with custom beta for all models
 | `(32.0%)`     | Context usage percentage | -             | -                      |
 | `42.5 tok/s`  | Model throughput         | Dim           | `color_tps`            |
 | `[+2,500]`    | Token delta              | Dim           | `color_delta`          |
+| `ᗧ`           | Pacman context-zone icon | Zone color    | `color_zone`           |
 | `MI:0.918`    | Model Intelligence score | Yellow        | `color_mi_score`       |
 | `$0.42`       | Cumulative session cost  | Dim           | `color_cost`           |
 | `· high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
@@ -88,6 +93,12 @@ The reasoning effort level is reported by Claude Code (`effort.level`, one of
 reports no effort (e.g. models without an effort setting); set
 `show_effort=false` to hide it. The effort label shares the model color
 (`color_model`).
+
+The pacman icon is a quick emotional cue for the current context zone,
+shown next to the zone label. Each of the five zones maps to a distinct
+glyph — `ᗧ` (Plan), `ᗤ` (Code), `ᗣ` (Dump), `ᗢ` (ExDump), `×` (Dead) — and
+shares the zone's traffic-light color (`color_zone`). It is off by default
+to keep the status line compact; set `show_pacman=true` to enable it.
 
 ## Token Colors
 

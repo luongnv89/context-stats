@@ -13,6 +13,7 @@ from claude_statusline.graphs.intelligence import (
     MI_GREEN_THRESHOLD,
     MI_YELLOW_THRESHOLD,
     MODEL_PROFILES,
+    PACMAN_ICONS,
     ZONE_1M_C_MAX,
     ZONE_1M_D_MAX,
     ZONE_1M_P_MAX,
@@ -23,6 +24,7 @@ from claude_statusline.graphs.intelligence import (
     get_context_zone,
     get_mi_color,
     get_model_profile,
+    get_pacman_icon,
 )
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
@@ -636,3 +638,80 @@ class TestZone1MRecalibration:
         assert zone.zone == "Dump", (
             f"275k should be Dump with recalibrated thresholds, got {zone.zone}"
         )
+
+
+class TestPacmanIcon:
+    """Tests for the pacman-style icon reflecting context zone status (#98).
+
+    Each of the 5 zones (Plan, Code, Dump, ExDump, Dead) maps to a distinct,
+    single-codepoint glyph so the icon renders predictably in any terminal
+    and is counted correctly by visible_width()'s plain len().
+    """
+
+    @pytest.mark.parametrize(
+        "zone",
+        ["Plan", "Code", "Dump", "ExDump", "Dead"],
+    )
+    def test_all_five_zones_have_an_icon(self, zone):
+        """Every zone name produces a non-empty glyph."""
+        icon = get_pacman_icon(zone)
+        assert icon, f"Zone {zone} should have a non-empty pacman icon"
+
+    def test_icons_are_distinct_per_zone(self):
+        """All 5 zone icons are distinct strings (no two zones share a glyph)."""
+        icons = [get_pacman_icon(zone) for zone in ("Plan", "Code", "Dump", "ExDump", "Dead")]
+        assert len(set(icons)) == 5, f"Expected 5 distinct icons, got {icons}"
+
+    def test_icons_are_single_codepoint(self):
+        """Each glyph is exactly one character wide.
+
+        visible_width() computes len() after stripping ANSI codes with no
+        east_asian_width handling, so a multi-codepoint or wide glyph would
+        be miscounted and could break fit_to_width() reflow.
+        """
+        for zone, icon in PACMAN_ICONS.items():
+            assert len(icon) == 1, f"Icon for zone {zone} ({icon!r}) must be exactly 1 character"
+
+    def test_plan_icon(self):
+        """Plan zone (healthy) maps to its designated glyph."""
+        assert get_pacman_icon("Plan") == PACMAN_ICONS["Plan"]
+
+    def test_code_icon(self):
+        """Code zone (still fine) maps to its designated glyph."""
+        assert get_pacman_icon("Code") == PACMAN_ICONS["Code"]
+
+    def test_dump_icon(self):
+        """Dump zone (warning) maps to its designated glyph."""
+        assert get_pacman_icon("Dump") == PACMAN_ICONS["Dump"]
+
+    def test_exdump_icon(self):
+        """ExDump zone (critical) maps to its designated glyph."""
+        assert get_pacman_icon("ExDump") == PACMAN_ICONS["ExDump"]
+
+    def test_dead_icon(self):
+        """Dead zone (game over) maps to its designated glyph."""
+        assert get_pacman_icon("Dead") == PACMAN_ICONS["Dead"]
+
+    def test_unknown_zone_returns_empty_string(self):
+        """An unrecognized zone name returns '' rather than raising (defensive default)."""
+        assert get_pacman_icon("NotAZone") == ""
+        assert get_pacman_icon("") == ""
+
+    def test_pacman_icons_dict_has_exactly_five_zones(self):
+        """PACMAN_ICONS covers exactly the 5 documented zone names, no more/less."""
+        assert set(PACMAN_ICONS.keys()) == {"Plan", "Code", "Dump", "ExDump", "Dead"}
+
+    def test_icon_matches_actual_zone_from_get_context_zone(self):
+        """The icon for a zone returned by get_context_zone() is non-empty and consistent."""
+        test_cases = [
+            (100_000, 1_000_000, "Plan"),
+            (200_000, 1_000_000, "Code"),
+            (300_000, 1_000_000, "Dump"),
+            (420_000, 1_000_000, "ExDump"),
+            (460_000, 1_000_000, "Dead"),
+        ]
+        for used, window, expected_zone in test_cases:
+            zone = get_context_zone(used, window)
+            assert zone.zone == expected_zone
+            icon = get_pacman_icon(zone.zone)
+            assert icon == PACMAN_ICONS[expected_zone]

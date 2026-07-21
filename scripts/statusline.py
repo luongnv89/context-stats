@@ -83,6 +83,20 @@ _ZONE_RECOMMENDATIONS = {
     "Dead": "Start a new session with `/clear`",
 }
 
+# Pacman-style icon per zone — a distinct glyph per zone alongside the zone
+# text, from a healthy default (Plan) to a "game over" marker (Dead). Glyphs
+# are single-codepoint, width-1 characters (Canadian Aboriginal Syllabics,
+# matching the historical activity-tier icons removed in #13) so they render
+# predictably in any terminal and are counted correctly by visible_width()'s
+# plain len() (no east_asian_width handling).
+PACMAN_ICONS = {
+    "Plan": "ᗧ",  # healthy default
+    "Code": "ᗤ",  # distinct orientation, still fine
+    "Dump": "ᗣ",  # distinct orientation, warning
+    "ExDump": "ᗢ",  # distinct orientation, critical
+    "Dead": "×",  # outside the pacman family — game over
+}
+
 
 def get_model_profile(model_id):
     """Match model_id to degradation beta."""
@@ -251,6 +265,15 @@ def get_context_zone(used_tokens, context_window_size, zone_config=None):
     if used_tokens < dead_zone_tokens:
         return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
     return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
+
+
+def get_pacman_icon(zone):
+    """Get the pacman-style icon for a context zone.
+
+    Returns "" for an unrecognized zone (defensive default so an unexpected
+    zone name cannot crash the statusline render).
+    """
+    return PACMAN_ICONS.get(zone, "")
 
 
 def detect_compaction_events(values, drop_threshold=None):
@@ -673,6 +696,7 @@ def read_config():
         "show_pr": True,
         "show_cost": True,
         "show_effort": True,
+        "show_pacman": False,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -765,6 +789,13 @@ show_cost=true
 #   true  = effort visible (default)
 #   false = effort hidden
 show_effort=true
+
+# Show a pacman-style icon reflecting the current context zone (Plan/Code/
+# Dump/ExDump/Dead) next to the zone label — a quick emotional cue for how
+# much context headroom remains, beyond the numeric/graph indicators.
+#   false = icon hidden (default)
+#   true  = icon visible
+show_pacman=false
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -1012,6 +1043,8 @@ color_separator=dim
                     config["show_cost"] = value_lower != "false"
                 elif key == "show_effort":
                     config["show_effort"] = value_lower != "false"
+                elif key == "show_pacman":
+                    config["show_pacman"] = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -1121,7 +1154,28 @@ def _format_thinking_info(budget) -> str:
     return f"{tokens} tokens thinking"
 
 
+def _ensure_utf8_stdout():
+    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default.
+
+    Guarded with getattr because pytest's CaptureIO (and StringIO stand-ins used
+    by tests) do not implement reconfigure().
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = getattr(stream, "encoding", None)
+        if encoding and encoding.lower().replace("-", "") == "utf8":
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - detached/closed stream
+            pass
+
+
 def main():
+    _ensure_utf8_stdout()
+
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
@@ -1162,6 +1216,7 @@ def main():
     show_pr = config["show_pr"]
     show_cost = config["show_cost"]
     show_effort = config["show_effort"]
+    show_pacman = config["show_pacman"]
     # Note: show_io_tokens setting is read but not yet implemented
 
     # Apply color overrides from config
@@ -1202,6 +1257,7 @@ def main():
     tps_info = ""
     cost_info = ""
     zone_info = ""
+    pacman_info = ""
     session_info = ""
     pr_info = ""
 
@@ -1265,6 +1321,12 @@ def main():
         # Zone label uses same color, with per-property override
         effective_zone_color = c.get("zone", zone_ansi)
         zone_info = f" | {effective_zone_color}{zone_word}{RESET}"
+
+        # Pacman-style icon reflecting the same zone — off by default.
+        if show_pacman:
+            pacman_glyph = get_pacman_icon(zone_word)
+            if pacman_glyph:
+                pacman_info = f" | {effective_zone_color}{pacman_glyph}{RESET}"
 
         # Read previous entry if needed for delta, MI, or throughput (tok/s).
         # tok/s needs the previous row (for the API-time delta) and persists
@@ -1435,6 +1497,7 @@ def main():
         pr_info,
         context_info,
         zone_info,
+        pacman_info,
         mi_info,
         tps_info,
         delta_info,
