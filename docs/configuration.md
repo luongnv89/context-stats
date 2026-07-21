@@ -44,8 +44,8 @@ reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
 
 # Pacman-style icon reflecting the current context zone (Plan/Code/Dump/ExDump/Dead)
-show_pacman=false  # (default) Icon hidden
-show_pacman=true   # Show icon next to the zone label
+show_pacman=true   # (default) Show icon next to the zone label
+show_pacman=false  # Icon hidden
 
 # Model Intelligence (MI) score display
 show_mi=false  # (default) MI score hidden
@@ -97,8 +97,8 @@ reports no effort (e.g. models without an effort setting); set
 The pacman icon is a quick emotional cue for the current context zone,
 shown next to the zone label. Each of the five zones maps to a distinct
 glyph — `ᗧ` (Plan), `ᗤ` (Code), `ᗣ` (Dump), `ᗢ` (ExDump), `×` (Dead) — and
-shares the zone's traffic-light color (`color_zone`). It is off by default
-to keep the status line compact; set `show_pacman=true` to enable it.
+shares the zone's traffic-light color (`color_zone`). It is on by default;
+set `show_pacman=false` to hide it and keep the status line more compact.
 
 ## Token Colors
 

@@ -696,7 +696,7 @@ def read_config():
         "show_pr": True,
         "show_cost": True,
         "show_effort": True,
-        "show_pacman": False,
+        "show_pacman": True,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,
@@ -793,9 +793,9 @@ show_effort=true
 # Show a pacman-style icon reflecting the current context zone (Plan/Code/
 # Dump/ExDump/Dead) next to the zone label — a quick emotional cue for how
 # much context headroom remains, beyond the numeric/graph indicators.
-#   false = icon hidden (default)
-#   true  = icon visible
-show_pacman=false
+#   true  = icon visible (default)
+#   false = icon hidden
+show_pacman=true
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────

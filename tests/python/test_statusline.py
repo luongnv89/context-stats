@@ -1021,8 +1021,8 @@ class TestPacmanDisplay:
 
     A pacman-style glyph reflects the current context zone (Plan/Code/Dump/
     ExDump/Dead) as a quick emotional cue alongside the existing zone text.
-    Off by default (``show_pacman=false``) to avoid reintroducing statusline
-    clutter; opt-in via ``show_pacman=true``.
+    On by default (``show_pacman=true``); opt out via ``show_pacman=false``
+    to keep the statusline more compact.
     """
 
     # 1M-class model (>= 500k context) so each zone boundary is reached with
@@ -1061,32 +1061,33 @@ class TestPacmanDisplay:
             },
         }
 
-    # --- Default-off behavior -------------------------------------------------
+    # --- Default-on behavior --------------------------------------------------
 
-    def test_pacman_not_shown_by_default(self, sample_input):
-        """With no config file at all, the pacman icon is hidden (default off)."""
+    def test_pacman_shown_by_default(self, sample_input):
+        """With no config file at all, the pacman icon is shown (default on)."""
         output, code = run_script(sample_input, {"COLUMNS": "200"})
         assert code == 0
         from claude_statusline.graphs.intelligence import PACMAN_ICONS
 
         visible = strip_ansi(output)
-        for icon in PACMAN_ICONS.values():
-            assert icon not in visible, f"Icon {icon!r} should not appear by default"
+        assert any(icon in visible for icon in PACMAN_ICONS.values()), (
+            "A pacman icon should appear by default"
+        )
 
-    def test_pacman_not_shown_when_config_silent(self, sample_input, tmp_path):
-        """An explicit config file that never mentions show_pacman still hides it."""
+    def test_pacman_shown_when_config_silent(self, sample_input, tmp_path):
+        """An explicit config file that never mentions show_pacman still shows it."""
         output, code = self._run_with_config(sample_input, "show_session=true\n", tmp_path)
         assert code == 0
-        assert "ᗧ" not in strip_ansi(output)
+        assert "ᗧ" in strip_ansi(output)
 
-    def test_show_pacman_default_is_false(self, tmp_path):
-        """show_pacman should default to False when not specified in config."""
+    def test_show_pacman_default_is_true(self, tmp_path):
+        """show_pacman should default to True when not specified in config."""
         from claude_statusline.core.config import Config
 
         config_file = tmp_path / "statusline.conf"
         config_file.write_text("show_session=true\n", encoding="utf-8")
         cfg = Config.load(str(config_file))
-        assert cfg.show_pacman is False
+        assert cfg.show_pacman is True
 
     # --- Config parsing ---------------------------------------------------
 
@@ -1122,12 +1123,12 @@ class TestPacmanDisplay:
         assert cfg2.show_pacman is True
 
     def test_show_pacman_in_to_dict(self):
-        """show_pacman should be present in Config.to_dict() output, default False."""
+        """show_pacman should be present in Config.to_dict() output, default True."""
         from claude_statusline.core.config import Config
 
         cfg = Config()
         assert "show_pacman" in cfg.to_dict()
-        assert cfg.to_dict()["show_pacman"] is False
+        assert cfg.to_dict()["show_pacman"] is True
 
     # --- Enabled: icon appears and changes per zone ------------------------
 
@@ -1199,8 +1200,8 @@ class TestPacmanDisplay:
         assert zone in out, f"Expected zone label {zone!r} in output"
         assert expected_icon in out, f"Expected icon {expected_icon!r} for zone {zone}"
 
-    def test_pacman_hidden_by_default_package(self, monkeypatch, capsys, tmp_path):
-        """The PACKAGE entry point also defaults show_pacman to off."""
+    def test_pacman_shown_by_default_package(self, monkeypatch, capsys, tmp_path):
+        """The PACKAGE entry point also defaults show_pacman to on."""
         import io
 
         from claude_statusline.cli import statusline as pkg_statusline
@@ -1215,8 +1216,7 @@ class TestPacmanDisplay:
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(self._zone_input("ExDump"))))
         pkg_statusline.main()
         out = strip_ansi(capsys.readouterr().out)
-        for icon in PACMAN_ICONS.values():
-            assert icon not in out, f"Icon {icon!r} should not appear by default (package)"
+        assert PACMAN_ICONS["ExDump"] in out, "Icon should appear by default (package)"
 
     # --- Structural checks ---------------------------------------------------
 
