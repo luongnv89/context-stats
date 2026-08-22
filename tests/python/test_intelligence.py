@@ -267,9 +267,9 @@ class TestSharedVectors:
                 cur, inp["context_window"], inp["model_id"], beta_override
             )
 
-            assert score.mi == pytest.approx(exp["mi"], abs=0.01), (
-                f"MI mismatch for '{vec['description']}': got {score.mi:.4f}, expected {exp['mi']}"
-            )
+            assert score.mi == pytest.approx(
+                exp["mi"], abs=0.01
+            ), f"MI mismatch for '{vec['description']}': got {score.mi:.4f}, expected {exp['mi']}"
             assert score.utilization == pytest.approx(exp["utilization"], abs=0.01), (
                 f"Utilization mismatch for '{vec['description']}': "
                 f"got {score.utilization:.4f}, expected {exp['utilization']}"
@@ -635,9 +635,9 @@ class TestZone1MRecalibration:
     def test_old_dead_threshold_now_dump(self):
         """275k was old Dead threshold. Under new thresholds it should be Dump."""
         zone = get_context_zone(275_000, 1_000_000)
-        assert zone.zone == "Dump", (
-            f"275k should be Dump with recalibrated thresholds, got {zone.zone}"
-        )
+        assert (
+            zone.zone == "Dump"
+        ), f"275k should be Dump with recalibrated thresholds, got {zone.zone}"
 
 
 class TestPacmanIcon:

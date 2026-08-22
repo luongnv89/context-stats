@@ -94,9 +94,9 @@ class TestMIFormulaMonotonicity:
             u = pct / 100.0
             mi = calculate_context_pressure(u, beta=beta)
             if prev_mi is not None:
-                assert mi <= prev_mi, (
-                    f"MI not monotonic at {pct}% with beta={beta}: {mi:.4f} > {prev_mi:.4f}"
-                )
+                assert (
+                    mi <= prev_mi
+                ), f"MI not monotonic at {pct}% with beta={beta}: {mi:.4f} > {prev_mi:.4f}"
             prev_mi = mi
 
     def test_mi_boundary_values(self):
@@ -141,9 +141,9 @@ class TestPerModelMonotonicity:
             score = calculate_intelligence(cur, cw, model_id)
 
             if prev_mi is not None:
-                assert score.mi <= prev_mi + 1e-9, (
-                    f"MI increased at {pct}% for {model_family}: {score.mi:.6f} > {prev_mi:.6f}"
-                )
+                assert (
+                    score.mi <= prev_mi + 1e-9
+                ), f"MI increased at {pct}% for {model_family}: {score.mi:.6f} > {prev_mi:.6f}"
             prev_mi = score.mi
 
     @pytest.mark.parametrize("beta", [1.0, 1.5, 2.0, 3.0])
@@ -237,6 +237,6 @@ class TestMIReflectsZones:
         mi_full = calculate_intelligence(full, cw, "claude-sonnet-4-6").mi
 
         spread = mi_empty - mi_full
-        assert spread >= 0.5, (
-            f"MI spread too small: {mi_empty:.4f} - {mi_full:.4f} = {spread:.4f} < 0.5"
-        )
+        assert (
+            spread >= 0.5
+        ), f"MI spread too small: {mi_empty:.4f} - {mi_full:.4f} = {spread:.4f} < 0.5"

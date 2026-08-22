@@ -14,7 +14,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 ### How to Report
 
 1. **Do NOT** open a public GitHub issue for security vulnerabilities
-2. Email your findings to luongnv89@gmail.com
+2. Email your findings to <luongnv89@gmail.com>
 3. Include detailed steps to reproduce the vulnerability
 4. Allow up to 48 hours for an initial response
 

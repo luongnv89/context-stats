@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Pacman context-zone icon** — Show a pacman-style glyph next to the zone label that reflects the current context zone (Plan/Code/Dump/ExDump/Dead), sharing the zone's traffic-light color. On by default; controlled by the new `show_pacman` toggle and applied to both the installable package and the standalone script (#98)
 - **PR number in statusline by default** — Shows the current pull request number alongside the model name. Now enabled by default (previously required `show_pr=true`) (#95)
-- **Grouped statusline separators** — Context usage, context zone, and the pacman icon are now one visual group joined by an unspaced `·` (`64,000 free (32.0%)·Code·ᗤ`) instead of ` | `. Groups remain separated by ` | `. Saves horizontal room and keeps related elements together, including when the statusline wraps on narrow terminals (#101)
+- **Grouped statusline separators** — Context usage, context zone, and the pacman icon are now one visual group joined by an unspaced `·` (`64,000 free (32.0%)·Code·ᗤ`) instead of `|`. Groups remain separated by `|`. Saves horizontal room and keeps related elements together, including when the statusline wraps on narrow terminals (#101)
 
 ### Fixed
 

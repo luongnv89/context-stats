@@ -7,12 +7,14 @@ There is no format documentation. `docs/ARCHITECTURE.md` line 90 incorrectly sta
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Document the 14-field CSV format as the canonical contract between writers and readers
 - Prevent commas in `workspace_project_dir` from corrupting CSV rows
 - Fix the incorrect JSON statement in ARCHITECTURE.md
 - Keep the comma guard consistent across all 5 writer implementations
 
 **Non-Goals:**
+
 - Migrating to a proper CSV library (e.g., Python `csv` module) — the format is simple enough that manual serialization is fine for 14 fixed fields
 - Adding RFC 4180 quoting — over-engineering for a single field where commas are extremely rare
 - Retroactively fixing existing state files — they're append-only and transient
@@ -25,6 +27,7 @@ There is no format documentation. `docs/ARCHITECTURE.md` line 90 incorrectly sta
 **Choice:** Before writing the CSV line, replace all `,` characters in the workspace path with `_`.
 
 **Alternatives considered:**
+
 - **RFC 4180 quoting** (wrap field in double-quotes): Would require updating all 5 writers and the parser to handle quoted fields. Overkill for a single field where commas are extremely rare in real paths.
 - **Backslash escaping** (`\,`): Requires custom unescape logic in the parser. More complex than replacement with negligible benefit.
 - **Drop commas entirely** (strip instead of replace): Loses information — `/a,b/c` becomes `/ab/c` which is a different path. Underscore replacement (`/a_b/c`) is more transparent.

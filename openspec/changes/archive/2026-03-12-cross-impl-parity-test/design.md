@@ -7,12 +7,14 @@ The existing CI pipeline (`ci.yml`) already has an `integration-test` job that r
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Detect stdout output drift between the two implementations for the same JSON input
 - Detect CSV state file format drift (field count, field values, field ordering)
 - Run automatically in CI on every PR, blocking merge on parity failures
 - Normalize environmental variables (terminal width, state file directory, git) so comparisons are deterministic
 
 **Non-Goals:**
+
 - Fixing existing drift (terminal width defaults, delta calculation) — those are separate tasks
 - Testing the Python package version (`src/claude_statusline/`) — only the `scripts/` versions
 - Performance benchmarking or timing comparisons
@@ -27,6 +29,7 @@ The existing CI pipeline (`ci.yml`) already has an `integration-test` job that r
 **Rationale:** The test orchestrates two different runtimes (Python + Node.js) as black-box CLI processes. Bats is already used for bash integration tests in this project, the CI already installs bats, and shell is the natural language for piping JSON to two processes and comparing their outputs. A pytest or jest test would need subprocess calls anyway.
 
 **Alternatives considered:**
+
 - pytest with `subprocess.run()` — adds Python bias, requires Node.js to also be installed in the Python test matrix
 - jest with `child_process.execSync()` — same issue in reverse
 - Standalone shell script — loses bats assertion library and CI integration
