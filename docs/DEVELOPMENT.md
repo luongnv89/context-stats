@@ -69,6 +69,20 @@ pre-commit install
 
 `requirements-dev.constraints.txt` pins every dev requirement (and its transitive dependencies) to exact versions so local installs and CI are reproducible; it is consumed via `pip install -r requirements-dev.txt -c requirements-dev.constraints.txt` in every CI job that installs dev dependencies (`python-lint`, `python-test`, and the release workflow's test job). To regenerate it after editing `requirements-dev.txt`, resolve at the **Python 3.9 floor** — the oldest version CI supports — so the pins stay installable across the whole 3.9–3.12 matrix: run `pip download --dest /tmp/wheels --python-version 3.9 --only-binary=:all: -r requirements-dev.txt`, read the exact resolved versions from the downloaded wheel filenames, and write them into the constraints file as `name==version` lines (canonical PyPI names, alphabetically sorted). Then verify before committing: re-run that same download command with `-c requirements-dev.constraints.txt` for each matrix Python (`3.9`, `3.10`, `3.11`, `3.12`) — all four must resolve without conflicts — and run the recorded test command in a clean venv installed with the constraints.
 
+### Security auditing
+
+The locked dev environment is scanned for known vulnerabilities with `pip-audit` (F-DEP-008). The scanner itself is pinned in `requirements-dev.constraints.txt` like every other dev dependency. Run it locally from an activated venv:
+
+```bash
+pip-audit -r requirements-dev.constraints.txt --progress-spinner off
+# or, equivalently, with the ticketed exceptions applied:
+bash scripts/pip-audit-locked.sh
+```
+
+CI runs the same audit on every push/PR (`dependency-scan` job in `.github/workflows/ci.yml`) and weekly ([`.github/workflows/security-audit.yml`](../.github/workflows/security-audit.yml)). The gate fails on **any** known advisory — stricter than the High/Critical requirement.
+
+**Exception policy:** an advisory may only be silenced with a filed ticket. Add one `--ignore-vuln <ID>` line per advisory to `scripts/pip-audit-locked.sh`, reference the ticket in that script's header comment, and note it in `requirements-dev.constraints.txt`. Current exceptions are tracked in [#161](https://github.com/luongnv89/context-stats/issues/161): every fix version requires Python >= 3.10 directly, or conflicts across the CI matrix with the Python 3.9-floor pins, so they become actionable when the minimum supported Python rises to 3.10+ — bump the affected pins and delete the matching flags then. When a **new** advisory appears: first try bumping the pin within what resolves at the 3.9 floor; only if no fix installs, file a ticket and add the flag.
+
 ## Project Layout
 
 ```

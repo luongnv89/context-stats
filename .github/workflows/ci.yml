@@ -266,11 +266,39 @@ jobs:
         run: pre-commit run --all-files
 
   # ============================================
+  # DEPENDENCY VULNERABILITY SCAN (F-DEP-008)
+  # ============================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements-dev.constraints.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
+
+      - name: Audit locked environment with pip-audit
+        # Fails on any known advisory not explicitly ignored in the script.
+        # Every ignored advisory has a filed ticket (#161); see
+        # docs/DEVELOPMENT.md ("Security auditing").
+        run: bash scripts/pip-audit-locked.sh
+
+  # ============================================
   # FINAL STATUS CHECK
   # ============================================
   ci-success:
     name: CI Success
-    needs: [python-lint, python-test, integration-test, e2e-install-pip, e2e-exec, pre-commit]
+    needs: [python-lint, python-test, integration-test, e2e-install-pip, e2e-exec, pre-commit, dependency-scan]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -281,7 +309,8 @@ jobs:
              [[ "${{ needs.integration-test.result }}" != "success" ]] || \
              [[ "${{ needs.e2e-install-pip.result }}" != "success" ]] || \
              [[ "${{ needs.e2e-exec.result }}" != "success" ]] || \
-             [[ "${{ needs.pre-commit.result }}" != "success" ]]; then
+             [[ "${{ needs.pre-commit.result }}" != "success" ]] || \
+             [[ "${{ needs.dependency-scan.result }}" != "success" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
