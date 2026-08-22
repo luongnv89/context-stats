@@ -10,3 +10,6 @@ mypy>=1.7.0
 
 # Pre-commit hooks
 pre-commit>=3.6.0
+
+# Security auditing
+pip-audit>=2.7,<3

@@ -1,0 +1,37 @@
+name: Security Audit
+
+# Weekly vulnerability scan of the locked dev environments (F-DEP-008).
+# The same audit also gates every push/PR via the dependency-scan job in
+# ci.yml; this schedule catches advisories published after the last push.
+
+on:
+  schedule:
+    # Every Monday at 06:23 UTC
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency-scan:
+    name: Weekly pip-audit (locked dev environment)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements-dev.constraints.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
+
+      - name: Audit locked environment with pip-audit
+        # Fails on any known advisory not explicitly ignored in the script.
+        # Every ignored advisory has a filed ticket (#161); see
+        # docs/DEVELOPMENT.md ("Security auditing").
+        run: bash scripts/pip-audit-locked.sh
