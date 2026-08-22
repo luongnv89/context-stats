@@ -26,7 +26,7 @@ cd cc-context-stats
 # Install Python dependencies
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
 # Install pre-commit hooks
 pre-commit install
@@ -46,7 +46,7 @@ cd cc-context-stats
 # Install Python dependencies
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
 # Install pre-commit hooks
 pre-commit install

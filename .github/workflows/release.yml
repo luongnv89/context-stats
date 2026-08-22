@@ -64,7 +64,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r requirements-dev.txt
+          pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
           pip install -e .
 
       - name: Run Python tests
