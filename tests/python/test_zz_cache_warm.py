@@ -13,10 +13,6 @@ from unittest.mock import patch
 
 import pytest
 
-# Tests that simulate os.fork() behavior are Unix-only — on Windows the
-# cmd_cache_warm_on function exits before reaching the fork code path.
-unix_only = pytest.mark.skipif(sys.platform == "win32", reason="os.fork not available on Windows")
-
 from claude_statusline.cli.cache_warm import (
     _clear_warm_state,
     _parse_duration,
@@ -27,6 +23,10 @@ from claude_statusline.cli.cache_warm import (
     load_warm_state,
     run_cache_warm,
 )
+
+# Tests that simulate os.fork() behavior are Unix-only — on Windows the
+# cmd_cache_warm_on function exits before reaching the fork code path.
+unix_only = pytest.mark.skipif(sys.platform == "win32", reason="os.fork not available on Windows")
 
 
 @pytest.fixture()

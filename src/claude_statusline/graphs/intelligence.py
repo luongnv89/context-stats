@@ -133,7 +133,7 @@ def calculate_context_pressure(utilization: float, beta: float = 1.5) -> float:
     """
     if utilization <= 0:
         return 1.0
-    return max(0.0, 1.0 - utilization**beta)
+    return max(0.0, 1.0 - utilization**beta)  # type: ignore[no-any-return]
 
 
 def calculate_intelligence(

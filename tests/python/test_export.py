@@ -152,9 +152,9 @@ class TestGenerateMarkdown:
         assert "| # | Time |" in md
         # Should have 3 rows in the timeline (8 columns per row)
         lines = [
-            l
-            for l in md.split("\n")
-            if l.startswith("| ") and l[2:3].isdigit() and l.count("|") >= 8
+            row
+            for row in md.split("\n")
+            if row.startswith("| ") and row[2:3].isdigit() and row.count("|") >= 8
         ]
         assert len(lines) == 3
 

@@ -373,7 +373,7 @@ class GraphRenderer:
                 get_mi_color,
             )
 
-            mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)
+            mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)  # type: ignore[attr-defined]
             mi_color = getattr(self.colors, mi_color_name)
             if mi_color_name == "green":
                 mi_hint = "Model is operating well"
@@ -383,12 +383,12 @@ class GraphRenderer:
                 mi_hint = "Significant degradation, start new session"
             self._emit(
                 f"  {mi_color}{'Model Intelligence:':<20}{self.colors.reset} "
-                f"{format_mi_score(mi_score.mi)}  "
+                f"{format_mi_score(mi_score.mi)}  "  # type: ignore[attr-defined]
                 f"{self.colors.dim}({mi_hint}){self.colors.reset}"
             )
             self._emit(
                 f"  {self.colors.dim}  Context: "
-                f"{mi_score.utilization * 100:.0f}% used{self.colors.reset}"
+                f"{mi_score.utilization * 100:.0f}% used{self.colors.reset}"  # type: ignore[attr-defined]
             )
 
         # Compaction events summary

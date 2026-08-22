@@ -34,13 +34,13 @@ jobs:
         run: pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
       - name: Run Ruff (linting)
-        run: ruff check scripts/statusline.py
+        run: ruff check .
 
       - name: Run Ruff (formatting check)
-        run: ruff format --check scripts/statusline.py
+        run: ruff format --check .
 
       - name: Run MyPy (type checking)
-        run: mypy scripts/statusline.py --ignore-missing-imports
+        run: mypy src scripts
 
   python-test:
     name: Python Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
