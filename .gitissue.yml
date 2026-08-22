@@ -24,15 +24,6 @@ triage:
   # Whether auto-pilot can close stale issues
   can_close_stale: false
 
-review:
-  # Checklist items to review
-  checklist:
-    - code_quality
-    - test_coverage
-    - no_dead_code
-    - no_console_logs
-    - no_sensitive_data
-
 pr:
   # Title template
   title_template: '{type}: {title}'
