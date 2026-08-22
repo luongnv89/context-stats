@@ -28,7 +28,7 @@ jobs:
             requirements-dev.constraints.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
+        run: python -m pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
       - name: Audit locked environment with pip-audit
         # Fails on any known advisory not explicitly ignored in the script.
