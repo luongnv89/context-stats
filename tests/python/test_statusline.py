@@ -1169,9 +1169,7 @@ class TestPacmanDisplay:
     )
     def test_pacman_icon_changes_per_zone_standalone(self, zone, expected_icon, tmp_path):
         """The standalone script renders the correct glyph for each of the 5 zones."""
-        output, code = self._run_with_config(
-            self._zone_input(zone), "show_pacman=true\n", tmp_path
-        )
+        output, code = self._run_with_config(self._zone_input(zone), "show_pacman=true\n", tmp_path)
         assert code == 0
         visible = strip_ansi(output)
         assert zone in visible, f"Expected zone label {zone!r} in output"
