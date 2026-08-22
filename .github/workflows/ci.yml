@@ -77,7 +77,13 @@ jobs:
           # C extension tracer and Windows process shutdown. We capture the result,
           # and on Windows only, treat exit code 1 as success when no tests failed.
           set +e
-          pytest tests/python/ -v --cov=scripts --cov=src --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
+          # Coverage floor (--cov-fail-under=73) is inherited from
+          # pyproject.toml [tool.pytest.ini_options] addopts (issue #117), so
+          # the measured scope here must match the pinned scope:
+          # src/claude_statusline (73.78% precise on main). The previous
+          # scripts+src scope measures 66% and would trip that floor on every
+          # matrix leg.
+          pytest tests/python/ -v --cov=src/claude_statusline --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
           PYTEST_EXIT=${PIPESTATUS[0]}
           set -e
           if [ "$RUNNER_OS" = "Windows" ] && [ "$PYTEST_EXIT" -eq 1 ]; then

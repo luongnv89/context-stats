@@ -121,7 +121,15 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
-addopts = "-v --tb=short"
+# Coverage floor (issue #117, F-TEST-006): measured over src/claude_statusline
+# on main — 2750 statements, 721 missed, identical across the Python 3.9-3.12
+# CI matrix legs and stable between interpreters locally. The precise total is
+# 73.78%, and coverage compares fail-under against the unrounded value, so a
+# literal 74 would fail on main itself; 73 is today's measured-value floor.
+# Raised toward the 94% M3 target by Tasks 4.6 and 5.7 of the modernization
+# plan. Inert unless coverage is requested (--cov); every invocation that does
+# request it inherits the enforcement.
+addopts = "-v --tb=short --cov-fail-under=73"
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 
