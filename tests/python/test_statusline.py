@@ -1083,9 +1083,9 @@ class TestPacmanDisplay:
         from claude_statusline.graphs.intelligence import PACMAN_ICONS
 
         visible = strip_ansi(output)
-        assert any(
-            icon in visible for icon in PACMAN_ICONS.values()
-        ), "A pacman icon should appear by default"
+        assert any(icon in visible for icon in PACMAN_ICONS.values()), (
+            "A pacman icon should appear by default"
+        )
 
     def test_pacman_shown_when_config_silent(self, sample_input, tmp_path):
         """An explicit config file that never mentions show_pacman still shows it."""

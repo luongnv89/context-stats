@@ -33,8 +33,10 @@ repos:
         files: \.(sh|bash)$
 
   # Python: Ruff linter and formatter
+  # Rev must track requirements-dev.constraints.txt ruff==... — CI lint and
+  # this hook must never disagree about formatting (issue #118).
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.14
+    rev: v0.16.4
     hooks:
       - id: ruff
         args: ['--fix']

@@ -104,9 +104,9 @@ class TestConfigDefaultRoundTrip:
 
         # Verify the file contains Unicode characters (em dash, box drawing)
         content = config_file.read_text(encoding="utf-8")
-        assert (
-            "\u2014" in content or "\u2500" in content
-        ), "Template should contain Unicode characters (em dash or box drawing)"
+        assert "\u2014" in content or "\u2500" in content, (
+            "Template should contain Unicode characters (em dash or box drawing)"
+        )
 
         # Second load reads the file back — must not raise
         config2 = Config.load(config_path=config_file)
@@ -170,9 +170,9 @@ class TestPackageDataTemplateSync:
         package_data_file = (
             repo_root / "src" / "claude_statusline" / "data" / "statusline.conf.default"
         )
-        assert (
-            package_data_file.exists()
-        ), f"data/statusline.conf.default not found at {package_data_file}"
+        assert package_data_file.exists(), (
+            f"data/statusline.conf.default not found at {package_data_file}"
+        )
         example_content = example_file.read_text(encoding="utf-8")
         package_content = package_data_file.read_text(encoding="utf-8")
         assert package_content == example_content, (
@@ -205,19 +205,19 @@ class TestFirstLoadColorOverrides:
 
         # The default template sets color_green=#7dcfff, so the 'green' slot
         # must be present in color_overrides after first load.
-        assert (
-            "green" in config.color_overrides
-        ), "First load should apply color_green from template"
+        assert "green" in config.color_overrides, (
+            "First load should apply color_green from template"
+        )
         # Verify it parsed the hex value (38;2;r;g;b format)
-        assert (
-            "38;2;" in config.color_overrides["green"]
-        ), "color_green should be parsed as 24-bit ANSI from hex #7dcfff"
+        assert "38;2;" in config.color_overrides["green"], (
+            "color_green should be parsed as 24-bit ANSI from hex #7dcfff"
+        )
 
     def test_first_load_color_overrides_match_second_load(self, tmp_path):
         """Color overrides from first load must equal those from a second load."""
         config_file = tmp_path / "statusline.conf"
         config1 = Config.load(config_path=config_file)
         config2 = Config.load(config_path=config_file)
-        assert (
-            config1.color_overrides == config2.color_overrides
-        ), "First and second loads should produce identical color_overrides"
+        assert config1.color_overrides == config2.color_overrides, (
+            "First and second loads should produce identical color_overrides"
+        )
