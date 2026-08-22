@@ -7,6 +7,46 @@
 - **Bats** - Bash Automated Testing System (optional, for bash tests)
 - **pre-commit** - Git hook framework (optional, for automated code quality)
 
+## Agent-Runnable Setup Notes
+
+The sequence below is self-contained: run it top to bottom in a fresh clone and every command works as written.
+
+```bash
+# 1. Create and activate a Python 3 virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install development tools (pytest, pytest-cov, ruff, mypy, pre-commit)
+pip install -r requirements-dev.txt
+
+# 3. Install the package itself in editable mode
+pip install -e .
+
+# 4. Recorded test command (-p no:cacheprovider disables the cache plugin,
+#    so test runs never write .pytest_cache/)
+pytest tests/python/ -q -p no:cacheprovider
+
+# 5. Coverage report (measures src/claude_statusline per [tool.coverage.run])
+pytest tests/python/ -q -p no:cacheprovider --cov=claude_statusline --cov-report=term
+
+# 6. Bootstrap pre-commit hooks into .git/hooks
+pre-commit install
+```
+
+One-liner equivalent of steps 1 and 4 once the environment exists:
+
+```bash
+source venv/bin/activate && pytest tests/python/ -q -p no:cacheprovider
+```
+
+### Editable-install version skew
+
+If the version reported by `pip show context-stats` is older than `version` in `pyproject.toml` (for example a venv still holding **1.23.0** while `pyproject.toml` says **1.24.0**), the editable-install metadata is stale. Re-running the editable install clears it:
+
+```bash
+pip install -e .
+```
+
 ## Setup
 
 ```bash
@@ -62,8 +102,8 @@ pytest && bats tests/bash/test_check_install.bats tests/bash/test_context_stats_
 ### Coverage Reports
 
 ```bash
-# Python coverage
-pytest tests/python/ -v --cov=scripts --cov-report=html
+# Python coverage (measures src/claude_statusline per [tool.coverage.run])
+pytest tests/python/ -v --cov=claude_statusline --cov-report=html
 ```
 
 ## Linting & Formatting
