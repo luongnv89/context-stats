@@ -16,8 +16,9 @@ The sequence below is self-contained: run it top to bottom in a fresh clone and 
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install development tools (pytest, pytest-cov, ruff, mypy, pre-commit)
-pip install -r requirements-dev.txt
+# 2. Install development tools (pytest, pytest-cov, ruff, mypy, pre-commit),
+#    held to the pinned versions in requirements-dev.constraints.txt
+pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
 # 3. Install the package itself in editable mode
 pip install -e .
@@ -57,12 +58,16 @@ cd cc-context-stats
 # Python setup
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 pip install -e ".[dev]"
 
 # Install pre-commit hooks (optional but recommended)
 pre-commit install
 ```
+
+### Regenerating the dev-dependency constraints file
+
+`requirements-dev.constraints.txt` pins every dev requirement (and its transitive dependencies) to exact versions so local installs and CI are reproducible; it is consumed via `pip install -r requirements-dev.txt -c requirements-dev.constraints.txt` in every CI job that installs dev dependencies (`python-lint`, `python-test`, and the release workflow's test job). To regenerate it after editing `requirements-dev.txt`, resolve at the **Python 3.9 floor** — the oldest version CI supports — so the pins stay installable across the whole 3.9–3.12 matrix: run `pip download --dest /tmp/wheels --python-version 3.9 --only-binary=:all: -r requirements-dev.txt`, read the exact resolved versions from the downloaded wheel filenames, and write them into the constraints file as `name==version` lines (canonical PyPI names, alphabetically sorted). Then verify before committing: re-run that same download command with `-c requirements-dev.constraints.txt` for each matrix Python (`3.9`, `3.10`, `3.11`, `3.12`) — all four must resolve without conflicts — and run the recorded test command in a clean venv installed with the constraints.
 
 ## Project Layout
 

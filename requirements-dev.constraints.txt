@@ -1,0 +1,29 @@
+# Pinned development dependencies — consumed with `-c` by CI and local installs:
+#   pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
+#
+# Resolved from requirements-dev.txt at the Python 3.9 floor (the oldest
+# version CI supports), so every pin installs across the full CI matrix.
+# Regeneration is documented in docs/DEVELOPMENT.md ("Regenerating the
+# dev-dependency constraints file").
+cfgv==3.4.0
+coverage==7.10.7
+distlib==0.4.3
+filelock==3.19.1
+identify==2.6.15
+iniconfig==2.1.0
+librt==0.15.0
+mypy==1.19.1
+mypy-extensions==1.1.0
+nodeenv==1.10.0
+packaging==26.3
+pathspec==1.1.1
+platformdirs==4.4.0
+pluggy==1.6.0
+pre-commit==4.3.0
+pygments==2.21.0
+pytest==8.4.2
+pytest-cov==7.1.0
+PyYAML==6.0.3
+ruff==0.16.4
+typing-extensions==4.16.0
+virtualenv==20.35.4
