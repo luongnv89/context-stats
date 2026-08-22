@@ -129,7 +129,7 @@ testpaths = ["tests/python"]
 # Raised toward the 94% M3 target by Tasks 4.6 and 5.7 of the modernization
 # plan. Inert unless coverage is requested (--cov); every invocation that does
 # request it inherits the enforcement.
-addopts = "-v --tb=short --cov-fail-under=73"
+addopts = "-v --tb=short --cov-fail-under=99 # PROBE: unreachable floor to prove the CI gate trips (reverted next commit)"
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 
