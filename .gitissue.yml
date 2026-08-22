@@ -11,20 +11,11 @@ resolve:
   # Branch name prefix for issue branches (e.g., "issue-42")
   branch_prefix: 'issue-{id}'
 
-  # Commit message prefix for issue commits (e.g., "fix #42")
-  commit_prefix: 'fix'
-
-  # Base branch for issue branches
-  base_branch: main
-
   # Test timeout in seconds. Increase for large projects
   test_timeout: 300
 
   # Whether to run tests automatically after resolution
   auto_test: true
-
-  # Whether to create a draft PR after resolution
-  auto_pr: true
 
 triage:
   # Days of inactivity after which an issue is considered stale
