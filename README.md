@@ -62,15 +62,15 @@ A single line in your Claude Code terminal updated on every refresh:
 my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
-| Element               | What it tells you                                                    |
-| --------------------- | -------------------------------------------------------------------- |
-| `64,000 free (32.0%)` | Available tokens and utilization                                     |
-| `Code`                | Context zone — color-coded action signal                             |
-| `ᗤ`                   | Pacman context-zone icon (on by default — `show_pacman=false` to hide) |
-| `MI:0.918`            | Model Intelligence score — how sharp the model still is              |
-| `+2,500`              | Tokens consumed since last refresh                                   |
-| `tok/s`               | Model generation throughput (optional — enable with `show_tps=true`) |
-| `$0.42`               | Cumulative session cost in USD (on by default — `show_cost=false` to hide) |
+| Element               | What it tells you                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| `64,000 free (32.0%)` | Available tokens and utilization                                                       |
+| `Code`                | Context zone — color-coded action signal                                               |
+| `ᗤ`                   | Pacman context-zone icon (on by default — `show_pacman=false` to hide)                 |
+| `MI:0.918`            | Model Intelligence score — how sharp the model still is                                |
+| `+2,500`              | Tokens consumed since last refresh                                                     |
+| `tok/s`               | Model generation throughput (optional — enable with `show_tps=true`)                   |
+| `$0.42`               | Cumulative session cost in USD (on by default — `show_cost=false` to hide)             |
 | `Opus 4.6·high`       | Reasoning effort level next to the model (on by default — `show_effort=false` to hide) |
 
 When the terminal is too narrow to fit everything on one line, the statusline wraps onto additional lines instead of dropping elements — so no information is lost on narrow screens. Lower-priority elements (model name, session id) wrap to a later line first, and the project name always starts the first line. Requires Claude Code v2.1.153+ (which reports the real terminal width); on a wide terminal it stays a single line.

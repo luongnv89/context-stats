@@ -13,10 +13,12 @@ The Python (`scripts/statusline.py`) and Node.js (`scripts/statusline.js`) statu
 ## Capabilities
 
 ### New Capabilities
+
 - `cross-impl-parity`: Integration test that validates Python and Node.js statusline scripts produce equivalent stdout and CSV state output for identical JSON input
 
 ### Modified Capabilities
-_(none)_
+
+(none)
 
 ## Impact
 

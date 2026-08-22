@@ -19,4 +19,4 @@
 - Updated README messaging to three-level analytics framework
 - Fresh logo for ContextStats rebrand
 
-**Full Changelog**: https://github.com/luongnv89/context-stats/compare/v1.18.0...v1.19.0
+**Full Changelog**: <https://github.com/luongnv89/context-stats/compare/v1.18.0...v1.19.0>

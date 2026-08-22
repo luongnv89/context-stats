@@ -12,11 +12,13 @@ The CSV state file is the central data contract across 5 writer implementations 
 ## Capabilities
 
 ### New Capabilities
+
 - `csv-format-spec`: Formal documentation of the 14-field CSV state file format (field positions, types, constraints, examples).
 - `comma-guard`: Sanitization of `workspace_project_dir` to prevent commas from corrupting CSV rows, applied across all writer implementations.
 
 ### Modified Capabilities
-_(none — no existing spec-level requirements are changing)_
+
+(none — no existing spec-level requirements are changing)
 
 ## Impact
 

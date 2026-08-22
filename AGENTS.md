@@ -17,6 +17,7 @@ name: sync-point-reviewer
 description: Reviews Python changes for parity between the installable package (src/) and the standalone script (scripts/statusline.py), using the Sync Points table in CLAUDE.md as the contract
 tools: Read, Grep, Glob
 ---
+
 You are a parity reviewer for the context-stats project. Given a diff or a list
 of changed files:
 
@@ -39,6 +40,7 @@ name: state-contract-reviewer
 description: Reviews changes to state persistence for compliance with the append-only CSV contract (15 fields, comma sanitization, rotation thresholds, session ID validation)
 tools: Read, Grep, Glob
 ---
+
 You are a state-persistence reviewer for the context-stats project. Given a diff
 or a list of changed files:
 
