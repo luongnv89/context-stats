@@ -176,7 +176,7 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         secs = remaining % 60
         print(
             f"{c.yellow}Cache-warm already active for session {session_id} "  # type: ignore[attr-defined]
-            f"({mins}m {secs}s remaining). Refreshing duration.{c.reset}"  # type: ignore[attr-defined]
+            f"({mins}m {secs}s remaining). Refreshing duration.{c.reset}"  # type: ignore[attr-defined, unused-ignore]
         )
 
     now = int(time.time())
@@ -238,8 +238,8 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         remaining_fmt = f"{mins}m" if duration % 60 == 0 else f"{mins}m {duration % 60}s"
         print(
             f"{c.green}Cache-warm activated for session {session_id}.{c.reset}\n"  # type: ignore[attr-defined]
-            f"{c.dim}Heartbeat every {DEFAULT_INTERVAL // 60} minutes, "  # type: ignore[attr-defined]
-            f"auto-stops in {remaining_fmt}.{c.reset}"  # type: ignore[attr-defined]
+            f"{c.dim}Heartbeat every {DEFAULT_INTERVAL // 60} minutes, "  # type: ignore[attr-defined, unused-ignore]
+            f"auto-stops in {remaining_fmt}.{c.reset}"  # type: ignore[attr-defined, unused-ignore]
         )
 
 

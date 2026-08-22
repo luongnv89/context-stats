@@ -100,17 +100,24 @@ strict_optional = true
 ignore_missing_imports = true
 
 # Known-findings baseline (issue #116; burn-down scheduled in Task 5.7 of the
-# modernization plan). The 25 known mypy errors are suppressed by inline
+# modernization plan). The known mypy errors are suppressed by inline
 # `# type: ignore[<code>]` comments at each site — never a blanket disable.
 # Because warn_unused_ignores=true above, any ignore that outlives its error
 # fails typecheck itself, so this list shrinks automatically as findings are
-# fixed. Per-module counts:
-#   cli/cache_warm.py       no-any-return=1  attr-defined=12
+# fixed. Per-module counts of committed ignore comments:
+#   cli/cache_warm.py       no-any-return=1  attr-defined=8
 #   core/config.py          assignment=2
 #   cli/context_stats.py    assignment=1
 #   graphs/intelligence.py  no-any-return=1
-#   graphs/renderer.py      attr-defined=4
+#   graphs/renderer.py      attr-defined=3
 #   cli/export.py           attr-defined=4
+#
+# Three cache_warm.py attr-defined ignores also list `unused-ignore`: inside
+# multi-line implicitly-concatenated f-strings, mypy attributes the error to a
+# different physical line depending on the interpreter it runs under (PEP 701
+# tokenization on 3.12+ vs legacy on 3.11), so the error may legitimately be
+# absent on one side. Listing `unused-ignore` keeps those sites valid under
+# both; Task 5.7 should remove the whole comment when it fixes each site.
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
