@@ -44,6 +44,12 @@ pip-audit==2.9.0
 pip-requirements-parser==32.0.1
 platformdirs==4.4.0
 pluggy==1.6.0
+# Single unmarked pin: releases >= 4.4 require Python >= 3.10 while the CI
+# matrix floors at 3.9, so requirements-dev.txt caps pre-commit < 4.4
+# (F-DEP-002; raising the floor/cap pair is Task 3.1, #133). Keep this pin
+# marker-free — pip download --python-version evaluates python_version
+# markers against the running interpreter, not the target, so marked pins
+# cannot be verified with the documented cross-version procedure.
 pre-commit==4.3.0
 py-serializable==2.1.0
 pygments==2.21.0
