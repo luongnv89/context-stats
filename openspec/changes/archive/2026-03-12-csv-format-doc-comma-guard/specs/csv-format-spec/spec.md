@@ -19,7 +19,7 @@ The project SHALL have a `docs/CSV_FORMAT.md` file that documents the state file
 The CSV state file format SHALL consist of exactly 14 comma-separated fields per line, in the following fixed order:
 
 | Index | Field | Type |
-|-------|-------|------|
+| ------- | ------- | ------ |
 | 0 | timestamp | integer (unix seconds) |
 | 1 | total_input_tokens | integer |
 | 2 | total_output_tokens | integer |

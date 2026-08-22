@@ -8,7 +8,7 @@ default_language_version:
 repos:
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: check-json
@@ -26,7 +26,7 @@ repos:
 
   # ShellCheck for bash scripts
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
+    rev: v0.11.0.1-1
     hooks:
       - id: shellcheck
         args: ['--severity=warning']
@@ -65,7 +65,7 @@ repos:
 
   # Markdown lint
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.39.0
+    rev: v0.49.1
     hooks:
       - id: markdownlint
         args: ['--fix', '--disable', 'MD013', 'MD024', 'MD033', 'MD040', 'MD041', '--']
