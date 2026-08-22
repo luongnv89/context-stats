@@ -69,20 +69,22 @@ pie title Model Cost Distribution
      - m5b1a674... (Unknown): 0% cache hit
 
 2. **Model efficiency by family**
-   | Model | Sessions | $/1k tokens |
-   |-------|----------|-------------|
-   | haiku | 29 | $0.022 |
-   | opus | 241 | $0.040 |
-   | sonnet | 42 | $0.037 |
+
+   | Model  | Sessions | $/1k tokens |
+   | ------ | -------- | ----------- |
+   | haiku  | 29       | $0.022      |
+   | opus   | 241      | $0.040      |
+   | sonnet | 42       | $0.037      |
 
 3. **High-spend projects to review**
-   | Project | Sessions | Cost | Cache Hit % |
-   |---------|----------|------|-------------|
-   | project-alpha | 28 | $412.80 | 12% |
-   | project-beta | 41 | $318.44 | 44% |
-   | project-gamma | 35 | $264.17 | 38% |
-   | project-delta | 27 | $198.53 | 49% |
-   | project-epsilon | 22 | $187.62 | 31% |
+
+   | Project         | Sessions | Cost    | Cache Hit % |
+   | --------------- | -------- | ------- | ----------- |
+   | project-alpha   | 28       | $412.80 | 12%         |
+   | project-beta    | 41       | $318.44 | 44%         |
+   | project-gamma   | 35       | $264.17 | 38%         |
+   | project-delta   | 27       | $198.53 | 49%         |
+   | project-epsilon | 22       | $187.62 | 31%         |
 
 ```mermaid
 xychart-beta
