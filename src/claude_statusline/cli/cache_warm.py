@@ -61,7 +61,7 @@ def load_warm_state(session_id: str) -> dict | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text())  # type: ignore[no-any-return]
     except (OSError, json.JSONDecodeError):
         return None
 
@@ -175,8 +175,8 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         mins = remaining // 60
         secs = remaining % 60
         print(
-            f"{c.yellow}Cache-warm already active for session {session_id} "
-            f"({mins}m {secs}s remaining). Refreshing duration.{c.reset}"
+            f"{c.yellow}Cache-warm already active for session {session_id} "  # type: ignore[attr-defined]
+            f"({mins}m {secs}s remaining). Refreshing duration.{c.reset}"  # type: ignore[attr-defined]
         )
 
     now = int(time.time())
@@ -237,9 +237,9 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         mins = duration // 60
         remaining_fmt = f"{mins}m" if duration % 60 == 0 else f"{mins}m {duration % 60}s"
         print(
-            f"{c.green}Cache-warm activated for session {session_id}.{c.reset}\n"
-            f"{c.dim}Heartbeat every {DEFAULT_INTERVAL // 60} minutes, "
-            f"auto-stops in {remaining_fmt}.{c.reset}"
+            f"{c.green}Cache-warm activated for session {session_id}.{c.reset}\n"  # type: ignore[attr-defined]
+            f"{c.dim}Heartbeat every {DEFAULT_INTERVAL // 60} minutes, "  # type: ignore[attr-defined]
+            f"auto-stops in {remaining_fmt}.{c.reset}"  # type: ignore[attr-defined]
         )
 
 
@@ -256,7 +256,7 @@ def cmd_cache_warm_off(session_id: str, colors: object, silent: bool = False) ->
     state = load_warm_state(session_id)
     if state is None:
         if not silent:
-            print(f"{c.dim}No active cache-warm for session {session_id}.{c.reset}")
+            print(f"{c.dim}No active cache-warm for session {session_id}.{c.reset}")  # type: ignore[attr-defined]
         return
 
     pid = state.get("pid", 0)
@@ -276,7 +276,7 @@ def cmd_cache_warm_off(session_id: str, colors: object, silent: bool = False) ->
         pass
 
     if not silent:
-        print(f"{c.green}Cache-warm stopped for session {session_id}.{c.reset}")
+        print(f"{c.green}Cache-warm stopped for session {session_id}.{c.reset}")  # type: ignore[attr-defined]
 
 
 def run_cache_warm(session_id: str, argv: list[str], colors: object) -> None:
@@ -291,7 +291,7 @@ def run_cache_warm(session_id: str, argv: list[str], colors: object) -> None:
 
     if not argv:
         print(
-            f"{c.bold}Usage:{c.reset}\n"
+            f"{c.bold}Usage:{c.reset}\n"  # type: ignore[attr-defined]
             f"  context-stats <session_id> cache-warm on [duration]   "
             f"# e.g. 30m, 1h\n"
             f"  context-stats <session_id> cache-warm off\n"

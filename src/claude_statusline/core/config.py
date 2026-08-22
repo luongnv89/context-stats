@@ -286,7 +286,7 @@ class Config:
                         )
                 elif key in _ZONE_FLOAT_KEYS:
                     try:
-                        v = float(raw_value)
+                        v = float(raw_value)  # type: ignore[assignment]
                         if 0.0 < v < 1.0:
                             setattr(self, key, v)
                         else:
@@ -300,7 +300,7 @@ class Config:
                         )
                 elif key in _COMPACTION_FLOAT_KEYS:
                     try:
-                        v = float(raw_value)
+                        v = float(raw_value)  # type: ignore[assignment]
                         if 0.0 < v < 1.0:
                             setattr(self, key, v)
                         else:

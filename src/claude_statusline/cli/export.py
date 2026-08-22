@@ -166,8 +166,8 @@ def _generate_mermaid_trend_chart(entries: list, context_window: int) -> list[st
     """Generate a Mermaid xychart showing context usage over time."""
     sampled = _sample_entries_by_window(entries, window_minutes=15, max_points=10)
     x_values = ", ".join(f'"{label}"' for label, _ in sampled)
-    y_values = ", ".join(str(entry.current_used_tokens) for _, entry in sampled)
-    max_used = max((entry.current_used_tokens for _, entry in sampled), default=0)
+    y_values = ", ".join(str(entry.current_used_tokens) for _, entry in sampled)  # type: ignore[attr-defined]
+    max_used = max((entry.current_used_tokens for _, entry in sampled), default=0)  # type: ignore[attr-defined]
     y_max = _nice_axis_max(max(context_window, max_used))
 
     return [
@@ -238,8 +238,8 @@ def _generate_mermaid_composition_chart(last_entry) -> list[str]:
 def _generate_mermaid_cache_chart(entries: list) -> list[str]:
     """Generate a Mermaid xychart showing cache creation and cache read over time."""
     sampled = _sample_entries_by_window(entries, window_minutes=10, max_points=12)
-    creation_values = [entry.cache_creation for _, entry in sampled]
-    read_values = [entry.cache_read for _, entry in sampled]
+    creation_values = [entry.cache_creation for _, entry in sampled]  # type: ignore[attr-defined]
+    read_values = [entry.cache_read for _, entry in sampled]  # type: ignore[attr-defined]
     max_cache = max((*creation_values, *read_values), default=0)
 
     if max_cache <= 0:

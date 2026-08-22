@@ -99,6 +99,19 @@ warn_unused_ignores = true
 strict_optional = true
 ignore_missing_imports = true
 
+# Known-findings baseline (issue #116; burn-down scheduled in Task 5.7 of the
+# modernization plan). The 25 known mypy errors are suppressed by inline
+# `# type: ignore[<code>]` comments at each site — never a blanket disable.
+# Because warn_unused_ignores=true above, any ignore that outlives its error
+# fails typecheck itself, so this list shrinks automatically as findings are
+# fixed. Per-module counts:
+#   cli/cache_warm.py       no-any-return=1  attr-defined=12
+#   core/config.py          assignment=2
+#   cli/context_stats.py    assignment=1
+#   graphs/intelligence.py  no-any-return=1
+#   graphs/renderer.py      attr-defined=4
+#   cli/export.py           attr-defined=4
+
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 addopts = "-v --tb=short"

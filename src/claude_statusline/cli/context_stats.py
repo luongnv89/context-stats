@@ -1020,7 +1020,7 @@ def main() -> None:
     )
 
     # Run
-    minutes = getattr(args, "minutes", None)
+    minutes = getattr(args, "minutes", None)  # type: ignore[assignment]
     if args.no_watch:
         success = render_once(
             state_file, args.type, renderer, colors, config=config, minutes=minutes
