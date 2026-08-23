@@ -718,9 +718,14 @@ def tail_window_text(path, window: int = STATE_TAIL_WINDOW_BYTES) -> tuple[str, 
 
     Raises OSError on IO failure; callers own their degradation paths.
     """
-    size = os.path.getsize(path)
     with open(path, "rb") as fh:
+        # Anchor the size to THIS descriptor: stat()-then-open races a
+        # concurrent rotation shrinking the file, which would make the
+        # relative seek below go negative and raise.
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
         if size <= window:
+            fh.seek(0)
             data = fh.read()
             return data.decode("utf-8", errors="replace"), True
         fh.seek(-window, os.SEEK_END)
@@ -1019,6 +1024,10 @@ def _count_changes_capped(project_dir, cap: int | None = None) -> tuple[int, boo
         timer.cancel()
     if proc.returncode != 0 and not (killed or count >= cap):
         # Real git failure (not our cap/deadline kill): no count, as before.
+        return 0, False
+    if killed and count < cap:
+        # Deadline kill mid-count: a partial number would read as exact;
+        # degrade like the old timeout path (no segment) instead.
         return 0, False
     return count, count >= cap
 

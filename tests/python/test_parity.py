@@ -1428,6 +1428,9 @@ class _CountingBinaryReader:
     def seek(self, *args):
         return self._fh.seek(*args)
 
+    def tell(self):
+        return self._fh.tell()
+
     def close(self):
         return self._fh.close()
 
