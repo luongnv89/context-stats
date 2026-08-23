@@ -179,18 +179,14 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
         "test_validate_csv_field_grid",
         "test_render_byte_parity_hostile_session_id",
     ),
-    "External-input extraction (explicit JSON null treated as absent)": (
-        "test_extract_grid",
-    ),
+    "External-input extraction (explicit JSON null treated as absent)": ("test_extract_grid",),
     "Render catch-all (unexpected exceptions → minimal line on stdout, traceback to stderr)": (
         "test_render_catch_all_parity",
     ),
     "project_dir trust gate (git/gh only run inside a verified-existing directory)": (
         "test_resolve_project_dir_grid",
     ),
-    "State file creation mode (0600, owner-only)": (
-        "test_state_file_creation_mode_parity",
-    ),
+    "State file creation mode (0600, owner-only)": ("test_state_file_creation_mode_parity",),
     "Legacy-state migration (guarded move/remove, warns on OSError, never breaks the refresh)": (
         "test_legacy_migration_parity",
     ),
@@ -393,9 +389,7 @@ class TestConstantPairs:
         ]
         for parts in parts_sets:
             for width in (10, 40, 200):
-                assert (
-                    sl.fit_to_width(parts, width) == fit_to_width(parts, width)
-                ), (parts, width)
+                assert sl.fit_to_width(parts, width) == fit_to_width(parts, width), (parts, width)
         monkey_cols = os.environ.get("COLUMNS")
         try:
             os.environ["COLUMNS"] = "123"
@@ -503,9 +497,7 @@ class TestIntelligencePairs:
     @pytest.mark.parametrize("mi", [0.0, 0.80, 0.85, 0.899, 0.90, 0.95, 1.0])
     def test_mi_color_grid(self, mi, utilization):
         ansi_to_name = {sl.RED: "red", sl.YELLOW: "yellow", sl.GREEN: "green"}
-        assert ansi_to_name[sl.get_mi_color(mi, utilization)] == get_mi_color(
-            mi, utilization
-        )
+        assert ansi_to_name[sl.get_mi_color(mi, utilization)] == get_mi_color(mi, utilization)
 
     ZONE_CASES = [
         (0, 0, {}),
@@ -582,9 +574,7 @@ class TestThroughputPairs:
     @pytest.mark.parametrize("unit", ["tok/s", "tokens/s"])
     @pytest.mark.parametrize("precision", [-3, 0, 1, 2, 11])
     def test_format_tps_grid(self, precision, unit):
-        assert sl.format_tps(42.56123, precision, unit) == format_tps(
-            42.56123, precision, unit
-        )
+        assert sl.format_tps(42.56123, precision, unit) == format_tps(42.56123, precision, unit)
 
     @pytest.mark.parametrize(
         "values",
@@ -596,9 +586,9 @@ class TestThroughputPairs:
         if threshold is None:
             assert sl.detect_compaction_events(values) == detect_compaction_events(values)
         else:
-            assert sl.detect_compaction_events(
+            assert sl.detect_compaction_events(values, threshold) == detect_compaction_events(
                 values, threshold
-            ) == detect_compaction_events(values, threshold)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -757,8 +747,12 @@ class TestGitInfoPair:
         env = os.environ.copy()
         sp.run(["git", "init", "-q", str(tmp_path)], check=True, env=env)
         cfg = ["-c", "user.email=t@t", "-c", "user.name=t"]
-        sp.run(["git", *cfg, "commit", "--allow-empty", "-q", "-m", "init"],
-               cwd=tmp_path, check=True, env=env)
+        sp.run(
+            ["git", *cfg, "commit", "--allow-empty", "-q", "-m", "init"],
+            cwd=tmp_path,
+            check=True,
+            env=env,
+        )
         for i in range(dirty_files):
             (tmp_path / f"f{i}.txt").write_text("x", encoding="utf-8")
 
@@ -948,8 +942,13 @@ class TestConfigParsingPair:
             slot = PKG_COLOR_KEYS[key]
             assert slot not in scfg["colors"]
             assert slot not in pcfg.color_overrides
-        elif key in ("zone_std_dump_ratio", "zone_std_warn_buffer", "zone_std_hard_limit",
-                     "zone_std_dead_ratio", "large_model_threshold"):
+        elif key in (
+            "zone_std_dump_ratio",
+            "zone_std_warn_buffer",
+            "zone_std_hard_limit",
+            "zone_std_dead_ratio",
+            "large_model_threshold",
+        ):
             assert key not in scfg["zone_config"]
             assert getattr(pcfg, key) == 0  # 0 = use built-in default on both sides
         elif key == "compaction_drop_threshold":
@@ -1114,6 +1113,7 @@ class FakeStream:
         self.encoding = encoding
         self.calls = []
         if with_reconfigure:
+
             def _reconfigure(**kwargs):
                 self.calls.append(kwargs)
                 if fail:
@@ -1215,9 +1215,9 @@ class TestRenderParity:
     ):
         payload = build_payload(tmp_path)
         sl_lines = render_standalone(payload, isolated_home, columns="60")[0].split("\n")
-        pkg_lines = render_package(
-            payload, monkeypatch, capsys, isolated_home, columns="60"
-        )[0].split("\n")
+        pkg_lines = render_package(payload, monkeypatch, capsys, isolated_home, columns="60")[
+            0
+        ].split("\n")
         assert pkg_lines == sl_lines
         assert len(sl_lines) > 1, "expected a multi-line reflow at 60 columns"
         joined = "\n".join(self.plain(line) for line in sl_lines)
@@ -1297,9 +1297,7 @@ class TestRenderParity:
                     )
                     + "\n"
                 )
-            (state_dir / f"statusline.{sid}.state").write_text(
-                "".join(rows), encoding="utf-8"
-            )
+            (state_dir / f"statusline.{sid}.state").write_text("".join(rows), encoding="utf-8")
 
         payload = build_payload(tmp_path, session_id="tpscheck")
         payload["context_window"]["current_usage"]["input_tokens"] = 20000
@@ -1310,9 +1308,7 @@ class TestRenderParity:
         assert "+3,200" in ANSI_RE.sub("", sl_out), "delta segment expected on both sides"
         assert pkg_out == sl_out
 
-    def test_render_byte_parity_show_cost_off(
-        self, tmp_path, monkeypatch, capsys, isolated_home
-    ):
+    def test_render_byte_parity_show_cost_off(self, tmp_path, monkeypatch, capsys, isolated_home):
         conf = isolated_home / ".claude" / "statusline.conf"
         conf.write_text(
             COMMENT_ONLY_CONF + "show_cost=false\nshow_pacman=false\nshow_effort=false\n",
