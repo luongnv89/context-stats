@@ -300,13 +300,12 @@ class TestStateIoFailures:
         sf.file_path.write_text(_csv_line(sid="iotail") + "\n")
         # The tail read is window-bounded (F-PERF-001): the IO failure surface
         # is the shared tail_window_text helper (plus the full-read fallback).
-        with patch(
-            "claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")
-        ):
+        with patch("claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")):
             assert sf.read_tail(5) == []
-        with patch(
-            "claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")
-        ), patch.object(Path, "read_text", side_effect=OSError("denied")):
+        with (
+            patch("claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")),
+            patch.object(Path, "read_text", side_effect=OSError("denied")),
+        ):
             # Fallback path failing too must still degrade to [].
             assert sf.read_tail(5) == []
         assert "failed to read state tail" in capsys.readouterr().err
@@ -314,9 +313,7 @@ class TestStateIoFailures:
     def test_read_last_entry_oserror_warns_and_returns_none(self, state_dirs, capsys):
         sf = StateFile("iolast")
         sf.file_path.write_text(_csv_line(sid="iolast") + "\n")
-        with patch(
-            "claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")
-        ):
+        with patch("claude_statusline.core.state.tail_window_text", side_effect=OSError("denied")):
             assert sf.read_last_entry() is None
         assert "failed to read last entry" in capsys.readouterr().err
 

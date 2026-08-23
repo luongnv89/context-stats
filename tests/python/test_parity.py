@@ -896,9 +896,7 @@ class TestBranchCachePair:
 
         assert sl._BRANCH_CACHE_TTL_SECONDS == shared._BRANCH_CACHE_TTL_SECONDS == 10
         assert (
-            sl._BRANCH_CACHE_NEGATIVE_TTL_SECONDS
-            == shared._BRANCH_CACHE_NEGATIVE_TTL_SECONDS
-            == 5
+            sl._BRANCH_CACHE_NEGATIVE_TTL_SECONDS == shared._BRANCH_CACHE_NEGATIVE_TTL_SECONDS == 5
         )
 
     def test_branch_cache_roundtrip_and_cross_read(self, tmp_path):
@@ -1347,6 +1345,7 @@ class TestLegacyMigrationPair:
     def test_migrate_sentinel_prevents_repeat_sweep(self, tmp_path, monkeypatch):
         """F-PERF-005: after one clean pass the sentinel skips the glob/stat
         sweep entirely — on both implementations."""
+
         # Package side: StateFile.__init__ runs the migration once.
         class _OldDir:
             def __init__(self):
@@ -1482,9 +1481,9 @@ class TestRotationByteGate:
 
         assert counter.opened_paths == [], "byte gate must skip ALL reads below the floor"
         assert state.read_bytes() == ("".join(rows)).encode()
-        assert (
-            state_dir / "statusline.gate.state"
-        ).read_bytes() == state.read_bytes(), "both sides byte-identical"
+        assert (state_dir / "statusline.gate.state").read_bytes() == state.read_bytes(), (
+            "both sides byte-identical"
+        )
 
     @pytest.mark.parametrize(
         ("rows_spec", "expect_rotation"),
@@ -1494,7 +1493,9 @@ class TestRotationByteGate:
             ("over_threshold", True),  # 10,001 "x\n" = 20,002 B -> rotate
         ],
     )
-    def test_rotate_byte_gate_boundary_tiny_rows(self, tmp_path, monkeypatch, rows_spec, expect_rotation):
+    def test_rotate_byte_gate_boundary_tiny_rows(
+        self, tmp_path, monkeypatch, rows_spec, expect_rotation
+    ):
         """The provable floor never suppresses genuine rotation: even the
         worst case (1-byte rows) rotates iff lines exceed the threshold,
         and outputs stay byte-identical between the implementations."""
@@ -1705,9 +1706,7 @@ class TestSubprocessBudget:
         monkeypatch.setattr(sl.shutil, "which", lambda name: None if name == "gh" else name)
         return counters
 
-    def test_subprocess_count_render_budget(
-        self, tmp_path, isolated_home, monkeypatch, capsys
-    ):
+    def test_subprocess_count_render_budget(self, tmp_path, isolated_home, monkeypatch, capsys):
         """Explicit N: cold render runs exactly one rev-parse (down from two);
         second render within TTL runs zero; the capped porcelain count stays
         live on both renders."""
