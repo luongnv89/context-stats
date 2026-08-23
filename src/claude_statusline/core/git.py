@@ -16,6 +16,10 @@ from claude_statusline.core.colors import CYAN, MAGENTA, RESET, ColorManager
 # statusline re-renders frequently, the result is cached per-branch for a
 # short TTL so the network round-trip happens at most once per window.
 _PR_CACHE_TTL_SECONDS = 60
+# Failed lookups (gh errors, timeouts) get a much shorter TTL so a broken
+# environment recovers quickly instead of stalling every render for a full
+# positive-TTL window.
+_PR_CACHE_NEGATIVE_TTL_SECONDS = 10
 
 
 def _pr_cache_file() -> Path:
@@ -32,6 +36,8 @@ def _pr_cache_get(key: str) -> str | None:
     try:
         with open(_pr_cache_file(), encoding="utf-8") as fh:
             cache = json.load(fh)
+        if not isinstance(cache, dict):
+            return None
         entry = cache.get(key)
         if isinstance(entry, dict) and entry.get("exp", 0) > time.time():
             return str(entry.get("pr", ""))
@@ -40,11 +46,11 @@ def _pr_cache_get(key: str) -> str | None:
     return None
 
 
-def _pr_cache_set(key: str, pr: str) -> None:
+def _pr_cache_set(key: str, pr: str, ttl: int | None = None) -> None:
     """Store ``pr`` for ``key`` with a TTL, pruning expired entries.
 
     Best-effort and atomic: any IO error is swallowed so a render never fails
-    on a cache write.
+    on a cache write. A shorter ``ttl`` negatively caches a failed lookup.
     """
     try:
         path = _pr_cache_file()
@@ -57,7 +63,10 @@ def _pr_cache_set(key: str, pr: str) -> None:
         except (OSError, ValueError):
             cache = {}
         cache = {k: v for k, v in cache.items() if isinstance(v, dict) and v.get("exp", 0) > now}
-        cache[key] = {"pr": pr, "exp": now + _PR_CACHE_TTL_SECONDS}
+        cache[key] = {
+            "pr": pr,
+            "exp": now + (ttl if ttl is not None else _PR_CACHE_TTL_SECONDS),
+        }
         path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
         try:
@@ -82,6 +91,7 @@ def _get_pr_number(project_dir: Path) -> str:
     if shutil.which("gh") is None:
         return ""
 
+    cache_key: str | None = None
     try:
         branch = subprocess.run(
             ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -121,11 +131,15 @@ def _get_pr_number(project_dir: Path) -> str:
             timeout=5,
         )
         if result.returncode != 0:
+            # Negatively cache the failure (short TTL) so a broken gh
+            # environment does not stall every render on a live lookup.
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
             return ""
 
         try:
             data = json.loads(result.stdout.strip())
         except (json.JSONDecodeError, ValueError):
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
             return ""
 
         pr_str = ""
@@ -136,6 +150,8 @@ def _get_pr_number(project_dir: Path) -> str:
         _pr_cache_set(cache_key, pr_str)
         return pr_str
     except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
+        if cache_key is not None:
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
         return ""
 
 
