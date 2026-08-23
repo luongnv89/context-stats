@@ -34,6 +34,7 @@ import time
 from pathlib import Path
 
 from claude_statusline import __version__
+from claude_statusline.cli.statusline import _ensure_utf8_stdout
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.state import StateFile, _validate_session_id
@@ -878,14 +879,6 @@ def run_sessions(minutes: int, colors: ColorManager) -> None:
         print()
 
     print(f"{colors.dim}Tip: context-stats {sessions[0][1]} graph{colors.reset}")
-
-
-def _ensure_utf8_stdout() -> None:
-    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default."""
-    if sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") != "utf8":
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
-    if sys.stderr.encoding and sys.stderr.encoding.lower().replace("-", "") != "utf8":
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 
 def main() -> None:
