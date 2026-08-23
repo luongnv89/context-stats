@@ -515,7 +515,9 @@ def _stub_detach(monkeypatch):
     """Make _run_heartbeat_loop's setsid/stdio-detach safe for in-process runs."""
     import claude_statusline.cli.cache_warm as cw
 
-    monkeypatch.setattr(cw.os, "setsid", lambda: None)
+    # raising=False: os.setsid does not exist on Windows; production only
+    # reaches it after a successful fork, so a no-op stub is safe everywhere.
+    monkeypatch.setattr(cw.os, "setsid", lambda: None, raising=False)
     dummies = (_DummyStream(), _DummyStream(), _DummyStream())
     monkeypatch.setattr(cw.sys, "stdin", dummies[0])
     monkeypatch.setattr(cw.sys, "stdout", dummies[1])
@@ -575,7 +577,9 @@ class TestHeartbeatLoop:
 
         calls = []
         exits = []
-        monkeypatch.setattr(cw.os, "fork", lambda: 0)  # pretend we are the child
+        # raising=False: os.fork does not exist on Windows; the stub lets the
+        # child-branch dispatch logic run (production gates fork via hasattr).
+        monkeypatch.setattr(cw.os, "fork", lambda: 0, raising=False)  # pretend we are the child
         monkeypatch.setattr(
             cw,
             "_run_heartbeat_loop",
