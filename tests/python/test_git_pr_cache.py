@@ -249,8 +249,11 @@ class TestGetPrNumber:
         clock["now"] += _PR_CACHE_NEGATIVE_TTL_SECONDS + 1  # expire the negative entry
         assert _get_pr_number(Path("/proj")) == "#5"
 
-    def test_branch_timeout_negatively_cached_when_key_known(self, cache_file, fake_gh, monkeypatch):
+    def test_branch_timeout_negatively_cached_when_key_known(
+        self, cache_file, fake_gh, monkeypatch
+    ):
         """Timeout on the *gh* leg (branch already resolved) → negative cache."""
+
         def runner(argv, **kwargs):
             if argv[0] == "git":
                 return StubCompleted(stdout="dev\n")

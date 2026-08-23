@@ -196,9 +196,7 @@ class TestRenderOnceEdges:
         ]
         sf = _write_state(entries)
         renderer = _FakeRenderer(buffer="S")
-        result = cs.render_once(
-            sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config()
-        )
+        result = cs.render_once(sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config())
         assert "(Session: sess-cli)" in result
         assert "S" in result
 
@@ -223,9 +221,7 @@ class TestRenderOnceEdges:
         ]
         sf = _write_state(entries)
         renderer = _FakeRenderer(buffer="")
-        result = cs.render_once(
-            sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config()
-        )
+        result = cs.render_once(sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config())
         assert isinstance(result, str)
 
 
@@ -359,7 +355,9 @@ class TestMainDispatch:
         from claude_statusline.cli import explain as explain_mod
 
         monkeypatch.setattr(
-            explain_mod, "run_explain", lambda data, no_color: recorded.update(data=data, nc=no_color)
+            explain_mod,
+            "run_explain",
+            lambda data, no_color: recorded.update(data=data, nc=no_color),
         )
         monkeypatch.setattr(sys, "stdin", io.StringIO('{"model":{"display_name":"Opus"}}'))
         _run_main(monkeypatch, ["explain"])
@@ -405,7 +403,9 @@ class TestMainDispatch:
         recorded = {}
         from claude_statusline.cli import report as report_mod
 
-        monkeypatch.setattr(report_mod, "run_report", lambda remaining: recorded.update(rem=remaining))
+        monkeypatch.setattr(
+            report_mod, "run_report", lambda remaining: recorded.update(rem=remaining)
+        )
         _run_main(monkeypatch, ["report", "--since-days", "7"])
         assert recorded["rem"] == ["--since-days", "7"]
 

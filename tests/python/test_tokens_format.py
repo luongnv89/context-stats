@@ -88,9 +88,7 @@ class TestCalculateContextUsage:
 
     def test_autocompact_disabled_branch_skips_buffer(self):
         """Disabled autocompact frees the whole remainder — no buffer carve-out."""
-        free, pct, buf = calculate_context_usage(
-            100_000, 200_000, autocompact_enabled=False
-        )
+        free, pct, buf = calculate_context_usage(100_000, 200_000, autocompact_enabled=False)
         assert buf == 45_000  # buffer still reported…
         assert free == 100_000  # …but not subtracted
         assert pct == pytest.approx(50.0)
@@ -102,8 +100,6 @@ class TestCalculateContextUsage:
         assert pct == 0.0
 
     def test_disabled_overrun_also_clamps(self):
-        free, pct, _ = calculate_context_usage(
-            250_000, 200_000, autocompact_enabled=False
-        )
+        free, pct, _ = calculate_context_usage(250_000, 200_000, autocompact_enabled=False)
         assert free == 0
         assert pct == 0.0

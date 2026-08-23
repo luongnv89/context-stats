@@ -168,9 +168,7 @@ class TestLoadSessionStats:
         f = tmp_path / "statusline.mixed.state"
         f.write_text(
             "garbage-without-commas\n"
-            ",,,\n"
-            + _csv_line(ts=5, sid="mixed")
-            + "\nnot-a-number,also-bad\n"
+            ",,,\n" + _csv_line(ts=5, sid="mixed") + "\nnot-a-number,also-bad\n"
         )
         stats = _load_session_stats(f)
         assert stats is not None
@@ -383,9 +381,7 @@ class TestStateIoFailures:
         assert sorted(StateFile(None).list_sessions()) == ["alpha", "beta"]
 
     def test_from_csv_line_safe_int_float_fallbacks(self):
-        row = (
-            "1710288000,abc,def,ghi,jkl,mno,pqr,vwx,stu,yz,ab,cd,ef,gh,ij\n"
-        )
+        row = "1710288000,abc,def,ghi,jkl,mno,pqr,vwx,stu,yz,ab,cd,ef,gh,ij\n"
         entry = StateEntry.from_csv_line(row)
         assert entry is not None
         assert entry.timestamp == 1710288000
