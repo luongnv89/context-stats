@@ -58,6 +58,29 @@ FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "json"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 
 
+@pytest.fixture(autouse=True)
+def _isolated_branch_cache(tmp_path_factory, monkeypatch):
+    """Point both implementations' branch cache (F-PERF-003) at a temp file.
+
+    The dir-keyed branch cache introduced with the render hot-path work is
+    file-backed under ``~/.claude/statusline/``; without this redirect any
+    test exercising ``get_git_info``/``git_branch``/PR lookups would read
+    and write the developer's real cache file. The location lives OUTSIDE
+    each test's ``tmp_path`` so suites that turn that directory itself into
+    a git repo don't see an extra untracked file. Patching the canonical
+    home in ``claude_statusline._shared`` covers every shared-core caller;
+    the script's bound alias is patched too since it rebinds at import.
+    """
+    import scripts.statusline as sl_mod
+
+    import claude_statusline._shared as shared_mod
+
+    target = str(tmp_path_factory.mktemp("branch-cache") / "branch_cache.json")
+    monkeypatch.setattr(shared_mod, "_branch_cache_file", lambda: target)
+    if hasattr(sl_mod, "_branch_cache_file"):
+        monkeypatch.setattr(sl_mod, "_branch_cache_file", lambda: target)
+
+
 @pytest.fixture
 def project_root():
     """Return the project root directory."""

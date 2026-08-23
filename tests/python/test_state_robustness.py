@@ -260,7 +260,8 @@ class TestWorktreeGitFile:
         (worktree / ".git").write_text(f"gitdir: {real_gitdir}\n")
         return worktree
 
-    def test_package_git_info_with_git_file(self, tmp_path):
+    def test_package_git_info_with_git_file(self, tmp_path, monkeypatch):
+        import claude_statusline._shared as shared
         from claude_statusline.core import git as core_git
 
         wt = self._worktree_style_repo(tmp_path)
@@ -270,12 +271,17 @@ class TestWorktreeGitFile:
                 return FakeCompleted("wt-branch\n")
             return FakeCompleted(" M file.py\n?? new.py\n")
 
+        # F-PERF-003: the change count is a separate capped streaming call;
+        # stub its result so this test stays focused on the .git-file path.
+        monkeypatch.setattr(shared, "_count_changes_capped", lambda d, cap=None: (2, False))
         with patch.object(core_git.subprocess, "run", side_effect=fake_run):
             info = core_git.get_git_info(wt)
         assert "wt-branch" in info
         assert "[2]" in info
 
-    def test_script_git_info_with_git_file(self, tmp_path, sl_module):
+    def test_script_git_info_with_git_file(self, tmp_path, sl_module, monkeypatch):
+        import claude_statusline._shared as shared
+
         wt = self._worktree_style_repo(tmp_path)
 
         def fake_run(cmd, **kwargs):
@@ -283,6 +289,7 @@ class TestWorktreeGitFile:
                 return FakeCompleted("wt-branch\n")
             return FakeCompleted(" M file.py\n")
 
+        monkeypatch.setattr(shared, "_count_changes_capped", lambda d, cap=None: (1, False))
         with patch.object(sl_module.subprocess, "run", side_effect=fake_run):
             info = sl_module.get_git_info(str(wt))
         assert "wt-branch" in info

@@ -233,16 +233,18 @@ class TestGetPrNumber:
     def test_gh_failure_negatively_cached_then_recovered_after_expiry(
         self, cache_file, fake_gh, monkeypatch
     ):
+        """gh failures negatively cache; expiry retries. F-PERF-003 note:
+        the branch resolves ONCE through the shared branch cache — the
+        second/third lookups hit it instead of re-running rev-parse."""
         clock = {"now": 100.0}
         monkeypatch.setattr(git_mod.time, "time", lambda: clock["now"])
         self._stub_runs(
             monkeypatch,
             [
-                StubCompleted(stdout="dev\n"),
-                StubCompleted(returncode=1, stderr="auth expired"),
-                StubCompleted(stdout="dev\n"),  # 2nd call: branch re-resolved, negative hit
-                StubCompleted(stdout="dev\n"),  # 3rd call after expiry: branch again
-                StubCompleted(stdout='[{"number": 5}]'),
+                StubCompleted(stdout="dev\n"),  # 1st call: branch (branch-cache cold)
+                StubCompleted(returncode=1, stderr="auth expired"),  # gh fails
+                # 2nd call: negative hit inside TTL -> no subprocess at all
+                StubCompleted(stdout='[{"number": 5}]'),  # 3rd call post-expiry
             ],
         )
         assert _get_pr_number(Path("/proj")) == ""  # failure, negative-cached
