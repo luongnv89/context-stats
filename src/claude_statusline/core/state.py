@@ -9,6 +9,36 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows has no fcntl
+    fcntl = None  # type: ignore[assignment]
+
+
+def _lock_state_file(fh: object) -> None:
+    """Take an exclusive advisory lock on ``fh`` (best-effort, POSIX only).
+
+    Serializes the append + rotation read-modify-write between concurrent
+    statusline/CLI processes so rotation cannot drop a concurrently appended
+    line (F-BUG-008). No-op on platforms without ``fcntl``.
+    """
+    if fcntl is None:
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)  # type: ignore[attr-defined]
+    except OSError:
+        pass  # locking is best-effort; atomic rename still bounds damage
+
+
+def _unlock_state_file(fh: object) -> None:
+    """Release the exclusive lock taken by :func:`_lock_state_file`."""
+    if fcntl is None:
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
+    except OSError:
+        pass
+
 
 @dataclass
 class StateEntry:
@@ -104,7 +134,15 @@ class StateEntry:
             return None
 
     def to_csv_line(self) -> str:
-        """Convert entry to CSV line."""
+        """Convert entry to CSV line.
+
+        Raises:
+            ValueError: If ``session_id`` or ``model_id`` contains characters
+                that cannot be represented in the unquoted 15-field CSV format
+                (commas, newlines, or other control characters).
+        """
+        _validate_csv_field("session_id", self.session_id)
+        _validate_csv_field("model_id", self.model_id)
         return ",".join(
             str(x)
             for x in [
@@ -120,7 +158,7 @@ class StateEntry:
                 self.lines_removed,
                 self.session_id,
                 self.model_id,
-                self.workspace_project_dir.replace(",", "_"),
+                _sanitize_workspace_dir(self.workspace_project_dir),
                 self.context_window_size,
                 self.api_duration_ms,
             ]
@@ -140,12 +178,17 @@ class StateEntry:
 def _validate_session_id(session_id: str) -> None:
     """Validate that a session ID does not contain dangerous path characters.
 
+    Path-traversal defense plus CSV-safety defense (F-BUG-006): a session_id
+    carrying a comma, newline, or other control character would corrupt the
+    unquoted 15-field CSV rows (shifting column indexes for index-based
+    readers like ``csv_parts[14]``), so those are rejected too.
+
     Args:
         session_id: Session ID to validate
 
     Raises:
-        ValueError: If session_id is not a str, or contains '/', '\\', '..', or
-            null bytes
+        ValueError: If session_id is not a str, contains '/', '\\', '..', or
+            null bytes, or is not CSV-safe (comma/newline/control chars).
     """
     if not isinstance(session_id, str):
         raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
@@ -153,8 +196,63 @@ def _validate_session_id(session_id: str) -> None:
         if bad in session_id:
             raise ValueError(
                 f"Invalid session_id: contains '{bad}'. "
-                "Session IDs must not contain '/', '\\', '..', or null bytes."
+                "Session IDs must not contain '/', '\\', '..', null bytes, "
+                "commas, newlines, or control characters."
             )
+    _validate_csv_field("session_id", session_id)
+
+
+def _csv_unsafe_reason(value: str) -> str | None:
+    """Describe why ``value`` cannot be written into an unquoted CSV field.
+
+    Returns ``None`` when the value is safe. The 15-field state format has no
+    quoting or escaping, so any comma would shift every following column
+    index, and newlines/control characters would corrupt or forge row
+    boundaries.
+    """
+    for i, ch in enumerate(value):
+        if ch == ",":
+            return f"comma at position {i}"
+        code = ord(ch)
+        if code < 0x20 or code == 0x7F:
+            return f"control character U+{code:04X} at position {i}"
+    return None
+
+
+def _validate_csv_field(field: str, value: object) -> None:
+    """Validate that a string field is safe to write into a CSV state row.
+
+    Args:
+        field: Field name used in error messages (e.g. ``"model_id"``)
+        value: Value to validate
+
+    Raises:
+        ValueError: If value is not a str, or contains commas, newlines, or
+            other control characters (F-BUG-006).
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"Invalid {field}: expected str, got {type(value).__name__}.")
+    reason = _csv_unsafe_reason(value)
+    if reason is not None:
+        raise ValueError(
+            f"Invalid {field}: contains {reason}. "
+            "String fields must not contain commas, newlines, or control "
+            "characters (the state CSV has no quoting/escaping)."
+        )
+
+
+def _sanitize_workspace_dir(value: object) -> str:
+    """Sanitize ``workspace_project_dir`` before writing (CSV_FORMAT contract).
+
+    Commas — and, defensively, newlines/other control characters — are
+    replaced with underscores so the directory path can never shift the CSV
+    column indexes. Non-str values yield an empty string.
+    """
+    if not isinstance(value, str):
+        return ""
+    return "".join(
+        "_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value
+    )
 
 
 class StateFile:
@@ -186,16 +284,18 @@ class StateFile:
         for old_file in self.OLD_STATE_DIR.glob("statusline*.state"):
             if old_file.is_file():
                 new_file = self.STATE_DIR / old_file.name
-                if not new_file.exists():
-                    try:
+                try:
+                    if not new_file.exists():
                         shutil.move(str(old_file), str(new_file))
-                    except OSError:
-                        pass
-                else:
-                    try:
+                    else:
                         old_file.unlink()
-                    except OSError:
-                        pass
+                except OSError as e:
+                    # Migration must never break the refresh that triggered it
+                    # (F-BUG-005): warn and leave the file for a later pass.
+                    sys.stderr.write(
+                        f"[statusline] warning: failed to migrate legacy state "
+                        f"file {old_file}: {e}\n"
+                    )
 
     @property
     def file_path(self) -> Path:
@@ -214,14 +314,25 @@ class StateFile:
             file_path = self.STATE_DIR / f"statusline.{self.session_id}.state"
             return file_path if file_path.exists() else None
 
-        # Find most recent state file by modification time
-        state_files = list(self.STATE_DIR.glob("statusline.*.state"))
-        if not state_files:
-            # Try default state file
-            default = self.STATE_DIR / "statusline.state"
-            return default if default.exists() else None
+        # Find most recent state file by modification time. Each stat() is
+        # guarded (F-BUG-008 TOCTOU): a state file may be rotated away or
+        # deleted by a concurrent process between the glob and the stat.
+        latest_path: Path | None = None
+        latest_mtime = -1.0
+        for f in self.STATE_DIR.glob("statusline.*.state"):
+            try:
+                mtime = f.stat().st_mtime
+            except OSError:
+                continue
+            if mtime > latest_mtime:
+                latest_mtime = mtime
+                latest_path = f
+        if latest_path is not None:
+            return latest_path
 
-        return max(state_files, key=lambda f: f.stat().st_mtime)
+        # Try default state file
+        default = self.STATE_DIR / "statusline.state"
+        return default if default.exists() else None
 
     def read_history(self) -> list[StateEntry]:
         """Read all entries from the state file.
@@ -328,29 +439,45 @@ class StateFile:
         The file is created with owner-only permissions (0600) — state rows
         carry session ids and costs, matching the pr-number-cache precedent.
 
+        The append and the subsequent rotation share one exclusive advisory
+        lock (POSIX ``fcntl``, best-effort) so a concurrent process cannot
+        append between rotation's line-count read and its atomic rename
+        (F-BUG-008). Entries whose string fields would corrupt the CSV are
+        rejected with a stderr warning instead of being written (F-BUG-006).
+
         Args:
             entry: StateEntry to append
         """
         try:
-            fd = os.open(self.file_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-            with os.fdopen(fd, "w") as f:
-                f.write(f"{entry.to_csv_line()}\n")
+            line = entry.to_csv_line()
+        except ValueError as e:
+            sys.stderr.write(
+                f"[statusline] warning: refusing to write state {self.file_path}: {e}\n"
+            )
+            return
+        try:
+            fd = os.open(self.file_path, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a+") as f:
+                _lock_state_file(f)
+                try:
+                    f.write(f"{line}\n")
+                    f.flush()
+                    self._rotate_locked(f)
+                finally:
+                    _unlock_state_file(f)
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to write state {self.file_path}: {e}\n")
-            return
-        self._maybe_rotate()
 
-    def _maybe_rotate(self) -> None:
-        """Rotate state file if it exceeds the line threshold.
+    def _rotate_locked(self, fh: object) -> None:
+        """Rotation core — caller must hold the exclusive lock on ``fh``.
 
         If the file has more than ROTATION_THRESHOLD lines, truncate to
         the most recent ROTATION_KEEP lines via atomic temp-file + rename.
         """
         file_path = self.file_path
         try:
-            if not file_path.exists():
-                return
-            lines = file_path.read_text().splitlines(keepends=True)
+            fh.seek(0)  # type: ignore[attr-defined]
+            lines = fh.readlines()  # type: ignore[attr-defined]
             if len(lines) <= self.ROTATION_THRESHOLD:
                 return
             keep = lines[-self.ROTATION_KEEP :]
@@ -368,6 +495,27 @@ class StateFile:
                 except OSError:
                     pass
                 raise
+        except OSError as e:
+            sys.stderr.write(
+                f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"
+            )
+
+    def _maybe_rotate(self) -> None:
+        """Rotate state file if it exceeds the line threshold.
+
+        Standalone entry point (also used by tests): opens the file, takes
+        the exclusive lock, and runs :meth:`_rotate_locked`.
+        """
+        file_path = self.file_path
+        try:
+            if not file_path.exists():
+                return
+            with open(file_path, "a+") as f:
+                _lock_state_file(f)
+                try:
+                    self._rotate_locked(f)
+                finally:
+                    _unlock_state_file(f)
         except OSError as e:
             sys.stderr.write(
                 f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"
