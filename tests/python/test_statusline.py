@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -617,6 +618,192 @@ class TestPRDisplay:
         monkeypatch.setattr("shutil.which", lambda x: None)
         result = get_pr_number("/tmp")
         assert result == ""
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "[]",  # valid JSON, non-object
+            "123",  # valid JSON scalar
+            '"a string"',  # valid JSON string
+            "null",  # valid JSON null
+            '{"k": {"pr": "#4", "exp": 99999999999',  # truncated (partial write)
+            "{not json at all",  # corrupt
+        ],
+    )
+    def test_pr_cache_get_corrupt_cache_returns_miss_package(
+        self, tmp_path, monkeypatch, payload
+    ):
+        """A corrupt/partial cache file yields a miss, never an exception (#126)."""
+        from claude_statusline.core import git as git_mod
+
+        cache_file = git_mod._pr_cache_file()
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(payload, encoding="utf-8")
+
+        assert git_mod._pr_cache_get("k") is None
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "[]",
+            "123",
+            '"a string"',
+            "null",
+            '{"k": {"pr": "#4", "exp": 99999999999',
+            "{not json at all",
+        ],
+    )
+    def test_pr_cache_get_corrupt_cache_returns_miss_standalone(
+        self, tmp_path, monkeypatch, payload
+    ):
+        """Standalone copy: corrupt/partial cache yields a miss, never raises."""
+        from scripts import statusline as sl
+
+        cache_file = Path(sl._pr_cache_file())
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(payload, encoding="utf-8")
+
+        assert sl._pr_cache_get("k") is None
+
+    @pytest.mark.parametrize(
+        "gh_stdout,gh_rc",
+        [
+            ("", 1),  # gh exits non-zero (expired token, auth failure)
+            ("not json", 0),  # gh exits zero but emits unparsable output
+        ],
+    )
+    def test_gh_failure_negative_cached_package(self, tmp_path, monkeypatch, gh_stdout, gh_rc):
+        """With gh failing, the second lookup must not invoke gh again (#126)."""
+        from claude_statusline.core import git as git_mod
+
+        calls = {"git": 0, "gh": 0}
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                calls["git"] += 1
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, gh_rc, stdout=gh_stdout, stderr="error")
+
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert git_mod._get_pr_number(tmp_path) == ""
+        assert git_mod._get_pr_number(tmp_path) == ""
+        # First call paid the failed live lookup; the second was negative-cached.
+        assert calls["gh"] == 1
+        # The failure was stored with the short negative TTL, not the 60s one.
+        cache_file = git_mod._pr_cache_file()
+        entry = json.loads(cache_file.read_text(encoding="utf-8"))[f"{tmp_path}\tfeature-branch"]
+        ttl = entry["exp"] - time.time()
+        assert 0 < ttl <= git_mod._PR_CACHE_NEGATIVE_TTL_SECONDS + 5
+
+    @pytest.mark.parametrize(
+        "gh_stdout,gh_rc",
+        [
+            ("", 1),
+            ("not json", 0),
+        ],
+    )
+    def test_gh_failure_negative_cached_standalone(
+        self, tmp_path, monkeypatch, gh_stdout, gh_rc
+    ):
+        """Standalone copy: gh failure is negatively cached for one retry window."""
+        from scripts import statusline as sl
+
+        calls = {"gh": 0}
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, gh_rc, stdout=gh_stdout, stderr="error")
+
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert sl.get_pr_number(str(tmp_path)) == ""
+        assert sl.get_pr_number(str(tmp_path)) == ""
+        assert calls["gh"] == 1
+        cache_file = Path(sl._pr_cache_file())
+        entry = json.loads(cache_file.read_text(encoding="utf-8"))[f"{tmp_path}\tfeature-branch"]
+        ttl = entry["exp"] - time.time()
+        assert 0 < ttl <= sl._PR_CACHE_NEGATIVE_TTL_SECONDS + 5
+
+    def test_gh_failure_timeout_negative_cached_package(self, tmp_path, monkeypatch):
+        """A gh timeout is also negatively cached; git failures are not (#126)."""
+        from claude_statusline.core import git as git_mod
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            raise subprocess.TimeoutExpired(cmd, 5)
+
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert git_mod._get_pr_number(tmp_path) == ""
+        cache_file = git_mod._pr_cache_file()
+        entry = json.loads(cache_file.read_text(encoding="utf-8"))[f"{tmp_path}\tfeature-branch"]
+        ttl = entry["exp"] - time.time()
+        assert 0 < ttl <= git_mod._PR_CACHE_NEGATIVE_TTL_SECONDS + 5
+
+    def test_negative_cache_expires_and_retries_gh_package(self, tmp_path, monkeypatch):
+        """After the negative TTL lapses, the next lookup retries gh live."""
+        from claude_statusline.core import git as git_mod
+
+        clock = {"now": 1000.0}
+        calls = {"gh": 0}
+
+        def mock_time():
+            return clock["now"]
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error")
+
+        monkeypatch.setattr(git_mod.time, "time", mock_time)
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert git_mod._get_pr_number(tmp_path) == ""
+        assert git_mod._get_pr_number(tmp_path) == ""
+        assert calls["gh"] == 1
+
+        # Advance past the negative TTL: gh must be retried.
+        clock["now"] += git_mod._PR_CACHE_NEGATIVE_TTL_SECONDS + 1
+        assert git_mod._get_pr_number(tmp_path) == ""
+        assert calls["gh"] == 2
+
+    def test_negative_cache_expires_and_retries_gh_standalone(self, tmp_path, monkeypatch):
+        """Standalone copy: expired negative entries fall through to a live lookup."""
+        from scripts import statusline as sl
+
+        clock = {"now": 1000.0}
+        calls = {"gh": 0}
+
+        def mock_time():
+            return clock["now"]
+
+        def mock_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
+            calls["gh"] += 1
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error")
+
+        monkeypatch.setattr(sl.time, "time", mock_time)
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert sl.get_pr_number(str(tmp_path)) == ""
+        assert sl.get_pr_number(str(tmp_path)) == ""
+        assert calls["gh"] == 1
+
+        clock["now"] += sl._PR_CACHE_NEGATIVE_TTL_SECONDS + 1
+        assert sl.get_pr_number(str(tmp_path)) == ""
+        assert calls["gh"] == 2
 
 
 class TestThinkingDisplay:
