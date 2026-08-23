@@ -333,7 +333,10 @@ class TestGetGitInfo:
         cm = ColorManager(enabled=True)
         plain = get_git_info(repo, colors_enabled=False)
         colored = get_git_info(repo, colors_enabled=False, color_manager=cm)
-        assert colored != plain or "\033[" in colored or colored == plain
+        # Manager colors are applied even when the legacy flag says "off".
+        assert "\033[" in colored
+        if "\033[" not in plain:
+            assert colored != plain
 
     def test_rev_parse_failure_returns_empty(self, repo, monkeypatch):
         monkeypatch.setattr(
@@ -382,4 +385,4 @@ class TestGetGitInfo:
         linked.mkdir()
         (linked / ".git").write_text("gitdir: /nonexistent\n")
         # git commands fail cleanly → empty string, no crash (F-BUG-007).
-        assert get_git_info(linked) in ("",) or True
+        assert get_git_info(linked, colors_enabled=False) == ""
