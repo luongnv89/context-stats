@@ -324,7 +324,9 @@ class TestAtomicWarmStateWrites:
         state_path = tmp_dir / "cache-warm.atomic.json"
         assert state_path.exists()
         # mkstemp creates the temp owner-only; the replaced file keeps 0600.
-        assert stat.S_IMODE(state_path.stat().st_mode) == 0o600
+        # POSIX permission bits are not reported on Windows — skip there.
+        if os.name != "nt":
+            assert stat.S_IMODE(state_path.stat().st_mode) == 0o600
 
     def test_failed_replace_preserves_previous_state(self, tmp_dir):
         """A crash mid-save must leave the previous valid state untouched."""

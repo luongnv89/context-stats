@@ -360,38 +360,52 @@ def _rotate_state_file_locked(state_file, fh):
         lines = fh.readlines()
         if len(lines) <= ROTATION_THRESHOLD:
             return
-        keep = lines[-ROTATION_KEEP:]
-        fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(state_file) or ".", suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as tmp_f:
-                tmp_f.writelines(keep)
-            os.replace(tmp_path, state_file)
-        except BaseException:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
+        _rotate_lines(state_file, lines)
     except OSError as e:
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
+
+
+def _rotate_lines(state_file, lines):
+    """Atomically keep the most recent ROTATION_KEEP of ``lines``.
+
+    Parity: mirrors ``claude_statusline.core.state.StateFile._rotate_lines``.
+    """
+    keep = lines[-ROTATION_KEEP:]
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(state_file) or ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as tmp_f:
+            tmp_f.writelines(keep)
+        os.replace(tmp_path, state_file)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def maybe_rotate_state_file(state_file):
     """Rotate a state file if it exceeds ROTATION_THRESHOLD lines.
 
-    Standalone entry point: opens the file, takes the exclusive lock, and
-    runs :func:`_rotate_state_file_locked`. Parity: mirrors
-    ``claude_statusline.core.state.StateFile._maybe_rotate``.
+    Standalone entry point: reads the line count under a best-effort lock,
+    then closes the handle BEFORE the atomic rename. Windows cannot
+    ``os.replace`` a path another handle holds open, so keeping the
+    descriptor across the rename would silently skip rotation there.
+    Parity: mirrors ``claude_statusline.core.state.StateFile._maybe_rotate``.
     """
     try:
         if not os.path.exists(state_file):
             return
-        with open(state_file, "a+") as f:
+        with open(state_file) as f:
             _lock_state_file(f)
             try:
-                _rotate_state_file_locked(state_file, f)
+                f.seek(0)
+                lines = f.readlines()
             finally:
                 _unlock_state_file(f)
+        if len(lines) <= ROTATION_THRESHOLD:
+            return
+        _rotate_lines(state_file, lines)
     except OSError as e:
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
 
@@ -1700,11 +1714,19 @@ def _render(data):
                             try:
                                 f.write(f"{state_data}\n")
                                 f.flush()
-                                _rotate_state_file_locked(state_file, f)
+                                if fcntl is not None:
+                                    # POSIX only: the rename may run while this
+                                    # descriptor still holds the file open.
+                                    # Windows cannot replace an open file, so
+                                    # it falls back after the close below.
+                                    _rotate_state_file_locked(state_file, f)
                             finally:
                                 _unlock_state_file(f)
                     except OSError as e:
                         sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
+                    else:
+                        if fcntl is None:
+                            maybe_rotate_state_file(state_file)
 
     # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
     # segment doesn't flicker in and out across the first few turns.

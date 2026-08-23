@@ -443,8 +443,10 @@ class StateFile:
         (F-BUG-008). Entries whose string fields would corrupt the CSV are
         rejected with a stderr warning instead of being written (F-BUG-006).
 
-        Args:
-            entry: StateEntry to append
+        Platforms without ``fcntl`` (Windows) cannot run the locked inline
+        rotation either — ``os.replace`` fails while the append descriptor
+        holds the target open — so they fall back to the unlocked
+        ``_maybe_rotate`` pass once the descriptor is closed.
         """
         try:
             line = entry.to_csv_line()
@@ -460,11 +462,18 @@ class StateFile:
                 try:
                     f.write(f"{line}\n")
                     f.flush()
-                    self._rotate_locked(f)
+                    if fcntl is not None:
+                        # POSIX only: the rename may run while this descriptor
+                        # still holds the file open. Windows cannot replace an
+                        # open file, so it falls back after the close below.
+                        self._rotate_locked(f)
                 finally:
                     _unlock_state_file(f)
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to write state {self.file_path}: {e}\n")
+            return
+        if fcntl is None:
+            self._maybe_rotate()
 
     def _rotate_locked(self, fh: object) -> None:
         """Rotation core — caller must hold the exclusive lock on ``fh``.
@@ -478,42 +487,53 @@ class StateFile:
             lines = fh.readlines()  # type: ignore[attr-defined]
             if len(lines) <= self.ROTATION_THRESHOLD:
                 return
-            keep = lines[-self.ROTATION_KEEP :]
-            fd = tempfile.NamedTemporaryFile(
-                dir=str(self.STATE_DIR), delete=False, mode="w", suffix=".tmp"
-            )
-            try:
-                fd.writelines(keep)
-                fd.close()
-                os.replace(fd.name, str(file_path))
-            except BaseException:
-                fd.close()
-                try:
-                    os.unlink(fd.name)
-                except OSError:
-                    pass
-                raise
+            self._rotate_lines(file_path, lines)
         except OSError as e:
             sys.stderr.write(
                 f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"
             )
 
+    def _rotate_lines(self, file_path: Path, lines: list[str]) -> None:
+        """Atomically truncate ``lines`` to the most recent ROTATION_KEEP lines."""
+        keep = lines[-self.ROTATION_KEEP :]
+        fd = tempfile.NamedTemporaryFile(
+            dir=str(self.STATE_DIR), delete=False, mode="w", suffix=".tmp"
+        )
+        try:
+            fd.writelines(keep)
+            fd.close()
+            os.replace(fd.name, str(file_path))
+        except BaseException:
+            fd.close()
+            try:
+                os.unlink(fd.name)
+            except OSError:
+                pass
+            raise
+
     def _maybe_rotate(self) -> None:
         """Rotate state file if it exceeds the line threshold.
 
-        Standalone entry point (also used by tests): opens the file, takes
-        the exclusive lock, and runs :meth:`_rotate_locked`.
+        Standalone entry point (also used by tests): reads the line count
+        under a best-effort lock, then closes the handle BEFORE the atomic
+        rename. Windows cannot ``os.replace`` a path another handle holds
+        open, so keeping the descriptor across the rename here would
+        silently skip rotation on that platform.
         """
         file_path = self.file_path
         try:
             if not file_path.exists():
                 return
-            with open(file_path, "a+") as f:
+            with open(file_path) as f:
                 _lock_state_file(f)
                 try:
-                    self._rotate_locked(f)
+                    f.seek(0)
+                    lines = f.readlines()
                 finally:
                     _unlock_state_file(f)
+            if len(lines) <= self.ROTATION_THRESHOLD:
+                return
+            self._rotate_lines(file_path, lines)
         except OSError as e:
             sys.stderr.write(
                 f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"

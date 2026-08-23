@@ -31,7 +31,7 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 - Lines are newline-terminated (`\n`).
 - Files are append-only.
 - Newly created files get owner-only `0600` permissions (rows carry session ids and costs).
-- Files are automatically rotated at 10,000 lines (keeps most recent 5,000) by the Python statusline script. The append and rotation run under one exclusive advisory lock (`fcntl`, best-effort) so a concurrent process cannot append between rotation's read and rename.
+- Files are automatically rotated at 10,000 lines (keeps most recent 5,000) by the Python statusline script. The append and rotation run under one exclusive advisory lock (`fcntl`, best-effort) so a concurrent process cannot append between rotation's read and rename; platforms without `fcntl` fall back to an unlocked rotation that still renames atomically after closing its handle.
 - Duplicate entries (same token count as previous line) are skipped to prevent file bloat.
 
 ## Legacy Format
