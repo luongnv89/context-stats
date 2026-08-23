@@ -1,5 +1,11 @@
 # TODOs
 
+> **Archive note:** Every item below was completed before the v1.17.0
+> Python-only migration (HOLD SCOPE mega review, 2026-03-12). References to
+> `statusline.js`, `statusline-full.sh`, `tests/bash/`, and `npm test`
+> describe implementations that no longer exist in this repo and are kept
+> only as historical record. No open work remains in this file.
+
 Items identified from the HOLD SCOPE mega review (2026-03-12).
 
 ## P1 — High Priority

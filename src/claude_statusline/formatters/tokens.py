@@ -24,19 +24,6 @@ def format_tokens(count: int, detail: bool = True) -> str:
             return str(count)
 
 
-def format_percentage(value: float, decimals: int = 1) -> str:
-    """Format a percentage value.
-
-    Args:
-        value: Percentage value (0-100)
-        decimals: Number of decimal places
-
-    Returns:
-        Formatted percentage string like "75.5%"
-    """
-    return f"{value:.{decimals}f}%"
-
-
 def calculate_context_usage(
     used_tokens: int,
     total_size: int,

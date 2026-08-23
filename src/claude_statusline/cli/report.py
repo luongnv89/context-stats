@@ -43,13 +43,6 @@ def _parse_report_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _format_timestamp(ts: int) -> str:
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return str(ts)
-
-
 def _safe_datetime(ts: float) -> datetime | None:
     """Convert ``ts`` to a local datetime, or None when it is out of range.
 
