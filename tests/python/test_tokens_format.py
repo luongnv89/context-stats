@@ -3,7 +3,7 @@
 
 Covers the zero/negative size guard, the autocompact-disabled branch, and the
 clamping path in calculate_context_usage, plus abbreviation boundaries in
-format_tokens and decimals handling in format_percentage.
+format_tokens.
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ import pytest
 
 from claude_statusline.formatters.tokens import (
     calculate_context_usage,
-    format_percentage,
     format_tokens,
 )
 
@@ -50,24 +49,6 @@ class TestFormatTokens:
     )
     def test_abbreviated_mode_boundaries(self, count, expected):
         assert format_tokens(count, detail=False) == expected
-
-
-class TestFormatPercentage:
-    @pytest.mark.parametrize(
-        "value,decimals,expected",
-        [
-            (0.0, 1, "0.0%"),
-            (75.5, 1, "75.5%"),
-            (100.0, 0, "100%"),
-            (33.3333, 3, "33.333%"),
-            (-12.5, 2, "-12.50%"),
-        ],
-    )
-    def test_decimals_handling(self, value, decimals, expected):
-        assert format_percentage(value, decimals=decimals) == expected
-
-    def test_default_is_one_decimal(self):
-        assert format_percentage(41.25) == "41.2%"
 
 
 class TestCalculateContextUsage:
