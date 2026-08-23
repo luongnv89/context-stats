@@ -37,6 +37,9 @@ from claude_statusline._shared import (
     _TPS_TAIL_BUFFER as _TPS_TAIL_BUFFER,
 )
 from claude_statusline._shared import (
+    ZONE_DARK_RED_ANSI,
+    ZONE_GRAY_ANSI,
+    ZONE_ORANGE_ANSI,
     _ensure_utf8_stdout,
     _extract,
     _format_thinking_info,
@@ -208,9 +211,9 @@ def _render(data: dict) -> None:
         zone_color_map = {
             "green": colors.green,
             "yellow": colors.yellow,
-            "orange": "\033[38;2;255;165;0m" if colors.enabled else "",
-            "dark_red": "\033[38;2;139;0;0m" if colors.enabled else "",
-            "gray": "\033[0;90m" if colors.enabled else "",
+            "orange": ZONE_ORANGE_ANSI if colors.enabled else "",
+            "dark_red": ZONE_DARK_RED_ANSI if colors.enabled else "",
+            "gray": ZONE_GRAY_ANSI if colors.enabled else "",
         }
         zone_color = zone_color_map.get(zone_result.color, colors.reset)
 

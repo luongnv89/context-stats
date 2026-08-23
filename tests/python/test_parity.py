@@ -19,9 +19,10 @@ Coverage is enforced two ways:
 
 The standalone script is imported as ``scripts.statusline`` (conftest puts the
 repo root on ``sys.path``). Full renders of the standalone side always run in a
-subprocess: ``_render`` mutates module-global ANSI colors from config, so an
-in-process render would pollute the pure-function comparisons elsewhere in
-this module.
+subprocess so an isolated HOME/state dir is guaranteed regardless of how many
+in-process renders ran earlier (Task 5.4 removed the module-global palette
+mutation, but subprocess isolation also keeps config templates and state files
+from leaking between cases).
 """
 
 from __future__ import annotations
@@ -95,6 +96,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "statusline.py"
 SHARED_MODULE_PATH = PROJECT_ROOT / "src" / "claude_statusline" / "_shared.py"
 VENDORED_SHARED_PATH = PROJECT_ROOT / "scripts" / "_statusline_shared.py"
+GOLDEN_FIXTURES_PATH = PROJECT_ROOT / "tests" / "python" / "fixtures" / "render_goldens.json"
 
 PKG_ROTATION_THRESHOLD = StateFile.ROTATION_THRESHOLD
 PKG_ROTATION_KEEP = StateFile.ROTATION_KEEP
@@ -197,6 +199,9 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "State file creation mode (0600, owner-only)": ("test_state_file_creation_mode_parity",),
     "Legacy-state migration (guarded move/remove, warns on OSError, never breaks the refresh)": (
         "test_legacy_migration_parity",
+    ),
+    "Named render constants (autocompact ratio, thinking tiers, zone RGB ANSI)": (
+        "test_shared_render_constants_equal",
     ),
 }
 
@@ -372,6 +377,38 @@ class TestConstantPairs:
     def test_pr_cache_constants_equal(self):
         assert sl._PR_CACHE_TTL_SECONDS == _PR_CACHE_TTL_SECONDS
         assert sl._PR_CACHE_NEGATIVE_TTL_SECONDS == _PR_CACHE_NEGATIVE_TTL_SECONDS
+
+    def test_shared_render_constants_equal(self):
+        """Named render constants (Task 5.4, F-CLEAN-010) agree across both
+        implementations: the script's bound autocompact ratio equals the
+        package default, and the shared tier/ANSI constants are identical in
+        the canonical module and its vendored copy."""
+        import importlib.util
+
+        from claude_statusline._shared import AUTOCOMPACT_RATIO
+        from claude_statusline.formatters.tokens import calculate_context_usage
+
+        assert sl._AUTOCOMPACT_RATIO == AUTOCOMPACT_RATIO == 0.225
+        # The package consumer really defaults to the shared constant.
+        assert calculate_context_usage.__defaults__ is not None
+        assert AUTOCOMPACT_RATIO in calculate_context_usage.__defaults__
+
+        spec = importlib.util.spec_from_file_location(
+            "_vendored_shared_check", VENDORED_SHARED_PATH
+        )
+        assert spec is not None and spec.loader is not None
+        vendored = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(vendored)
+        for name in (
+            "AUTOCOMPACT_RATIO",
+            "THINKING_K_FLOOR",
+            "THINKING_K_ROUND_MIN",
+            "THINKING_M_THRESHOLD",
+            "ZONE_ORANGE_ANSI",
+            "ZONE_DARK_RED_ANSI",
+            "ZONE_GRAY_ANSI",
+        ):
+            assert getattr(sl._shared, name) == getattr(vendored, name), name
 
     def test_tps_tail_size_grid(self):
         assert sl._TPS_TAIL_BUFFER == pkg._TPS_TAIL_BUFFER
@@ -1659,3 +1696,118 @@ class TestSharedModuleArrangement:
         assert result.returncode == 0, result.stderr
         assert "Claude" in ANSI_RE.sub("", result.stdout)
         assert "no-pkg-smoke" in ANSI_RE.sub("", result.stdout)
+
+
+# ---------------------------------------------------------------------------
+# Task 5.4 (#145): orchestrator arrangement + golden render fixtures
+# ---------------------------------------------------------------------------
+
+
+class TestScriptRenderArrangement:
+    """F-CLEAN-001/009 guards: no ``global`` statements and small orchestrators."""
+
+    def test_script_has_no_global_statements(self):
+        """The issue's own verify gate: zero ``global`` statements anywhere in
+        scripts/statusline.py (palette overrides travel via _Palette)."""
+        tree = ast_mod.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+        offenders = [n.lineno for n in ast_mod.walk(tree) if isinstance(n, ast_mod.Global)]
+        assert offenders == []
+
+    def test_orchestrators_within_line_budget(self):
+        """``main`` and the ``_render`` orchestrator each stay <= 100 lines;
+        the render pipeline lives in the extracted phase helpers instead."""
+        tree = ast_mod.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+        sizes = {
+            n.name: n.end_lineno - n.lineno + 1
+            for n in ast_mod.walk(tree)
+            if isinstance(n, ast_mod.FunctionDef) and n.name in ("main", "_render")
+        }
+        assert set(sizes) == {"main", "_render"}
+        for name, lines_count in sizes.items():
+            assert lines_count <= 100, f"{name} spans {lines_count} lines"
+
+    def test_palette_overrides_do_not_mutate_module_constants(self, tmp_path, monkeypatch, capsys):
+        """F-CLEAN-009: rendering with color overrides leaves the script's
+        module-level palette constants untouched, so consecutive renders
+        cannot leak palette state into each other (safe to render
+        in-process now — previously this required a subprocess)."""
+        from claude_statusline._shared import GREEN as PKG_GREEN
+
+        home = tmp_path / "palette-home"
+        (home / ".claude").mkdir(parents=True)
+        (home / ".claude" / "statusline.conf").write_text(
+            COMMENT_ONLY_CONF + "color_green=#123456\n", encoding="utf-8"
+        )
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setenv("USERPROFILE", str(home))
+        monkeypatch.setenv("COLUMNS", "200")
+
+        sl._render(build_payload(tmp_path))
+        out = capsys.readouterr().out
+        assert "\033[38;2;18;52;86m" in out, "color_green override must be applied"
+        assert sl.GREEN == PKG_GREEN == "\033[0;32m"
+
+
+class TestRenderGoldenFixtures:
+    """Byte-exact regression pins for rendered output (issue #145).
+
+    ``fixtures/render_goldens.json`` was captured from the pre-refactor
+    implementation; every case must keep rendering byte-identically through
+    BOTH implementations after the phase-helper decomposition.
+    """
+
+    @staticmethod
+    def _render_standalone_raw(case, home):
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        env["USERPROFILE"] = str(home)
+        env["COLUMNS"] = case["columns"]
+        env["PYTHONUTF8"] = "1"
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT_PATH)],
+            input=case["stdin"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            timeout=120,
+        )
+        return result
+
+    @pytest.mark.parametrize(
+        "index", range(len(json.loads(GOLDEN_FIXTURES_PATH.read_text(encoding="utf-8"))))
+    )
+    def test_render_matches_pinned_golden(
+        self, index, tmp_path, monkeypatch, capsys, isolated_home
+    ):
+        cases = json.loads(GOLDEN_FIXTURES_PATH.read_text(encoding="utf-8"))
+        case = cases[index]
+        assert case["name"]
+
+        home = tmp_path / f"golden-home-{index}"
+        (home / ".claude").mkdir(parents=True)
+        (home / ".claude" / "statusline.conf").write_text(case["conf"], encoding="utf-8")
+
+        result = self._render_standalone_raw(case, home)
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == case["expected_stdout"], case["name"]
+        for marker in case["stderr_markers"]:
+            assert marker in result.stderr, case["name"]
+
+        # Package side must agree byte-for-byte on every dict-representable
+        # payload (the invalid-JSON case has no dict form by definition).
+        try:
+            payload = json.loads(case["stdin"])
+        except json.JSONDecodeError:
+            return
+        if not isinstance(payload, dict):
+            return
+        pkg_home = tmp_path / f"golden-pkg-home-{index}"
+        (pkg_home / ".claude").mkdir(parents=True)
+        (pkg_home / ".claude" / "statusline.conf").write_text(case["conf"], encoding="utf-8")
+        pkg_out, pkg_err = render_package(
+            payload, monkeypatch, capsys, pkg_home, columns=case["columns"]
+        )
+        assert pkg_out == result.stdout.rstrip("\n"), case["name"]
+        for marker in case["stderr_markers"]:
+            assert marker in pkg_err, case["name"]

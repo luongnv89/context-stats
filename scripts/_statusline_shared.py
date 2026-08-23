@@ -88,6 +88,11 @@ PACMAN_ICONS: dict[str, str] = {
 COMPACTION_DROP_THRESHOLD = 0.5
 COMPACT_MI_WARN_THRESHOLD = 0.6
 
+# Autocompact reserve (F-CLEAN-010): when autocompact is enabled, this
+# fraction of the context window is reserved as the buffer (45k of a
+# 200k window) before "free" tokens are reported.
+AUTOCOMPACT_RATIO = 0.225
+
 # Extra rows read beyond ``tps_window`` when tail-reading state history for
 # tok/s. compute_tps needs the last ``tps_window`` valid *turns* (=
 # ``tps_window + 1`` valid rows); this headroom absorbs sparse dropped rows
@@ -195,6 +200,21 @@ _PR_CACHE_NEGATIVE_TTL_SECONDS = 10
 # Colors
 # ---------------------------------------------------------------------------
 
+# Fixed RGB ANSI codes for the traffic-light zone tiers beyond green/yellow
+# (F-CLEAN-010): orange (Dump), dark red (ExDump), and gray (Dead) are true-color
+# literals on both implementations, so they are named once here.
+ZONE_ORANGE_ANSI = "\033[38;2;255;165;0m"  # RGB orange
+ZONE_DARK_RED_ANSI = "\033[38;2;139;0;0m"  # RGB dark red
+ZONE_GRAY_ANSI = "\033[0;90m"  # bright black / gray
+
+# Thinking-budget display tiers (F-CLEAN-010): budgets below THINKING_K_FLOOR
+# are shown exactly; budgets from the floor up to THINKING_K_ROUND_MIN are
+# floored to whole "Nk"; up to THINKING_M_THRESHOLD they round to "Nk"; and at
+# or above the threshold they render as "NM".
+THINKING_K_FLOOR = 5_000
+THINKING_K_ROUND_MIN = 10_000
+THINKING_M_THRESHOLD = 1_000_000
+
 
 def parse_color(value: str) -> str | None:
     """Parse a color name or #rrggbb hex into an ANSI escape code.
@@ -222,19 +242,19 @@ def zone_ansi_code(
     """Map a zone color name to an ANSI escape code.
 
     ``green``/``yellow``/``reset`` are injected by the caller so config
-    overrides applied to the caller's palette globals are honored; the
-    orange/dark-red/gray codes are fixed RGB literals on both sides.
+    overrides applied to the caller's palette are honored; the
+    orange/dark-red/gray codes are the fixed RGB literals named above.
     """
     if color_name == "green":
         return green
     if color_name == "yellow":
         return yellow
     if color_name == "orange":
-        return "\033[38;2;255;165;0m"  # RGB orange
+        return ZONE_ORANGE_ANSI
     if color_name == "dark_red":
-        return "\033[38;2;139;0;0m"  # RGB dark red
+        return ZONE_DARK_RED_ANSI
     if color_name == "gray":
-        return "\033[0;90m"  # bright black / gray
+        return ZONE_GRAY_ANSI
     return reset
 
 
@@ -539,8 +559,9 @@ def _format_thinking_info(budget) -> str:
     """Format thinking budget for display next to model name.
 
     Returns an empty string when budget is None or zero. Small budgets
-    (< 1000) are shown exactly; medium budgets round to "Nk" only when
-    reasonable (>= 5k); large budgets (>= 1M) are shown as "NM".
+    (< THINKING_K_FLOOR) are shown exactly; medium budgets round to "Nk"
+    only when reasonable (>= the floor); large budgets (>=
+    THINKING_M_THRESHOLD) are shown as "NM".
     """
     if budget is None or budget == 0:
         return ""
@@ -550,12 +571,12 @@ def _format_thinking_info(budget) -> str:
         return ""
     if tokens <= 0:
         return ""
-    if tokens >= 1_000_000:
-        return f"{tokens // 1_000_000}M tokens thinking"
-    if tokens >= 10_000:
+    if tokens >= THINKING_M_THRESHOLD:
+        return f"{tokens // THINKING_M_THRESHOLD}M tokens thinking"
+    if tokens >= THINKING_K_ROUND_MIN:
         k = round(tokens / 1_000)
         return f"{k}k tokens thinking"
-    if tokens >= 5_000:
+    if tokens >= THINKING_K_FLOOR:
         return f"{tokens // 1_000}k tokens thinking"
     return f"{tokens} tokens thinking"
 
