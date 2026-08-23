@@ -99,38 +99,15 @@ warn_unused_ignores = true
 strict_optional = true
 ignore_missing_imports = true
 
-# Known-findings baseline (issue #116; burn-down scheduled in Task 5.7 of the
-# modernization plan). The known mypy errors are suppressed by inline
-# `# type: ignore[<code>]` comments at each site — never a blanket disable.
-# Because warn_unused_ignores=true above, any ignore that outlives its error
-# fails typecheck itself, so this list shrinks automatically as findings are
-# fixed. Per-module counts of committed ignore comments:
-#   cli/cache_warm.py       no-any-return=1  attr-defined=8
-#   core/config.py          assignment=2
-#   cli/context_stats.py    assignment=1
-#   graphs/intelligence.py  no-any-return=1
-#   graphs/renderer.py      attr-defined=3
-#   cli/export.py           attr-defined=4
-#
-# Three cache_warm.py attr-defined ignores also list `unused-ignore`: inside
-# multi-line implicitly-concatenated f-strings, mypy attributes the error to a
-# different physical line depending on the interpreter it runs under (PEP 701
-# tokenization on 3.12+ vs legacy on 3.11), so the error may legitimately be
-# absent on one side. Listing `unused-ignore` keeps those sites valid under
-# both; Task 5.7 should remove the whole comment when it fixes each site.
-
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
-# Coverage floor (issue #141): raised from the interim 73% floor (issue #117,
-# F-TEST-006) once Sprint 4 test tasks 4.2–4.5 (#137 batch, PR #177) landed,
-# as an intermediate step toward the 94% M3 target completed by Task 5.7.
-# Measured over src/claude_statusline — 2910 statements, 87.59% precise when
-# the gate was raised (and enforced on every CI matrix leg by this addopts
-# floor). Coverage compares fail-under against the unrounded value, so the
-# literal keeps real headroom below the measured total. Inert unless coverage
-# is requested (--cov); every invocation that does request it inherits the
-# enforcement.
-addopts = "-v --tb=short --cov-fail-under=84"
+# Coverage floor (Task 5.7, issue #148): raised from 84 (issue #141, which in
+# turn superseded the interim 73% floor of issue #117 / F-TEST-006) to the
+# bound M3 target of 94%. Measured over src/claude_statusline — coverage
+# compares fail-under against the unrounded value, so the literal keeps real
+# headroom below the measured total. Inert unless coverage is requested
+# (--cov); every invocation that does request it inherits the enforcement.
+addopts = "-v --tb=short --cov-fail-under=94"
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 

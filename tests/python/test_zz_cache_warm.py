@@ -496,3 +496,99 @@ class TestPidReuseDetection:
             cmd_cache_warm_on("refresh", "5m", colors)
         # Same generation → old heartbeat signalled; the new child never is.
         assert kills == [555000]
+
+
+# ---------------------------------------------------------------------------
+# Heartbeat loop internals
+# ---------------------------------------------------------------------------
+
+
+class _DummyStream:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def _stub_detach(monkeypatch):
+    """Make _run_heartbeat_loop's setsid/stdio-detach safe for in-process runs."""
+    import claude_statusline.cli.cache_warm as cw
+
+    monkeypatch.setattr(cw.os, "setsid", lambda: None)
+    dummies = (_DummyStream(), _DummyStream(), _DummyStream())
+    monkeypatch.setattr(cw.sys, "stdin", dummies[0])
+    monkeypatch.setattr(cw.sys, "stdout", dummies[1])
+    monkeypatch.setattr(cw.sys, "stderr", dummies[2])
+
+
+class TestHeartbeatLoop:
+    """Tests for _run_heartbeat_loop (runs in-process with stubbed sleep)."""
+
+    def test_expired_state_cleans_up_and_exits(self, tmp_dir, monkeypatch):
+        import claude_statusline.cli.cache_warm as cw
+
+        _stub_detach(monkeypatch)
+        session = "hb-expired"
+        _save_warm_state(session, {"pid": os.getpid(), "start_time": 1, "expiry_time": 2})
+        heartbeat = tmp_dir / f"cache-warm.{session}.heartbeat"
+        heartbeat.write_text("123")
+
+        # Expiry already in the past: first loop iteration clears state and breaks.
+        monkeypatch.setattr(cw.time, "time", lambda: 10_000)
+        cw._run_heartbeat_loop(session, expiry_time=5_000, interval=60)
+
+        assert load_warm_state(session) is None
+        assert not heartbeat.exists()
+
+    def test_live_iteration_writes_heartbeat_then_stops(self, tmp_dir, monkeypatch):
+        import claude_statusline.cli.cache_warm as cw
+
+        _stub_detach(monkeypatch)
+        session = "hb-live"
+        expiry = int(time.time()) + 10_000
+        writes = []
+
+        class StopLoop(Exception):
+            pass
+
+        def fake_sleep(_seconds):
+            raise StopLoop
+
+        monkeypatch.setattr(cw.time, "sleep", fake_sleep)
+        original_write = Path.write_text
+
+        def tracking_write(self, data, *args, **kwargs):
+            writes.append(data)
+            return original_write(self, data, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", tracking_write)
+        with pytest.raises(StopLoop):
+            cw._run_heartbeat_loop(session, expiry_time=expiry, interval=60)
+
+        assert writes and writes[0].isdigit()
+        assert (tmp_dir / f"cache-warm.{session}.heartbeat").exists()
+
+    def test_child_process_branch_dispatches_loop_and_exits(self, tmp_dir, monkeypatch):
+        """The fork child branch runs the loop then hard-exits without returning."""
+        import claude_statusline.cli.cache_warm as cw
+
+        calls = []
+        exits = []
+        monkeypatch.setattr(cw.os, "fork", lambda: 0)  # pretend we are the child
+        monkeypatch.setattr(
+            cw,
+            "_run_heartbeat_loop",
+            lambda sid, expiry, interval: calls.append((sid, expiry, interval)),
+        )
+        monkeypatch.setattr(cw.os, "_exit", lambda code=0: exits.append(code))
+
+        cmd_cache_warm_on("child-sess", "30m", _mock_colors())
+
+        assert calls == [("child-sess", calls[0][1], cw.DEFAULT_INTERVAL)]
+        assert exits == [0]
+
+    def test_load_warm_state_rejects_non_dict_json(self, tmp_dir):
+        path = tmp_dir / "cache-warm.junk.state"
+        path.write_text("[1, 2, 3]", encoding="utf-8")
+        assert load_warm_state("junk") is None

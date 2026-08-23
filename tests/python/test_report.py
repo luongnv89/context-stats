@@ -322,3 +322,52 @@ class TestReportStructure:
         # Every registered section contributes its lines without error.
         for section in _REPORT_SECTIONS:
             assert isinstance(section(data), list)
+
+
+class TestRunReportE2E:
+    """End-to-end tests for the report command entry point."""
+
+    def test_run_report_writes_file(self, monkeypatch, tmp_path, capsys):
+        out_file = tmp_path / "report.md"
+        monkeypatch.setattr(
+            report_mod, "load_all_projects", lambda since_days=None: _golden_projects()
+        )
+        report_mod.run_report(["--output", str(out_file)])
+        assert out_file.exists()
+        assert "Report generated" in capsys.readouterr().out
+
+    def test_run_report_default_output_path(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            report_mod, "load_all_projects", lambda since_days=None: _golden_projects()
+        )
+        report_mod.run_report([])
+        written = list(tmp_path.glob("context-stats-report-*.md"))
+        assert len(written) == 1
+        assert written[0].read_text(encoding="utf-8")
+
+    def test_run_report_since_days_passthrough(self, monkeypatch, tmp_path):
+        seen = {}
+
+        def fake_load(since_days=None):
+            seen["since_days"] = since_days
+            return _golden_projects()
+
+        monkeypatch.setattr(report_mod, "load_all_projects", fake_load)
+        out_file = tmp_path / "r.md"
+        report_mod.run_report(["--since-days", "7", "--output", str(out_file)])
+        assert seen["since_days"] == 7
+
+    def test_run_report_no_data_exits(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.setattr(report_mod, "load_all_projects", lambda since_days=None: {})
+        with pytest.raises(SystemExit) as exc:
+            report_mod.run_report([])
+        assert exc.value.code == 1
+        assert "No project data found" in capsys.readouterr().err
+
+    def test_parse_report_args_defaults(self):
+        from claude_statusline.cli.report import _parse_report_args
+
+        args = _parse_report_args([])
+        assert args.output is None
+        assert args.since_days is None

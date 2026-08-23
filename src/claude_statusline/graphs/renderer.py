@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.formatters.time import format_duration, format_timestamp
 from claude_statusline.formatters.tokens import format_tokens
+from claude_statusline.graphs.intelligence import IntelligenceScore
 from claude_statusline.graphs.statistics import calculate_stats
 
 
@@ -296,7 +297,7 @@ class GraphRenderer:
         self,
         entries: list,  # list[StateEntry]
         deltas: list[int],
-        mi_score: object | None = None,  # IntelligenceScore
+        mi_score: IntelligenceScore | None = None,
         graph_type: str | None = None,
         cache_warm_status: tuple[bool, int] | None = None,
         compaction_events: list[tuple[int, float]] | None = None,
@@ -373,7 +374,7 @@ class GraphRenderer:
                 get_mi_color,
             )
 
-            mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)  # type: ignore[attr-defined]
+            mi_color_name = get_mi_color(mi_score.mi, mi_score.utilization)
             mi_color = getattr(self.colors, mi_color_name)
             if mi_color_name == "green":
                 mi_hint = "Model is operating well"
@@ -383,12 +384,12 @@ class GraphRenderer:
                 mi_hint = "Significant degradation, start new session"
             self._emit(
                 f"  {mi_color}{'Model Intelligence:':<20}{self.colors.reset} "
-                f"{format_mi_score(mi_score.mi)}  "  # type: ignore[attr-defined]
+                f"{format_mi_score(mi_score.mi)}  "
                 f"{self.colors.dim}({mi_hint}){self.colors.reset}"
             )
             self._emit(
                 f"  {self.colors.dim}  Context: "
-                f"{mi_score.utilization * 100:.0f}% used{self.colors.reset}"  # type: ignore[attr-defined]
+                f"{mi_score.utilization * 100:.0f}% used{self.colors.reset}"
             )
 
         # Compaction events summary

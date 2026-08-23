@@ -87,7 +87,7 @@ bats tests/bash/*.bats
 # Python tests
 pytest tests/python/ -v
 
-# Python tests with coverage (enforces the --cov-fail-under=84 floor from pyproject.toml)
+# Python tests with coverage (enforces the --cov-fail-under=94 floor from pyproject.toml)
 pytest tests/python/ -v --cov=src/claude_statusline --cov-report=term
 ```
 

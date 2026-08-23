@@ -5,6 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from claude_statusline.core.colors import ColorManager
+from claude_statusline.core.config import Config
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "json"
 
@@ -175,3 +178,149 @@ class TestExplainCommand:
         result = self._run_explain(data)
         assert result.returncode == 0
         assert "Extensions" not in result.stdout
+
+
+class TestExplainRender:
+    """In-process tests for the explain render helpers."""
+
+    def _explain(self, monkeypatch, capsys, data, no_color=True):
+        import claude_statusline.cli.explain as explain_mod
+
+        home = Path(self._tmp_home)
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setattr(Path, "home", lambda: home)
+        explain_mod.run_explain(data, no_color=no_color)
+        return capsys.readouterr().out
+
+    def setup_method(self):
+        import tempfile
+
+        self._tmp_home = tempfile.mkdtemp(prefix="explain-home-")
+
+    def test_run_explain_full_payload(self, monkeypatch, capsys):
+        out = self._explain(
+            monkeypatch,
+            capsys,
+            {
+                "model": {"display_name": "Opus", "id": "opus-1", "api_name": "opus"},
+                "workspace": {"current_dir": "/w", "project_dir": "/p"},
+                "context_window": {
+                    "context_window_size": 200000,
+                    "total_input_tokens": 1000,
+                    "total_output_tokens": 500,
+                    "used_percentage": 12.5,
+                    "remaining_percentage": 87.5,
+                },
+                "cost": {"total_cost_usd": 0.5},
+                "session_id": "s1",
+                "version": "2.0",
+            },
+        )
+        assert "Opus" in out
+        assert "Workspace" in out
+        assert "Context Window" in out
+        assert "Cost" in out
+        assert "$0.5000" in out
+        assert "Session" in out
+        assert "Raw JSON" in out
+        assert "Extensions" not in out
+
+    def test_run_explain_no_color_suppresses_ansi(self, monkeypatch, capsys):
+        out = self._explain(monkeypatch, capsys, {"model": {"display_name": "X"}})
+        assert "\x1b[" not in out
+
+    def test_pct_color_tiers(self):
+        from claude_statusline.cli.explain import _pct_color
+
+        colors = ColorManager(enabled=False)
+        assert _pct_color(colors, 80.0) == colors.green
+        assert _pct_color(colors, 30.0) == colors.yellow
+        assert _pct_color(colors, 10.0) == colors.red
+
+    def test_fv_formats_float_and_none(self):
+        from claude_statusline.cli.explain import _fv
+
+        colors = ColorManager(enabled=False)
+        assert "(absent)" in _fv(colors, None)
+        assert _fv(colors, 1.25) == "1.2500"
+        assert _fv(colors, "abc") == "abc"
+
+    def test_render_context_window_zero_size(self, capsys):
+        from claude_statusline.cli.explain import _render_context_window
+
+        config = Config()
+        _render_context_window({"context_window": {}}, ColorManager(enabled=False), config)
+        out = capsys.readouterr().out
+        assert "(absent" in out
+        assert "no API call yet" in out
+
+    def test_render_current_usage_autocompact_disabled(self, capsys):
+        from claude_statusline.cli.explain import _render_current_usage
+
+        config = Config()
+        config.autocompact = False
+        cu = {
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "cache_creation_input_tokens": 3,
+            "cache_read_input_tokens": 2,
+        }
+        _render_current_usage(cu, 200000, ColorManager(enabled=False), config)
+        out = capsys.readouterr().out
+        assert "autocompact:" in out
+        assert "disabled" in out
+
+    def test_render_current_usage_free_pct_colors(self, capsys):
+        from claude_statusline.cli.explain import _render_current_usage
+
+        config = Config()
+        config.autocompact = True
+        # 95% free -> green tier; exercises free/effective percentage math
+        cu = {"input_tokens": 1000}
+        _render_current_usage(cu, 200000, ColorManager(enabled=False), config)
+        out = capsys.readouterr().out
+        assert "free_tokens" in out
+        assert "effective_free" in out
+
+    def test_render_cost_absent_returns_early(self, capsys):
+        from claude_statusline.cli.explain import _render_cost
+
+        _render_cost({}, ColorManager(enabled=False))
+        assert capsys.readouterr().out == ""
+
+    def test_render_cost_null_cost_usd_shows_absent(self, capsys):
+        from claude_statusline.cli.explain import _render_cost
+
+        _render_cost({"cost": {"total_duration_ms": 5}}, ColorManager(enabled=False))
+        out = capsys.readouterr().out
+        assert "(absent)" in out
+
+    def test_render_extensions_plain_string_values(self, capsys):
+        from claude_statusline.cli.explain import _render_extensions
+
+        colors = ColorManager(enabled=False)
+        _render_extensions({"vim": "INSERT", "agent": "bot", "output_style": "explanatory"}, colors)
+        out = capsys.readouterr().out
+        assert "vim_mode:" in out
+        assert "INSERT" in out
+        assert "bot" in out
+        assert "explanatory" in out
+
+    def test_render_config_with_overrides(self, capsys):
+        from claude_statusline.cli.explain import _render_config
+
+        config = Config()
+        config.color_overrides = {"color_context": "\x1b[38;5;46m"}
+        _render_config(config, ColorManager(enabled=True))
+        out = capsys.readouterr().out
+        assert "color_overrides:" in out
+        assert "color_context:" in out
+
+    def test_render_config_override_disabled_palette(self, capsys):
+        from claude_statusline.cli.explain import _render_config
+
+        config = Config()
+        config.color_overrides = {"color_context": "\x1b[38;5;46m"}
+        _render_config(config, ColorManager(enabled=False))
+        out = capsys.readouterr().out
+        assert "(set)" in out
