@@ -1,52 +1,32 @@
-# Contributing to Claude Code Status Line
+# Contributing to context-stats
 
-Thank you for your interest in contributing to Claude Code Status Line! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to context-stats! This document provides guidelines and instructions for contributing.
 
 ## Development Setup
 
 ### Prerequisites
 
 - **Git** - Version control
-- **jq** - JSON processor (for bash scripts)
-- **Python 3.10+** - For Python script and testing
-- **Bats** - Bash Automated Testing System
+- **Python 3.10+** - For the package and test suite
+- **pre-commit** - Git hook framework (optional, for automated code quality)
 
 ### Installing Dependencies
 
-#### macOS
-
 ```bash
-# Install system dependencies
-brew install jq bats-core
-
 # Clone the repository
-git clone https://github.com/luongnv89/cc-context-stats.git
-cd cc-context-stats
+git clone https://github.com/luongnv89/context-stats.git
+cd context-stats
 
-# Install Python dependencies
+# Create and activate a virtual environment
 python3 -m venv venv
 source venv/bin/activate
+
+# Install development tools (pytest, pytest-cov, ruff, mypy, pre-commit),
+# held to the pinned versions in requirements-dev.constraints.txt
 pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 
-# Install pre-commit hooks
-pre-commit install
-```
-
-#### Linux (Ubuntu/Debian)
-
-```bash
-# Install system dependencies
-sudo apt-get update
-sudo apt-get install -y jq bats
-
-# Clone the repository
-git clone https://github.com/luongnv89/cc-context-stats.git
-cd cc-context-stats
-
-# Install Python dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
+# Install the package itself in editable mode
+pip install -e .
 
 # Install pre-commit hooks
 pre-commit install
@@ -55,40 +35,40 @@ pre-commit install
 ## Project Structure
 
 ```text
-cc-context-stats/
-├── scripts/                    # Main scripts
-│   └── statusline.py           # Python standalone statusline
-├── src/                        # Installable Python package
-├── config/                     # Configuration examples
-├── tests/                      # Test suites
-│   ├── fixtures/json/          # Test fixtures
-│   ├── bash/                   # Bats tests
-│   └── python/                 # Pytest tests
+context-stats/
+├── src/claude_statusline/      # Installable Python package
+│   ├── cli/                    #   Entry points (statusline, context-stats, ...)
+│   ├── core/                   #   Config, state, git, colors
+│   ├── formatters/             #   Token, time, layout formatting
+│   ├── graphs/                 #   ASCII rendering, MI/zones, statistics
+│   └── ui/                     #   Icons, waiting animation
+├── scripts/                    # Standalone scripts (no-install usage)
+│   ├── statusline.py           #   Python standalone statusline
+│   └── _statusline_shared.py   #   Vendored shared core for the script
+├── examples/                   # Configuration examples (statusline.conf)
+├── config/                     # Claude Code settings examples
+├── tests/python/               # Pytest suite
+├── docs/                       # Documentation
 ├── .github/workflows/          # CI/CD workflows
-├── install.sh                  # Installation script
-└── README.md                   # Documentation
+└── pyproject.toml              # Python build config (hatchling)
 ```
 
 ## Running Tests
 
-### All Tests
+### Command of Record
 
 ```bash
-# Run all tests
-pytest && bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
+source venv/bin/activate && pytest tests/python/ -q -p no:cacheprovider
 ```
 
-### Individual Test Suites
+`-p no:cacheprovider` disables the cache plugin so test runs never write `.pytest_cache/`.
+
+### Coverage
 
 ```bash
-# Bash tests (requires bats)
-bats tests/bash/*.bats
-
-# Python tests
-pytest tests/python/ -v
-
-# Python tests with coverage (enforces the --cov-fail-under=94 floor from pyproject.toml)
-pytest tests/python/ -v --cov=src/claude_statusline --cov-report=term
+# Measures src/claude_statusline per [tool.coverage.run]; the 94% floor is
+# enforced by --cov-fail-under=94 in [tool.pytest.ini_options] addopts
+pytest tests/python/ -q -p no:cacheprovider --cov=claude_statusline --cov-report=term
 ```
 
 ## Code Quality
@@ -96,22 +76,23 @@ pytest tests/python/ -v --cov=src/claude_statusline --cov-report=term
 ### Linting
 
 ```bash
-# Run all linters
+# Run all hooks (formatting, whitespace, shellcheck, markdownlint, e2e smoke)
 pre-commit run --all-files
 
-# Individual linters
-ruff check scripts/statusline.py          # Python
-shellcheck install.sh                     # Bash
+# Individual linters — same commands CI runs
+ruff check .                  # Python lint
+ruff format --check .         # Python format check
+mypy src scripts              # Type checking
 ```
 
 ### Formatting
 
 ```bash
 # Auto-format Python
-ruff format scripts/statusline.py
+ruff format .
 
 # Check formatting without modifying
-ruff format --check scripts/statusline.py
+ruff format --check .
 ```
 
 ## Making Changes
@@ -119,7 +100,7 @@ ruff format --check scripts/statusline.py
 ### 1. Create a Branch
 
 ```bash
-git checkout -b feature/your-feature-name
+git checkout -b feat/your-feature-name
 # or
 git checkout -b fix/your-bug-fix
 ```
@@ -129,7 +110,7 @@ git checkout -b fix/your-bug-fix
 - Follow the existing code style
 - Add tests for new functionality
 - Update documentation if needed
-- Ensure all scripts produce consistent output
+- Ensure both implementations produce identical output (see below)
 
 ### 3. Test Your Changes
 
@@ -137,11 +118,10 @@ git checkout -b fix/your-bug-fix
 # Run pre-commit hooks
 pre-commit run --all-files
 
-# Run all tests
-bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
-pytest tests/python/ -v
+# Run the test suite (command of record)
+pytest tests/python/ -q -p no:cacheprovider
 
-# Test scripts manually
+# Test the standalone script manually
 echo '{"model":{"display_name":"Test"}}' | python3 ./scripts/statusline.py
 ```
 
@@ -160,37 +140,45 @@ git commit -m "refactor: refactor code description"
 ### 5. Push and Create PR
 
 ```bash
-git push origin feature/your-feature-name
+git push origin feat/your-feature-name
 ```
 
 Then create a Pull Request on GitHub.
 
-## Script Guidelines
+## Implementation Guidelines
 
-### Cross-Script Consistency
+### Cross-Implementation Consistency
 
-The Python implementation is the sole implementation. When making changes:
+The package (`src/claude_statusline/`) and the standalone script (`scripts/statusline.py`) must render identical output. When making changes:
 
 1. Update `scripts/statusline.py` and the corresponding `src/` module in sync (see CLAUDE.md for sync points)
-2. Run Python tests to verify correctness
+2. Run the parity suite (`tests/python/test_parity.py`, part of the command of record) to verify correctness
 3. Test on multiple platforms if possible
 
 ### Output Format
 
-The status line output should follow this format:
+The status line assembles these segments in priority order:
 
 ```text
-[Model] directory | branch [changes] | XXk free (XX%) [AC:XXk]
+my-project | main [3] | #42 | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
 Components:
 
-- `[Model]` - AI model name (dim)
-- `directory` - Current directory name (blue)
-- `branch` - Git branch name (magenta)
-- `[changes]` - Uncommitted changes count (cyan)
-- `XXk free (XX%)` - Available context tokens (green/yellow/red)
-- `[AC:XXk]` - Autocompact buffer (dim)
+- `my-project` - Current directory name (cyan)
+- `main [3]` - Git branch name and uncommitted changes count
+- `#42` - PR number for the current branch (via `gh`; `show_pr`)
+- `64,000 free (32.0%)·Code·ᗤ` - Available tokens, utilization, context zone, pacman icon (one atomic group)
+- `MI:0.918` - Model Intelligence score (`show_mi`)
+- `42.5 tok/s` - Model throughput (`show_tps`)
+- `+2,500` - Token delta since last refresh (`show_delta`)
+- `$0.42` - Cumulative session cost (`show_cost`)
+- `Opus 4.6·high` - Model name with reasoning effort suffix (`show_effort`)
+- `abc-123` - Session ID (`show_session`)
+
+Every segment is toggleable via `~/.claude/statusline.conf` — see [docs/configuration.md](docs/configuration.md) for keys and defaults.
+
+On a narrow terminal the statusline wraps onto additional lines instead of dropping elements; see README ("Level 1: Live Stats") for the reflow behavior.
 
 ### Color Codes
 
@@ -204,6 +192,8 @@ Use ANSI color codes consistently:
 - Red: `\033[0;31m`
 - Dim: `\033[2m`
 - Reset: `\033[0m`
+
+Prefer named colors or `#rrggbb` hex values through the config system over raw literals — see [docs/configuration.md](docs/configuration.md#custom-colors).
 
 ## Questions?
 
