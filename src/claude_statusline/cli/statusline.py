@@ -30,6 +30,19 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+# Render-glue helpers are single-sourced in _shared (Task 5.2, F-DEAD-001);
+# the standalone script loads the same bodies from claude_statusline._shared /
+# its vendored copy.
+from claude_statusline._shared import (
+    _TPS_TAIL_BUFFER as _TPS_TAIL_BUFFER,
+)
+from claude_statusline._shared import (
+    _ensure_utf8_stdout,
+    _extract,
+    _format_thinking_info,
+    _resolve_project_dir,
+    _tps_tail_size,
+)
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.git import _get_pr_number, get_git_info
@@ -38,71 +51,9 @@ from claude_statusline.formatters.layout import fit_to_width, get_terminal_width
 from claude_statusline.formatters.time import get_current_timestamp
 from claude_statusline.formatters.tokens import calculate_context_usage, format_tokens
 
-# Extra rows read beyond ``tps_window`` when tail-reading state history for
-# tok/s. compute_tps needs the last ``tps_window`` valid *turns* (=
-# ``tps_window + 1`` valid rows); this headroom absorbs the sparse, isolated
-# dropped rows real histories contain (non-positive API-time delta, zero
-# output) plus any legacy/blank rows, so the rendered value matches a
-# full-history read. Kept small so each refresh still parses only a bounded
-# tail. (A pathological run of >~``tps_window + 7`` consecutive dropped rows
-# at the tail boundary cannot occur once tok/s is enabled: every appended row
-# carries the api_duration field, so legacy rows can only be a leading prefix.)
-_TPS_TAIL_BUFFER = 8
-
-
-def _tps_tail_size(tps_window: int) -> int:
-    """Number of trailing state rows to read for the tok/s rolling average.
-
-    ``tps_window`` valid turns need ``tps_window + 1`` valid rows; doubling the
-    window plus a fixed buffer leaves ample room for interleaved dropped rows
-    while staying bounded (independent of total file size).
-    """
-    return max(1, tps_window) * 2 + _TPS_TAIL_BUFFER
-
-
-def _format_thinking_info(budget) -> str:
-    """Format thinking budget for display next to model name.
-
-    Returns an empty string when budget is None or zero.
-    Small budgets (< 1000) are shown exactly.
-    Medium budgets (1000-9999) are shown as "Nk" only when rounding is reasonable (>= 5k).
-    Large budgets (>= 1M) are shown as "NM" tokens thinking.
-    """
-    if budget is None or budget == 0:
-        return ""
-    try:
-        tokens = int(budget)
-    except (ValueError, TypeError):
-        return ""
-    if tokens <= 0:
-        return ""
-    if tokens >= 1_000_000:
-        return f"{tokens // 1_000_000}M tokens thinking"
-    if tokens >= 10_000:
-        k = round(tokens / 1_000)
-        return f"{k}k tokens thinking"
-    if tokens >= 5_000:
-        return f"{tokens // 1_000}k tokens thinking"
-    return f"{tokens} tokens thinking"
-
-
-def _ensure_utf8_stdout() -> None:
-    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default.
-
-    Guarded with getattr because pytest's CaptureIO (and StringIO stand-ins used
-    by tests) do not implement reconfigure().
-    """
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is None:
-            continue
-        encoding = getattr(stream, "encoding", None)
-        if encoding and encoding.lower().replace("-", "") == "utf8":
-            continue
-        try:
-            reconfigure(encoding="utf-8", errors="replace")
-        except (ValueError, OSError):  # pragma: no cover - detached/closed stream
-            pass
+# The helper bodies above this class (tail-size, thinking formatting, UTF-8
+# guard, extraction, project-dir gate) are single-sourced in _shared and
+# imported at the top of this module.
 
 
 def _validate_session_id_or_none(session_id: Any) -> Any:
@@ -120,37 +71,6 @@ def _validate_session_id_or_none(session_id: Any) -> Any:
         sys.stderr.write(f"[statusline] warning: {e}\n")
         return None
     return session_id
-
-
-def _extract(data: object, key: str, default: Any = None) -> Any:
-    """Read ``key`` from ``data``, treating explicit JSON null as absent.
-
-    External inputs (the stdin payload) may carry explicit nulls where older
-    builds sent no key at all; a bare ``dict.get`` chain returns None instead
-    of the default for those, which used to crash the render (F-BUG-003).
-    Non-dict containers also yield the default.
-    """
-    if not isinstance(data, dict):
-        return default
-    value = data.get(key, default)
-    return default if value is None else value
-
-
-def _resolve_project_dir(raw: object) -> str | None:
-    """Resolve a stdin-supplied project_dir to an existing directory, else None.
-
-    Local trust boundary (F-SEC-002): ``workspace.project_dir`` arrives
-    verbatim from untrusted stdin JSON. Git/gh subprocesses are only ever run
-    with a cwd that has been resolved and verified to exist; anything else
-    returns None so callers skip those lookups entirely.
-    """
-    if not isinstance(raw, str) or not raw:
-        return None
-    try:
-        candidate = Path(raw).expanduser().resolve()
-    except OSError:
-        return None
-    return str(candidate) if candidate.is_dir() else None
 
 
 def main() -> None:

@@ -24,41 +24,61 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from claude_statusline._shared import _ZONE_RECOMMENDATIONS as _ZONE_RECOMMENDATIONS
+
+# Single-sourced in _shared (Task 5.2, F-DEAD-001); the standalone script loads
+# the same bodies from claude_statusline._shared / its vendored copy. Names the
+# package public API exposes are re-exported in explicit ``as`` form below.
+from claude_statusline._shared import (
+    LARGE_MODEL_THRESHOLD as LARGE_MODEL_THRESHOLD,
+)
+from claude_statusline._shared import (
+    MI_CONTEXT_RED_THRESHOLD as MI_CONTEXT_RED_THRESHOLD,
+)
+from claude_statusline._shared import (
+    MI_CONTEXT_YELLOW_THRESHOLD as MI_CONTEXT_YELLOW_THRESHOLD,
+)
+from claude_statusline._shared import (
+    MI_GREEN_THRESHOLD as MI_GREEN_THRESHOLD,
+)
+from claude_statusline._shared import (
+    MI_YELLOW_THRESHOLD as MI_YELLOW_THRESHOLD,
+)
+from claude_statusline._shared import (
+    MODEL_PROFILES as MODEL_PROFILES,
+)
+from claude_statusline._shared import (
+    PACMAN_ICONS as PACMAN_ICONS,
+)
+from claude_statusline._shared import (
+    ZONE_1M_C_MAX as ZONE_1M_C_MAX,
+)
+from claude_statusline._shared import (
+    ZONE_1M_D_MAX as ZONE_1M_D_MAX,
+)
+from claude_statusline._shared import (
+    ZONE_1M_P_MAX as ZONE_1M_P_MAX,
+)
+from claude_statusline._shared import (
+    ZONE_1M_X_MAX as ZONE_1M_X_MAX,
+)
+from claude_statusline._shared import (
+    ZONE_STD_DEAD_ZONE as ZONE_STD_DEAD_ZONE,
+)
+from claude_statusline._shared import (
+    ZONE_STD_DUMP_ZONE as ZONE_STD_DUMP_ZONE,
+)
+from claude_statusline._shared import (
+    ZONE_STD_HARD_LIMIT as ZONE_STD_HARD_LIMIT,
+)
+from claude_statusline._shared import (
+    ZONE_STD_WARN_BUFFER as ZONE_STD_WARN_BUFFER,
+)
+from claude_statusline._shared import calculate_context_pressure as calculate_context_pressure
+from claude_statusline._shared import context_zone_tuple, mi_color_name
+from claude_statusline._shared import get_model_profile as get_model_profile
+from claude_statusline._shared import get_pacman_icon as get_pacman_icon
 from claude_statusline.core.state import StateEntry
-
-# MI color thresholds — based on MI value and context utilization
-MI_GREEN_THRESHOLD = 0.90
-MI_YELLOW_THRESHOLD = 0.80
-# Context utilization zones (used as fallback for color decisions)
-MI_CONTEXT_YELLOW_THRESHOLD = 0.40  # 40% context used
-MI_CONTEXT_RED_THRESHOLD = 0.80  # 80% context used
-
-# 1M model detection threshold (context windows >= 500k are treated as 1M-class)
-LARGE_MODEL_THRESHOLD = 500_000
-
-# Zone thresholds for 1M models (token counts)
-# Recalibrated to match observed context rot onset at 300-400k tokens.
-# See: x.com/trq212/status/2044548257058328723
-ZONE_1M_P_MAX = 150_000  # P zone: < 150k used
-ZONE_1M_C_MAX = 250_000  # C zone: 150k–250k used
-ZONE_1M_D_MAX = 400_000  # D zone: 250k–400k used
-ZONE_1M_X_MAX = 450_000  # X zone: 400k–450k used; Z zone: >= 450k
-
-# Zone thresholds for standard models (< 1M) — expressed as utilization ratios
-ZONE_STD_DUMP_ZONE = 0.40  # dump zone starts at 40%
-ZONE_STD_WARN_BUFFER = 30_000  # warn 30k tokens before dump zone
-ZONE_STD_HARD_LIMIT = 0.70  # hard limit at 70%
-ZONE_STD_DEAD_ZONE = 0.75  # dead zone starts at 75%
-
-# Per-model degradation profiles calibrated from MRCR v2 8-needle benchmark
-# beta controls curve shape: higher = quality retained longer
-# All models drop from 1.0 to 0.0, but at different rates
-MODEL_PROFILES: dict[str, float] = {
-    "opus": 1.8,  # retains quality longest, steep drop near end
-    "sonnet": 1.5,  # moderate degradation
-    "haiku": 1.2,  # degrades earliest
-    "default": 1.5,  # same as sonnet
-}
 
 
 @dataclass
@@ -71,28 +91,8 @@ class ZoneInfo:
     recommendation: str  # One-line action guidance for the user
 
 
-# Zone recommendation strings — one per zone
-_ZONE_RECOMMENDATIONS: dict[str, str] = {
-    "Plan": "Safe to plan and code",
-    "Code": "Avoid starting new tasks; finish current one",
-    "Dump": "Consider `/compact focus on X` or delegate to subagent",
-    "ExDump": "Run `/compact` now before quality degrades further",
-    "Dead": "Start a new session with `/clear`",
-}
-
-# Pacman-style icon per zone — a distinct glyph per zone alongside the zone
-# text, from a healthy default (Plan) to a "game over" marker (Dead). Glyphs
-# are single-codepoint, width-1 characters (Canadian Aboriginal Syllabics,
-# matching the historical activity-tier icons removed in #13) so they render
-# predictably in any terminal and are counted correctly by visible_width()'s
-# plain len() (no east_asian_width handling).
-PACMAN_ICONS: dict[str, str] = {
-    "Plan": "ᗧ",  # healthy default
-    "Code": "ᗤ",  # distinct orientation, still fine
-    "Dump": "ᗣ",  # distinct orientation, warning
-    "ExDump": "ᗢ",  # distinct orientation, critical
-    "Dead": "×",  # outside the pacman family — game over
-}
+# Zone recommendation strings and pacman glyphs are single-sourced in _shared
+# (imported above as _ZONE_RECOMMENDATIONS / PACMAN_ICONS).
 
 
 @dataclass
@@ -103,37 +103,8 @@ class IntelligenceScore:
     utilization: float
 
 
-def get_model_profile(model_id: str) -> float:
-    """Match model_id to degradation beta.
-
-    Args:
-        model_id: Model identifier string (e.g., "claude-opus-4-6[1m]")
-
-    Returns:
-        Beta value for the model's degradation curve
-    """
-    model_lower = model_id.lower()
-    for family in ("opus", "sonnet", "haiku"):
-        if family in model_lower:
-            return MODEL_PROFILES[family]
-    return MODEL_PROFILES["default"]
-
-
-def calculate_context_pressure(utilization: float, beta: float = 1.5) -> float:
-    """Calculate Model Intelligence from context utilization.
-
-    MI = max(0, 1 - u^beta)
-
-    Args:
-        utilization: Context utilization ratio (current_used / context_window_size)
-        beta: Curve shape parameter (model-specific)
-
-    Returns:
-        MI value in [0, 1]
-    """
-    if utilization <= 0:
-        return 1.0
-    return max(0.0, 1.0 - utilization**beta)  # type: ignore[no-any-return]
+# get_model_profile / calculate_context_pressure are single-sourced in _shared;
+# re-exported here under their historical names for the package public API.
 
 
 def calculate_intelligence(
@@ -215,142 +186,48 @@ def get_context_zone(
     Returns:
         ZoneInfo with zone letter, color name, and label
     """
-    if context_window_size == 0:
-        return ZoneInfo(
-            zone="Plan",
-            color="green",
-            label="Planning",
-            recommendation=_ZONE_RECOMMENDATIONS["Plan"],
-        )
-
-    # Apply overrides (0 = use default)
-    lmt = large_model_threshold or LARGE_MODEL_THRESHOLD
-    is_large_model = context_window_size >= lmt
-
-    if is_large_model:
-        p_max = zone_1m_plan_max or ZONE_1M_P_MAX
-        c_max = zone_1m_code_max or ZONE_1M_C_MAX
-        d_max = zone_1m_dump_max or ZONE_1M_D_MAX
-        x_max = zone_1m_xdump_max or ZONE_1M_X_MAX
-
-        if used_tokens < p_max:
-            return ZoneInfo(
-                zone="Plan",
-                color="green",
-                label="Planning",
-                recommendation=_ZONE_RECOMMENDATIONS["Plan"],
-            )
-        if used_tokens < c_max:
-            return ZoneInfo(
-                zone="Code",
-                color="yellow",
-                label="Code-only",
-                recommendation=_ZONE_RECOMMENDATIONS["Code"],
-            )
-        if used_tokens < d_max:
-            return ZoneInfo(
-                zone="Dump",
-                color="orange",
-                label="Dump zone",
-                recommendation=_ZONE_RECOMMENDATIONS["Dump"],
-            )
-        if used_tokens < x_max:
-            return ZoneInfo(
-                zone="ExDump",
-                color="dark_red",
-                label="Hard limit",
-                recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
-            )
-        return ZoneInfo(
-            zone="Dead",
-            color="gray",
-            label="Dead zone",
-            recommendation=_ZONE_RECOMMENDATIONS["Dead"],
-        )
-
-    # Standard models
-    dump_ratio = zone_std_dump_ratio or ZONE_STD_DUMP_ZONE
-    warn_buf = zone_std_warn_buffer or ZONE_STD_WARN_BUFFER
-    hard_lim = zone_std_hard_limit or ZONE_STD_HARD_LIMIT
-    dead_rat = zone_std_dead_ratio or ZONE_STD_DEAD_ZONE
-
-    dump_zone_tokens = int(context_window_size * dump_ratio)
-    warn_start = max(0, dump_zone_tokens - warn_buf)
-    hard_limit_tokens = int(context_window_size * hard_lim)
-    dead_zone_tokens = int(context_window_size * dead_rat)
-
-    if used_tokens < warn_start:
-        return ZoneInfo(
-            zone="Plan",
-            color="green",
-            label="Planning",
-            recommendation=_ZONE_RECOMMENDATIONS["Plan"],
-        )
-    if used_tokens < dump_zone_tokens:
-        return ZoneInfo(
-            zone="Code",
-            color="yellow",
-            label="Code-only",
-            recommendation=_ZONE_RECOMMENDATIONS["Code"],
-        )
-    if used_tokens < hard_limit_tokens:
-        return ZoneInfo(
-            zone="Dump",
-            color="orange",
-            label="Dump zone",
-            recommendation=_ZONE_RECOMMENDATIONS["Dump"],
-        )
-    if used_tokens < dead_zone_tokens:
-        return ZoneInfo(
-            zone="ExDump",
-            color="dark_red",
-            label="Hard limit",
-            recommendation=_ZONE_RECOMMENDATIONS["ExDump"],
-        )
+    zone, color, recommendation = context_zone_tuple(
+        used_tokens,
+        context_window_size,
+        zone_1m_plan_max=zone_1m_plan_max,
+        zone_1m_code_max=zone_1m_code_max,
+        zone_1m_dump_max=zone_1m_dump_max,
+        zone_1m_xdump_max=zone_1m_xdump_max,
+        zone_std_dump_ratio=zone_std_dump_ratio,
+        zone_std_warn_buffer=zone_std_warn_buffer,
+        zone_std_hard_limit=zone_std_hard_limit,
+        zone_std_dead_ratio=zone_std_dead_ratio,
+        large_model_threshold=large_model_threshold,
+    )
     return ZoneInfo(
-        zone="Dead",
-        color="gray",
-        label="Dead zone",
-        recommendation=_ZONE_RECOMMENDATIONS["Dead"],
+        zone=zone,
+        color=color,
+        label=_ZONE_LABELS[zone],
+        recommendation=recommendation,
     )
 
 
-def get_pacman_icon(zone: str) -> str:
-    """Get the pacman-style icon for a context zone.
+# Human-readable labels per zone (package-only presentation detail)
+_ZONE_LABELS: dict[str, str] = {
+    "Plan": "Planning",
+    "Code": "Code-only",
+    "Dump": "Dump zone",
+    "ExDump": "Hard limit",
+    "Dead": "Dead zone",
+}
 
-    Args:
-        zone: Zone name ("Plan", "Code", "Dump", "ExDump", or "Dead")
 
-    Returns:
-        Single-character glyph for the zone, or "" for an unrecognized zone
-        (defensive default so an unexpected zone name cannot crash the
-        statusline render).
-    """
-    return PACMAN_ICONS.get(zone, "")
+# Pacman icon mapping is single-sourced in _shared; re-exported under the
+# historical name for the package public API.
 
 
 def get_mi_color(mi: float, utilization: float = 0.0) -> str:
     """Get color name for MI score considering both MI and context utilization.
 
-    Rules:
-      - Green: MI >= 0.90
-      - Yellow: MI < 0.90 and > 0.80, OR context 40%-80%
-      - Red: MI <= 0.80, OR context > 80%
-
-    Args:
-        mi: MI score value
-        utilization: Context utilization ratio (0-1)
-
     Returns:
         Color name: "green", "yellow", or "red"
     """
-    # Red: MI critically low or context nearly full
-    if mi <= MI_YELLOW_THRESHOLD or utilization >= MI_CONTEXT_RED_THRESHOLD:
-        return "red"
-    # Yellow: MI degrading or context in warning zone
-    if mi < MI_GREEN_THRESHOLD or utilization >= MI_CONTEXT_YELLOW_THRESHOLD:
-        return "yellow"
-    return "green"
+    return mi_color_name(mi, utilization)
 
 
 def format_mi_score(mi: float) -> str:

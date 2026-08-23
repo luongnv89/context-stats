@@ -36,12 +36,16 @@ class TestVisibleWidth:
 
 
 class TestGetTerminalWidth:
-    """Tests for get_terminal_width()."""
+    """Tests for get_terminal_width().
+
+    The implementation is single-sourced in claude_statusline._shared (Task
+    5.2), so the terminal-size probe is patched there.
+    """
 
     def test_fallback_to_200_when_no_columns_env(self):
         """When COLUMNS is not set and shutil returns 80, use 200 (Claude Code subprocess)."""
         with (
-            patch("claude_statusline.formatters.layout.shutil.get_terminal_size") as mock,
+            patch("claude_statusline._shared.shutil.get_terminal_size") as mock,
             patch.dict("os.environ", {}, clear=False),
         ):
             # Remove COLUMNS if present
@@ -54,14 +58,14 @@ class TestGetTerminalWidth:
     def test_respects_columns_env_80(self):
         """When COLUMNS=80 is explicitly set, trust it."""
         with (
-            patch("claude_statusline.formatters.layout.shutil.get_terminal_size") as mock,
+            patch("claude_statusline._shared.shutil.get_terminal_size") as mock,
             patch.dict("os.environ", {"COLUMNS": "80"}),
         ):
             mock.return_value = type("Size", (), {"columns": 80})()
             assert get_terminal_width() == 80
 
     def test_custom_width(self):
-        with patch("claude_statusline.formatters.layout.shutil.get_terminal_size") as mock:
+        with patch("claude_statusline._shared.shutil.get_terminal_size") as mock:
             mock.return_value = type("Size", (), {"columns": 120})()
             assert get_terminal_width() == 120
 

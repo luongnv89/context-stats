@@ -10,7 +10,13 @@ import tempfile
 import time
 from pathlib import Path
 
-from claude_statusline.core.colors import CYAN, MAGENTA, RESET, ColorManager
+# The git-info subprocess core is single-sourced in _shared (Task 5.2,
+# F-DEAD-001); the standalone script loads the same body from
+# claude_statusline._shared / its vendored copy. The PR-number cache helpers
+# stay defined in this namespace so tests can redirect them here.
+from claude_statusline._shared import CYAN, MAGENTA, RESET
+from claude_statusline._shared import git_info as _git_info_ansi
+from claude_statusline.core.colors import ColorManager
 
 # PR-number lookups shell out to ``gh`` (a network call). Because the
 # statusline re-renders frequently, the result is cached per-branch for a
@@ -172,58 +178,13 @@ def get_git_info(
     Returns:
         Formatted string with branch and change count, or empty string if not a git repo
     """
-    project_dir = Path(project_dir)
-    git_dir = project_dir / ".git"
-
-    # ``.git`` is a directory in normal checkouts but a *file* containing a
-    # ``gitdir:`` pointer in worktrees and submodules (F-BUG-007). Accept
-    # either; a bogus ``.git`` entry is still safe because the git commands
-    # below fail cleanly and yield "".
-    if not git_dir.exists():
-        return ""
-
-    try:
-        # Get branch name (skip optional locks for performance)
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            return ""
-        branch = result.stdout.strip()
-
-        if not branch:
-            return ""
-
-        # Count changes
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "status", "--porcelain"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            changes = 0
-        else:
-            changes = len([line for line in result.stdout.split("\n") if line.strip()])
-
-        # Format output — use ColorManager if provided, else fallback to constants
-        if color_manager is not None:
-            magenta = color_manager.magenta
-            cyan = color_manager.cyan
-            reset = color_manager.reset
-        elif colors_enabled:
-            magenta, cyan, reset = MAGENTA, CYAN, RESET
-        else:
-            magenta = cyan = reset = ""
-
-        if changes > 0:
-            return f" | {magenta}{branch}{reset} {cyan}[{changes}]{reset}"
-        return f" | {magenta}{branch}{reset}"
-
-    except (subprocess.TimeoutExpired, OSError):
-        return ""
+    # Resolve the palette first (shared core takes plain ANSI strings).
+    if color_manager is not None:
+        magenta = color_manager.magenta
+        cyan = color_manager.cyan
+        reset = color_manager.reset
+    elif colors_enabled:
+        magenta, cyan, reset = MAGENTA, CYAN, RESET
+    else:
+        magenta = cyan = reset = ""
+    return _git_info_ansi(str(project_dir), magenta=magenta, cyan=cyan, reset=reset)

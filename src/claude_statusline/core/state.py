@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,30 +13,26 @@ try:
 except ImportError:  # pragma: no cover - Windows has no fcntl
     fcntl = None  # type: ignore[assignment]
 
+# Validation, locking and rotation primitives are single-sourced in _shared
+# (Task 5.2/5.3, F-DEAD-001); the standalone script loads the same bodies from
+# claude_statusline._shared / its vendored copy. The module-level names below
+# keep their historical homes in this namespace for package consumers.
+from claude_statusline._shared import (
+    ROTATION_KEEP,
+    ROTATION_THRESHOLD,
+    _lock_state_file,
+    _sanitize_workspace_dir,
+    _unlock_state_file,
+    _validate_csv_field,
+    _validate_session_id,
+    rotate_lines,
+)
+from claude_statusline._shared import _csv_unsafe_reason as _csv_unsafe_reason
+from claude_statusline._shared import parse_state_row as parse_state_row
 
-def _lock_state_file(fh: object) -> None:
-    """Take an exclusive advisory lock on ``fh`` (best-effort, POSIX only).
-
-    Serializes the append + rotation read-modify-write between concurrent
-    statusline/CLI processes so rotation cannot drop a concurrently appended
-    line (F-BUG-008). No-op on platforms without ``fcntl``.
-    """
-    if fcntl is None:
-        return
-    try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)  # type: ignore[attr-defined]
-    except OSError:
-        pass  # locking is best-effort; atomic rename still bounds damage
-
-
-def _unlock_state_file(fh: object) -> None:
-    """Release the exclusive lock taken by :func:`_lock_state_file`."""
-    if fcntl is None:
-        return
-    try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
-    except OSError:
-        pass
+# Historical alias: the atomic keep-tail rotation core shared with the
+# standalone script's ``_rotate_lines`` helper.
+_rotate_state_lines = rotate_lines
 
 
 @dataclass
@@ -175,91 +170,13 @@ class StateEntry:
         return self.current_input_tokens + self.cache_creation + self.cache_read
 
 
-def _validate_session_id(session_id: str) -> None:
-    """Validate that a session ID does not contain dangerous path characters.
-
-    Path-traversal defense plus CSV-safety defense (F-BUG-006): a session_id
-    carrying a comma, newline, or other control character would corrupt the
-    unquoted 15-field CSV rows (shifting column indexes for index-based
-    readers like ``csv_parts[14]``), so those are rejected too.
-
-    Args:
-        session_id: Session ID to validate
-
-    Raises:
-        ValueError: If session_id is not a str, contains '/', '\\', '..', or
-            null bytes, or is not CSV-safe (comma/newline/control chars).
-    """
-    if not isinstance(session_id, str):
-        raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
-    for bad in ("/", "\\", "..", "\0"):
-        if bad in session_id:
-            raise ValueError(
-                f"Invalid session_id: contains '{bad}'. "
-                "Session IDs must not contain '/', '\\', '..', null bytes, "
-                "commas, newlines, or control characters."
-            )
-    _validate_csv_field("session_id", session_id)
-
-
-def _csv_unsafe_reason(value: str) -> str | None:
-    """Describe why ``value`` cannot be written into an unquoted CSV field.
-
-    Returns ``None`` when the value is safe. The 15-field state format has no
-    quoting or escaping, so any comma would shift every following column
-    index, and newlines/control characters would corrupt or forge row
-    boundaries.
-    """
-    for i, ch in enumerate(value):
-        if ch == ",":
-            return f"comma at position {i}"
-        code = ord(ch)
-        if code < 0x20 or code == 0x7F:
-            return f"control character U+{code:04X} at position {i}"
-    return None
-
-
-def _validate_csv_field(field: str, value: object) -> None:
-    """Validate that a string field is safe to write into a CSV state row.
-
-    Args:
-        field: Field name used in error messages (e.g. ``"model_id"``)
-        value: Value to validate
-
-    Raises:
-        ValueError: If value is not a str, or contains commas, newlines, or
-            other control characters (F-BUG-006).
-    """
-    if not isinstance(value, str):
-        raise ValueError(f"Invalid {field}: expected str, got {type(value).__name__}.")
-    reason = _csv_unsafe_reason(value)
-    if reason is not None:
-        raise ValueError(
-            f"Invalid {field}: contains {reason}. "
-            "String fields must not contain commas, newlines, or control "
-            "characters (the state CSV has no quoting/escaping)."
-        )
-
-
-def _sanitize_workspace_dir(value: object) -> str:
-    """Sanitize ``workspace_project_dir`` before writing (CSV_FORMAT contract).
-
-    Commas — and, defensively, newlines/other control characters — are
-    replaced with underscores so the directory path can never shift the CSV
-    column indexes. Non-str values yield an empty string.
-    """
-    if not isinstance(value, str):
-        return ""
-    return "".join("_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value)
-
-
 class StateFile:
     """Manage state files for token tracking."""
 
     STATE_DIR = Path.home() / ".claude" / "statusline"
     OLD_STATE_DIR = Path.home() / ".claude"
-    ROTATION_THRESHOLD = 10_000
-    ROTATION_KEEP = 5_000
+    ROTATION_THRESHOLD = ROTATION_THRESHOLD
+    ROTATION_KEEP = ROTATION_KEEP
 
     def __init__(self, session_id: str | None = None) -> None:
         """Initialize state file manager.
@@ -487,7 +404,7 @@ class StateFile:
             lines = fh.readlines()  # type: ignore[attr-defined]
             if len(lines) <= self.ROTATION_THRESHOLD:
                 return
-            self._rotate_lines(file_path, lines)
+            _rotate_state_lines(str(file_path), lines, self.ROTATION_KEEP)
         except OSError as e:
             sys.stderr.write(
                 f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"
@@ -495,21 +412,7 @@ class StateFile:
 
     def _rotate_lines(self, file_path: Path, lines: list[str]) -> None:
         """Atomically truncate ``lines`` to the most recent ROTATION_KEEP lines."""
-        keep = lines[-self.ROTATION_KEEP :]
-        fd = tempfile.NamedTemporaryFile(
-            dir=str(self.STATE_DIR), delete=False, mode="w", suffix=".tmp"
-        )
-        try:
-            fd.writelines(keep)
-            fd.close()
-            os.replace(fd.name, str(file_path))
-        except BaseException:
-            fd.close()
-            try:
-                os.unlink(fd.name)
-            except OSError:
-                pass
-            raise
+        _rotate_state_lines(str(file_path), lines, self.ROTATION_KEEP)
 
     def _maybe_rotate(self) -> None:
         """Rotate state file if it exceeds the line threshold.
@@ -533,7 +436,7 @@ class StateFile:
                     _unlock_state_file(f)
             if len(lines) <= self.ROTATION_THRESHOLD:
                 return
-            self._rotate_lines(file_path, lines)
+            _rotate_state_lines(str(file_path), lines, self.ROTATION_KEEP)
         except OSError as e:
             sys.stderr.write(
                 f"[statusline] warning: failed to rotate state file {file_path}: {e}\n"
