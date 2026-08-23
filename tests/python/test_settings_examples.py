@@ -18,11 +18,7 @@ def _entry_point_names():
     pyproject = (_PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     section = re.search(r"\[project\.scripts\]\n(.*?)(?:\n\[|\Z)", pyproject, re.DOTALL)
     assert section is not None, "[project.scripts] section missing from pyproject.toml"
-    return {
-        line.split("=", 1)[0].strip()
-        for line in section.group(1).splitlines()
-        if "=" in line
-    }
+    return {line.split("=", 1)[0].strip() for line in section.group(1).splitlines() if "=" in line}
 
 
 class TestSettingsExample:
@@ -40,7 +36,5 @@ class TestSettingsExample:
         )
 
     def test_no_dead_statusline_script_path(self):
-        raw = (_PROJECT_ROOT / "config" / "settings-example.json").read_text(
-            encoding="utf-8"
-        )
+        raw = (_PROJECT_ROOT / "config" / "settings-example.json").read_text(encoding="utf-8")
         assert "statusline.sh" not in raw
