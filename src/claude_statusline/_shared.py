@@ -216,7 +216,9 @@ def parse_color(value: str) -> str | None:
     return None
 
 
-def zone_ansi_code(color_name: str, green: str = GREEN, yellow: str = YELLOW, reset: str = RESET) -> str:
+def zone_ansi_code(
+    color_name: str, green: str = GREEN, yellow: str = YELLOW, reset: str = RESET
+) -> str:
     """Map a zone color name to an ANSI escape code.
 
     ``green``/``yellow``/``reset`` are injected by the caller so config

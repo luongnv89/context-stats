@@ -1046,9 +1046,7 @@ class TestStateRowParsingPair:
         entry = StateEntry.from_csv_line(line)
         parsed = sl.parse_state_row(line)
         assert parsed is not None and entry is not None
-        used = (
-            parsed["current_input_tokens"] + parsed["cache_creation"] + parsed["cache_read"]
-        )
+        used = parsed["current_input_tokens"] + parsed["cache_creation"] + parsed["cache_read"]
         assert used == entry.current_used_tokens == 356
 
     def test_invalid_rows_yield_none_on_both_sides(self):
@@ -1145,7 +1143,9 @@ class TestRotationPair:
 
         assert sl_mod._lock_state_file.__module__ == shared.__name__
         assert (
-            __import__("claude_statusline.core.state", fromlist=["_lock_state_file"])._lock_state_file
+            __import__(
+                "claude_statusline.core.state", fromlist=["_lock_state_file"]
+            )._lock_state_file
             is shared._lock_state_file
         )
 
@@ -1597,6 +1597,7 @@ class TestSharedModuleArrangement:
             uses ColorManager/StateFile abstractions, and its decomposition is
             owned by a later modernization task.
         """
+
         def normalized(node):
             body = node.body
             if (
@@ -1609,7 +1610,9 @@ class TestSharedModuleArrangement:
             return ast_mod.dump(ast_mod.Module(body=body, type_ignores=[]))
 
         tree = ast_mod.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
-        script_fns = {n.name: normalized(n) for n in ast_mod.walk(tree) if isinstance(n, ast_mod.FunctionDef)}
+        script_fns = {
+            n.name: normalized(n) for n in ast_mod.walk(tree) if isinstance(n, ast_mod.FunctionDef)
+        }
 
         pkg_names: set[str] = set()
         pkg_bodies: dict[str, set[str]] = {}

@@ -440,6 +440,7 @@ def read_config():
         sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
     return config
 
+
 # Default config template written when ~/.claude/statusline.conf does not
 # exist yet. Hoisted to a module constant (Task 5.3, F-CLEAN-003) so
 # read_config() stays focused on parsing.
@@ -732,6 +733,7 @@ color_separator=dim
 #   9. project name  (base — always starts the first line)
 """
 
+
 def get_pr_number(project_dir: str) -> str:
     """Look up the PR number for the current branch via gh CLI.
 
@@ -783,13 +785,17 @@ def get_pr_number(project_dir: str) -> str:
         if result.returncode != 0:
             # Negatively cache the failure (short TTL) so a broken gh
             # environment does not stall every render on a live lookup.
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
+            _pr_cache_set(
+                cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file()
+            )
             return ""
 
         try:
             data = json.loads(result.stdout.strip())
         except (json.JSONDecodeError, ValueError):
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
+            _pr_cache_set(
+                cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file()
+            )
             return ""
 
         pr_str = ""
@@ -801,8 +807,11 @@ def get_pr_number(project_dir: str) -> str:
         return pr_str
     except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
         if cache_key is not None:
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
+            _pr_cache_set(
+                cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file()
+            )
         return ""
+
 
 def main():
     _ensure_utf8_stdout()
