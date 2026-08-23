@@ -72,6 +72,7 @@ def _unlock_state_file(fh):
     except OSError:
         pass
 
+
 # Model Intelligence color thresholds
 MI_GREEN_THRESHOLD = 0.90
 MI_YELLOW_THRESHOLD = 0.80
@@ -1336,9 +1337,7 @@ def _sanitize_workspace_dir(value):
     """
     if not isinstance(value, str):
         return ""
-    return "".join(
-        "_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value
-    )
+    return "".join("_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value)
 
 
 def _extract(data, key, default=None):
@@ -1705,9 +1704,7 @@ def _render(data):
                             finally:
                                 _unlock_state_file(f)
                     except OSError as e:
-                        sys.stderr.write(
-                            f"[statusline] warning: failed to write state file: {e}\n"
-                        )
+                        sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
 
     # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
     # segment doesn't flicker in and out across the first few turns.

@@ -250,9 +250,7 @@ def _sanitize_workspace_dir(value: object) -> str:
     """
     if not isinstance(value, str):
         return ""
-    return "".join(
-        "_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value
-    )
+    return "".join("_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value)
 
 
 class StateFile:

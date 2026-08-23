@@ -141,7 +141,9 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
         scope_from = cutoff.strftime("%Y-%m-%d")
     else:
         all_start_dts = [
-            dt for dt in (_safe_datetime(s.start_time) for s in all_sessions if s.start_time > 0) if dt
+            dt
+            for dt in (_safe_datetime(s.start_time) for s in all_sessions if s.start_time > 0)
+            if dt
         ]
         scope_from = min(all_start_dts).strftime("%Y-%m-%d") if all_start_dts else "unknown"
     scope_to = max(all_end_dts).strftime("%Y-%m-%d") if all_end_dts else "unknown"

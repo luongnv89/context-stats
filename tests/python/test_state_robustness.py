@@ -79,9 +79,7 @@ class TestMigrationOSErrorGuards:
         old_file = StateFile.OLD_STATE_DIR / "statusline.old.state"
         old_file.write_text("1710288000,100\n")
 
-        with patch(
-            "claude_statusline.core.state.shutil.move", side_effect=OSError("denied")
-        ):
+        with patch("claude_statusline.core.state.shutil.move", side_effect=OSError("denied")):
             sf = StateFile("fresh")  # constructor runs migration; must not raise
 
         assert sf is not None
@@ -311,8 +309,14 @@ class TestWorktreeGitFile:
         """End-to-end: `git worktree add` produces a .git FILE; info renders."""
         origin = tmp_path / "origin"
         origin.mkdir()
-        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+        env = {
+            **os.environ,
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+        }
+
         def git(*args, cwd=None):
             return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, env=env)
 
@@ -322,8 +326,10 @@ class TestWorktreeGitFile:
         git("commit", "-qm", "init", cwd=str(origin))
 
         wt = tmp_path / "linked-wt"
-        assert git("worktree", "add", "-b", "feature-wt", str(wt), "main",
-                   cwd=str(origin)).returncode == 0
+        assert (
+            git("worktree", "add", "-b", "feature-wt", str(wt), "main", cwd=str(origin)).returncode
+            == 0
+        )
         (wt / "g.txt").write_text("y\n")
 
         from claude_statusline.core import git as core_git
@@ -386,8 +392,10 @@ class TestLockedRotation:
     def test_append_rotation_under_lock_keeps_newest_line(self, state_dirs):
         """Rotation triggered by append_entry retains the just-appended row."""
         sf = StateFile("lockrot")
-        lines = [f"{1710288000 + i},100,200,300,400,500,600,0.01,10,5,s{i},m,/p,200000\n"
-                 for i in range(10_000)]
+        lines = [
+            f"{1710288000 + i},100,200,300,400,500,600,0.01,10,5,s{i},m,/p,200000\n"
+            for i in range(10_000)
+        ]
         sf.file_path.write_text("".join(lines))
         sf.append_entry(_make_entry(timestamp=1719999999))
         result = sf.file_path.read_text().splitlines()
