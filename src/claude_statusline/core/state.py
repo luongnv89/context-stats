@@ -7,11 +7,12 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TextIO
 
-try:
+if sys.platform == "win32":
+    fcntl = None  # Windows has no fcntl
+else:
     import fcntl
-except ImportError:  # pragma: no cover - Windows has no fcntl
-    fcntl = None  # type: ignore[assignment]
 
 # Validation, locking and rotation primitives are single-sourced in _shared
 # (Task 5.2/5.3, F-DEAD-001); the standalone script loads the same bodies from
@@ -392,7 +393,7 @@ class StateFile:
         if fcntl is None:
             self._maybe_rotate()
 
-    def _rotate_locked(self, fh: object) -> None:
+    def _rotate_locked(self, fh: TextIO) -> None:
         """Rotation core — caller must hold the exclusive lock on ``fh``.
 
         If the file has more than ROTATION_THRESHOLD lines, truncate to
@@ -400,8 +401,8 @@ class StateFile:
         """
         file_path = self.file_path
         try:
-            fh.seek(0)  # type: ignore[attr-defined]
-            lines = fh.readlines()  # type: ignore[attr-defined]
+            fh.seek(0)
+            lines = fh.readlines()
             if len(lines) <= self.ROTATION_THRESHOLD:
                 return
             _rotate_state_lines(str(file_path), lines, self.ROTATION_KEEP)

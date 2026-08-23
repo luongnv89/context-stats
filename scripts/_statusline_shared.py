@@ -23,10 +23,10 @@ import sys
 import tempfile
 import time
 
-try:
+if sys.platform == "win32":
+    fcntl = None  # Windows has no fcntl
+else:
     import fcntl
-except ImportError:  # pragma: no cover - Windows has no fcntl
-    fcntl = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -350,7 +350,7 @@ def calculate_context_pressure(utilization: float, beta: float = 1.5) -> float:
     """Calculate Model Intelligence from context utilization: max(0, 1 - u^beta)."""
     if utilization <= 0:
         return 1.0
-    return max(0.0, 1.0 - utilization**beta)  # type: ignore[no-any-return]
+    return float(max(0.0, 1.0 - utilization**beta))
 
 
 def compute_mi(used_tokens, context_window_size, model_id="", beta_override=0.0):

@@ -224,9 +224,9 @@ class Config:
                         self.tps_unit = raw_value
                 elif key == "tps_window":
                     try:
-                        v = int(raw_value)
-                        if v >= 1:
-                            self.tps_window = v
+                        window_value = int(raw_value)
+                        if window_value >= 1:
+                            self.tps_window = window_value
                         else:
                             sys.stderr.write(
                                 f"[statusline] warning: tps_window must be >= 1, "
@@ -238,9 +238,9 @@ class Config:
                         )
                 elif key in _ZONE_INT_KEYS:
                     try:
-                        v = int(raw_value)
-                        if v > 0:
-                            setattr(self, key, v)
+                        int_value = int(raw_value)
+                        if int_value > 0:
+                            setattr(self, key, int_value)
                         else:
                             sys.stderr.write(
                                 f"[statusline] warning: {key} must be positive, "
@@ -252,9 +252,9 @@ class Config:
                         )
                 elif key in _ZONE_FLOAT_KEYS:
                     try:
-                        v = float(raw_value)  # type: ignore[assignment]
-                        if 0.0 < v < 1.0:
-                            setattr(self, key, v)
+                        float_value = float(raw_value)
+                        if 0.0 < float_value < 1.0:
+                            setattr(self, key, float_value)
                         else:
                             sys.stderr.write(
                                 f"[statusline] warning: {key} must be between 0 and 1, "
@@ -266,9 +266,9 @@ class Config:
                         )
                 elif key in _COMPACTION_FLOAT_KEYS:
                     try:
-                        v = float(raw_value)  # type: ignore[assignment]
-                        if 0.0 < v < 1.0:
-                            setattr(self, key, v)
+                        float_value = float(raw_value)
+                        if 0.0 < float_value < 1.0:
+                            setattr(self, key, float_value)
                         else:
                             sys.stderr.write(
                                 f"[statusline] warning: {key} must be between 0 and 1, "

@@ -19,7 +19,7 @@ from typing import Any
 
 from claude_statusline import __version__
 from claude_statusline.core.config import Config
-from claude_statusline.core.state import StateFile, _validate_session_id
+from claude_statusline.core.state import StateEntry, StateFile, _validate_session_id
 from claude_statusline.formatters.tokens import format_tokens
 from claude_statusline.graphs.intelligence import (
     calculate_intelligence,
@@ -108,8 +108,8 @@ def _format_chart_timestamp(ts: int) -> str:
 
 
 def _sample_entries_by_window(
-    entries: list, window_minutes: int = 5, max_points: int = 12
-) -> list[tuple[str, object]]:
+    entries: list[StateEntry], window_minutes: int = 5, max_points: int = 12
+) -> list[tuple[str, StateEntry]]:
     """Downsample entries so Mermaid charts stay readable on long sessions.
 
     Keep at most one point per time window, then trim again if the chart is
@@ -119,7 +119,7 @@ def _sample_entries_by_window(
         return []
 
     window_seconds = max(1, window_minutes) * 60
-    sampled: list[tuple[str, object]] = [
+    sampled: list[tuple[str, StateEntry]] = [
         (_format_chart_timestamp(entries[0].timestamp), entries[0])
     ]
     last_kept_ts = entries[0].timestamp
@@ -138,7 +138,7 @@ def _sample_entries_by_window(
         return sampled
 
     step = (len(sampled) - 1) / (max_points - 1)
-    reduced: list[tuple[str, object]] = []
+    reduced: list[tuple[str, StateEntry]] = []
     seen: set[int] = set()
     for i in range(max_points):
         index = round(i * step)
@@ -168,8 +168,8 @@ def _generate_mermaid_trend_chart(entries: list, context_window: int) -> list[st
     """Generate a Mermaid xychart showing context usage over time."""
     sampled = _sample_entries_by_window(entries, window_minutes=15, max_points=10)
     x_values = ", ".join(f'"{label}"' for label, _ in sampled)
-    y_values = ", ".join(str(entry.current_used_tokens) for _, entry in sampled)  # type: ignore[attr-defined]
-    max_used = max((entry.current_used_tokens for _, entry in sampled), default=0)  # type: ignore[attr-defined]
+    y_values = ", ".join(str(entry.current_used_tokens) for _, entry in sampled)
+    max_used = max((entry.current_used_tokens for _, entry in sampled), default=0)
     y_max = _nice_axis_max(max(context_window, max_used))
 
     return [
@@ -240,8 +240,8 @@ def _generate_mermaid_composition_chart(last_entry) -> list[str]:
 def _generate_mermaid_cache_chart(entries: list) -> list[str]:
     """Generate a Mermaid xychart showing cache creation and cache read over time."""
     sampled = _sample_entries_by_window(entries, window_minutes=10, max_points=12)
-    creation_values = [entry.cache_creation for _, entry in sampled]  # type: ignore[attr-defined]
-    read_values = [entry.cache_read for _, entry in sampled]  # type: ignore[attr-defined]
+    creation_values = [entry.cache_creation for _, entry in sampled]
+    read_values = [entry.cache_read for _, entry in sampled]
     max_cache = max((*creation_values, *read_values), default=0)
 
     if max_cache <= 0:

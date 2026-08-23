@@ -1020,13 +1020,18 @@ def main() -> None:
     )
 
     # Run
-    minutes = getattr(args, "minutes", None)  # type: ignore[assignment]
+    graph_minutes: int | None = getattr(args, "minutes", None)
     if args.no_watch:
         # Transport for single-run mode: print the frame, exit non-zero
         # when there was nothing to graph.
         try:
             frame = render_once(
-                state_file, args.type, renderer, colors, config=config, minutes=minutes
+                state_file,
+                args.type,
+                renderer,
+                colors,
+                config=config,
+                minutes=graph_minutes,
             )
         except InsufficientDataError as e:
             print(e)
@@ -1034,7 +1039,13 @@ def main() -> None:
         print(frame)
     else:
         run_watch_mode(
-            state_file, args.type, args.watch, renderer, colors, config=config, minutes=minutes
+            state_file,
+            args.type,
+            args.watch,
+            renderer,
+            colors,
+            config=config,
+            minutes=graph_minutes,
         )
 
 

@@ -39,10 +39,10 @@ import time
 import traceback
 from typing import Any, NamedTuple
 
-try:
+if sys.platform == "win32":
+    fcntl = None  # Windows has no fcntl
+else:
     import fcntl
-except ImportError:  # pragma: no cover - Windows has no fcntl
-    fcntl = None  # type: ignore[assignment]
 
 
 def _load_shared_module():

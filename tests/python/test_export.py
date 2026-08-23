@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from claude_statusline.cli.export import (
     _format_datetime,
     _format_duration,
@@ -12,7 +14,7 @@ from claude_statusline.cli.export import (
     _usage_bar,
 )
 from claude_statusline.core.config import Config
-from claude_statusline.core.state import StateEntry
+from claude_statusline.core.state import StateEntry, StateFile
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
@@ -359,3 +361,140 @@ class TestExportCommand:
         assert "# Context Stats Report" in content
         assert "fake-test-session" in content
         assert "## Interaction Timeline" in content
+
+
+class TestRunExportE2E:
+    """End-to-end tests for the export command entry point."""
+
+    def _seed_state(self, state_dir, session_id="e2e-sess", n=3):
+        state_dir.mkdir(parents=True, exist_ok=True)
+        lines = []
+        base = 1710288000
+        for i in range(n):
+            e = _make_entry(
+                timestamp=base + i * 300,
+                session_id=session_id,
+                current_input=10000 + i * 100,
+                context_window=200000,
+            )
+            lines.append(e.to_csv_line())
+        path = state_dir / f"statusline.{session_id}.state"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    def test_export_writes_markdown_file(self, monkeypatch, tmp_path, capsys):
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        out_file = tmp_path / "out.md"
+        self._seed_state(tmp_path)
+
+        run_export(["e2e-sess", "--output", str(out_file)])
+
+        assert out_file.exists()
+        content = out_file.read_text(encoding="utf-8")
+        assert "e2e-sess" in content
+        printed = capsys.readouterr().out
+        assert f"Exported to {out_file}" in printed
+
+    def test_export_default_output_name_uses_short_session(self, monkeypatch, tmp_path):
+
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        self._seed_state(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        sid = "abcdefghijklmnop"
+        self._seed_state(tmp_path, session_id=sid)
+        run_export([sid])
+        expected = tmp_path / f"context-stats-{sid[:8]}.md"
+        assert expected.exists()
+
+    def test_export_missing_session_lists_available_and_exits(self, monkeypatch, tmp_path, capsys):
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        self._seed_state(tmp_path)  # creates e2e-sess
+
+        with pytest.raises(SystemExit) as exc:
+            run_export(["nope"])
+        assert exc.value.code == 1
+        err = capsys.readouterr().err
+        assert "No state file found for session 'nope'" in err
+        assert "Available sessions:" in err
+
+    def test_export_no_sessions_at_all_exits(self, monkeypatch, tmp_path, capsys):
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+
+        with pytest.raises(SystemExit) as exc:
+            run_export([])
+        assert exc.value.code == 1
+        err = capsys.readouterr().err
+        assert "No session data found." in err
+
+    def test_export_invalid_session_id_exits(self, monkeypatch, tmp_path, capsys):
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+
+        with pytest.raises(SystemExit) as exc:
+            run_export(["../evil"])
+        assert exc.value.code == 1
+        assert "Error:" in capsys.readouterr().err
+
+    def test_export_empty_state_file_exits(self, monkeypatch, tmp_path, capsys):
+        from claude_statusline.cli.export import run_export
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        self._seed_state(tmp_path)
+        (tmp_path / "statusline.e2e-sess.state").write_text("", encoding="utf-8")
+
+        with pytest.raises(SystemExit) as exc:
+            run_export(["e2e-sess"])
+        assert exc.value.code == 1
+        assert "State file is empty" in capsys.readouterr().err
+
+
+class TestExportHelpers:
+    """Branch coverage for small export helpers."""
+
+    def test_sample_entries_reduction_over_max_points(self):
+        entries = [
+            _make_entry(timestamp=1710288000 + i * 60, context_window=200000) for i in range(40)
+        ]
+        sampled = _sample_entries_by_window(entries, window_minutes=1, max_points=5)
+        assert len(sampled) == 5
+
+    def test_sample_entries_single_entry(self):
+        sampled = _sample_entries_by_window([_make_entry()])
+        assert len(sampled) == 1
+
+    def test_format_chart_timestamp_invalid_falls_back(self):
+        from claude_statusline.cli.export import _format_chart_timestamp
+
+        assert _format_chart_timestamp(10**20) == str(10**20)
+
+    def test_nice_axis_max_boundaries(self):
+        from claude_statusline.cli.export import _nice_axis_max
+
+        assert _nice_axis_max(50) == 100
+        assert _nice_axis_max(1500) == 2000
+        assert _nice_axis_max(12_345) == 15_000
+        assert _nice_axis_max(150_001) == 160_000
+        assert _nice_axis_max(750_001) == 800_000
+
+    def test_parse_export_args_defaults(self):
+        from claude_statusline.cli.export import _parse_export_args
+
+        args = _parse_export_args([])
+        assert args.session_id is None
+        assert args.output is None

@@ -672,7 +672,7 @@ def run_report(argv: list[str]) -> None:
         output_path = Path.cwd() / f"context-stats-report-{timestamp}.md"
 
     try:
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(report)
         print(f"✓ Report generated: {output_path}")
     except OSError as e:
