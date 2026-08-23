@@ -1,6 +1,6 @@
 # context-stats — Real-Time Context Monitoring for Claude Code
 
-> Track token usage, catch context degradation early, and optimize your Claude Code spend — all without leaving your terminal. Zero dependencies, MIT licensed, pure Python 3.9+.
+> Track token usage, catch context degradation early, and optimize your Claude Code spend — all without leaving your terminal. Zero dependencies, MIT licensed, pure Python 3.10+.
 
 ## Landing Page
 

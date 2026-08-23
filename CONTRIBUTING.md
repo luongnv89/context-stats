@@ -8,7 +8,7 @@ Thank you for your interest in contributing to Claude Code Status Line! This doc
 
 - **Git** - Version control
 - **jq** - JSON processor (for bash scripts)
-- **Python 3.9+** - For Python script and testing
+- **Python 3.10+** - For Python script and testing
 - **Bats** - Bash Automated Testing System
 
 ### Installing Dependencies

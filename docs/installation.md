@@ -99,7 +99,7 @@ Windows:
 
 ## Requirements
 
-Python 3.9+ is the only requirement. No additional system packages needed.
+Python 3.10+ is the only requirement. No additional system packages needed.
 
 ## Verify Installation
 

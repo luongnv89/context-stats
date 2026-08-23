@@ -1,67 +1,63 @@
 # Pinned development dependencies — consumed with `-c` by CI and local installs:
 #   pip install -r requirements-dev.txt -c requirements-dev.constraints.txt
 #
-# Resolved from requirements-dev.txt at the Python 3.9 floor (the oldest
+# Resolved from requirements-dev.txt at the Python 3.10 floor (the oldest
 # version CI supports), so every pin installs across the full CI matrix.
 # Regeneration is documented in docs/DEVELOPMENT.md ("Regenerating the
 # dev-dependency constraints file").
 #
-# Security exceptions: the advisory IDs ignored by scripts/pip-audit-
-# locked.sh (12 findings across msgpack, filelock, pip, pytest, requests,
-# urllib3 and virtualenv) currently have no fix installable across the
-# whole CI matrix — every fix version requires Python >= 3.10 directly,
-# or conflicts across the matrix with the Python 3.9-floor pins. They are
-# silenced (with a filed ticket, #161) by the CI audit until the minimum
-# supported Python rises to 3.10+. See docs/DEVELOPMENT.md ("Security
+# Security exceptions: any advisory ID ignored by scripts/pip-audit-
+# locked.sh is listed here with its filed ticket. The 12 findings from
+# ticket #161 (msgpack, filelock, pip, pytest, requests, urllib3 and
+# virtualenv) became actionable when the minimum supported Python rose to
+# 3.10 (ADR 0001, #133/#134) and were cleared by this regeneration — their
+# --ignore-vuln flags are gone. See docs/DEVELOPMENT.md ("Security
 # auditing").
+ast-serialize==0.8.0
 boolean.py==5.0
-cachecontrol==0.14.3
+cachecontrol==0.14.4
 certifi==2026.7.22
-cfgv==3.4.0
+cfgv==3.5.0
 charset-normalizer==3.5.1
-coverage==7.10.7
-cyclonedx-python-lib==9.1.0
+coverage==7.15.4
+cyclonedx-python-lib==11.12.0
 defusedxml==0.7.1
 distlib==0.4.3
-filelock==3.19.1
-identify==2.6.15
+filelock==3.32.3
+identify==2.6.19
 idna==3.19
-iniconfig==2.1.0
+iniconfig==2.3.0
 librt==0.15.0
 license-expression==30.4.4
-markdown-it-py==3.0.0
+markdown-it-py==4.2.0
 mdurl==0.1.2
-msgpack==1.1.2
-mypy==1.19.1
+msgpack==1.2.1
+mypy==2.3.1
 mypy-extensions==1.1.0
 nodeenv==1.10.0
 packageurl-python==0.17.6
 packaging==26.3
 pathspec==1.1.1
-pip==26.0.1
+pip==26.2.1
 pip-api==0.0.34
-pip-audit==2.9.0
+pip-audit==2.10.1
 pip-requirements-parser==32.0.1
-platformdirs==4.4.0
+platformdirs==4.11.3
 pluggy==1.6.0
-# Single unmarked pin: releases >= 4.4 require Python >= 3.10 while the CI
-# matrix floors at 3.9, so requirements-dev.txt caps pre-commit < 4.4
-# (F-DEP-002; raising the floor/cap pair is Task 3.1, #133). Keep this pin
-# marker-free — pip download --python-version evaluates python_version
-# markers against the running interpreter, not the target, so marked pins
-# cannot be verified with the documented cross-version procedure.
-pre-commit==4.3.0
+pre-commit==4.6.2
 py-serializable==2.1.0
 pygments==2.21.0
 pyparsing==3.3.2
-pytest==8.4.2
+pytest==9.1.1
 pytest-cov==7.1.0
+python-discovery==1.5.2
 PyYAML==6.0.3
-requests==2.32.5
+requests==2.34.2
 rich==15.0.0
 ruff==0.16.4
 sortedcontainers==2.4.0
-toml==0.10.2
+tomli==2.4.1
+tomli-w==1.2.0
 typing-extensions==4.16.0
-urllib3==2.6.3
-virtualenv==20.35.4
+urllib3==2.7.0
+virtualenv==21.7.4

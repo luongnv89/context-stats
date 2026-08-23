@@ -173,7 +173,7 @@ def compute_tps(
     # Reconstruct per-turn (output, api_time_ms) from consecutive samples,
     # keeping only turns with real elapsed API time and real output.
     turns: list[tuple[int, int]] = []
-    for (_, prev_dur), (out, cur_dur) in zip(samples, samples[1:]):
+    for (_, prev_dur), (out, cur_dur) in zip(samples, samples[1:], strict=False):
         # A zero/negative previous cumulative means a legacy row without the
         # field — differencing against it would understate throughput badly.
         if prev_dur <= 0:
