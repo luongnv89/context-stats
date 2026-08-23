@@ -9,7 +9,7 @@ Both renderers read the wall clock for their "Generated" stamp, so the freeze
 strategy of ``test_report.py`` (F-TEST-008) is reused here.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -29,16 +29,26 @@ EXPORT_GOLDEN = FIXTURES_DIR / "export_golden.md"
 
 _FROZEN_NOW = datetime(2026, 6, 15, 12, 0, 0)
 _BASE = 1749945600
+# Goldens were captured on a UTC+2 host; pinning fromtimestamp to that fixed
+# offset keeps the byte-exact output independent of the runner's timezone.
+_CAPTURE_TZ = timezone(timedelta(hours=2))
 
 
 class _FrozenDatetime(datetime):
-    """datetime stand-in whose now() always returns _FROZEN_NOW."""
+    """datetime stand-in with pinned now() and fromtimestamp() rendering."""
 
     @classmethod
     def now(cls, tz=None):  # noqa: N802 - mirrors datetime API
         if tz is not None:
             return _FROZEN_NOW.replace(tzinfo=tz)
         return _FROZEN_NOW
+
+    @classmethod
+    def fromtimestamp(cls, t, tz=None):  # noqa: N802 - mirrors datetime API
+        pinned = super().fromtimestamp(t, tz=_CAPTURE_TZ)
+        if tz is not None:
+            return pinned.astimezone(tz)
+        return pinned.replace(tzinfo=None)
 
 
 @pytest.fixture
