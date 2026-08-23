@@ -144,8 +144,11 @@ def _validate_session_id(session_id: str) -> None:
         session_id: Session ID to validate
 
     Raises:
-        ValueError: If session_id contains '/', '\\', '..', or null bytes
+        ValueError: If session_id is not a str, or contains '/', '\\', '..', or
+            null bytes
     """
+    if not isinstance(session_id, str):
+        raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
     for bad in ("/", "\\", "..", "\0"):
         if bad in session_id:
             raise ValueError(

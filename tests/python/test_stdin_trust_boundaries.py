@@ -43,6 +43,15 @@ def run_script(input_data: dict, env_overrides: dict | None = None):
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     if env_overrides:
+        home = env_overrides.get("HOME")
+        if home:
+            # ntpath.expanduser/Path.home() prefer USERPROFILE over HOME, so a
+            # HOME-only override does not isolate the state dir on Windows.
+            env["USERPROFILE"] = home
+            drive, path = os.path.splitdrive(home)
+            if drive or path:
+                env["HOMEDRIVE"] = drive
+                env["HOMEPATH"] = path
         env.update(env_overrides)
     result = subprocess.run(
         [sys.executable, str(SCRIPT_PATH)],
@@ -157,6 +166,54 @@ class TestPackageSessionIdValidation:
         pkg_statusline.main()
 
         assert (state_dir / "statusline.pkg-good-session.state").exists()
+
+
+NON_STRING_SESSION_IDS = [123, 4.2, True, {"k": "../../evil"}, ["a", "/b"]]
+
+
+class TestNonStringSessionIds:
+    """Non-string session_ids must degrade per-field, never crash or bypass (#127)."""
+
+    @pytest.mark.parametrize("bad_id", NON_STRING_SESSION_IDS)
+    def test_script_non_string_session_id_degrades(self, bad_id, tmp_path):
+        payload = full_payload(str(tmp_path), session_id=bad_id)
+        out, code, err = run_script(payload, {"HOME": str(tmp_path)})
+        assert code == 0
+        assert "Invalid session_id" in err
+        assert "[Claude] ~" not in out
+        assert "Traceback" not in err
+        escaped = [p for p in tmp_path.rglob("*") if p.is_file() and "evil" in p.name]
+        assert escaped == []
+
+    @pytest.mark.parametrize("bad_id", NON_STRING_SESSION_IDS)
+    def test_package_non_string_session_id_degrades(self, bad_id, tmp_path, monkeypatch, capsys):
+        from claude_statusline.cli import statusline as pkg_statusline
+        from claude_statusline.core.state import StateFile
+
+        state_dir = tmp_path / "state"
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+
+        payload = full_payload(str(tmp_path), session_id=bad_id)
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+        monkeypatch.setenv("COLUMNS", "200")
+
+        pkg_statusline.main()  # must not raise
+
+        err = capsys.readouterr().err
+        assert "Invalid session_id" in err
+        assert list(tmp_path.rglob("*evil*")) == []
+
+    @pytest.mark.parametrize("bad_id", NON_STRING_SESSION_IDS)
+    def test_validator_raises_valueerror_not_typeerror(self, bad_id):
+        from scripts import statusline as sl
+
+        from claude_statusline.core.state import _validate_session_id as core_validate
+
+        for fn in (core_validate, sl._validate_session_id):
+            with pytest.raises(ValueError):
+                fn(bad_id)
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +410,17 @@ class TestProjectDirTrustGate:
 # ---------------------------------------------------------------------------
 
 
+def assert_owner_only_mode(path: Path) -> None:
+    """Assert 0600 where POSIX modes exist; strongest claim available elsewhere."""
+    mode = stat.S_IMODE(path.stat().st_mode)
+    if sys.platform == "win32":
+        # NTFS reports 0o666 regardless of creation mode; assert the owner
+        # read/write bits, which is the strongest meaningful check there.
+        assert mode & 0o600 == 0o600
+    else:
+        assert mode == 0o600
+
+
 class TestStateFilePermissions:
     """Newly created state files must be owner-only 0600 (#131)."""
 
@@ -382,8 +450,7 @@ class TestStateFilePermissions:
         )
         sf.append_entry(entry)
 
-        mode = stat.S_IMODE(sf.file_path.stat().st_mode)
-        assert mode == 0o600
+        assert_owner_only_mode(sf.file_path)
 
     def test_script_state_write_creates_0600(self, tmp_path):
         payload = full_payload(str(tmp_path), session_id="perm-script")
@@ -391,8 +458,7 @@ class TestStateFilePermissions:
         assert code == 0, err
         state_file = tmp_path / ".claude" / "statusline" / "statusline.perm-script.state"
         assert state_file.exists()
-        mode = stat.S_IMODE(state_file.stat().st_mode)
-        assert mode == 0o600
+        assert_owner_only_mode(state_file)
 
 
 # ---------------------------------------------------------------------------
