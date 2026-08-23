@@ -243,9 +243,7 @@ class TestRenderOnceTps:
         ]
         sf = _write_state(tmp_path, monkeypatch, entries)
         renderer = _renderer()
-        result = render_once(
-            sf, "tps", renderer, ColorManager(enabled=False), watch_mode=True, config=Config()
-        )
+        result = render_once(sf, "tps", renderer, ColorManager(enabled=False), config=Config())
         assert isinstance(result, str)
         clean = strip_ansi(result)
         assert "Throughput Trend (tokens/s)" in clean
@@ -259,9 +257,7 @@ class TestRenderOnceTps:
         ]
         sf = _write_state(tmp_path, monkeypatch, entries)
         renderer = _renderer()
-        result = render_once(
-            sf, "all", renderer, ColorManager(enabled=False), watch_mode=True, config=Config()
-        )
+        result = render_once(sf, "all", renderer, ColorManager(enabled=False), config=Config())
         assert "Throughput Trend (tokens/s)" in strip_ansi(result)
 
     def test_render_once_minutes_threads_through(self, tmp_path, monkeypatch):
@@ -278,7 +274,6 @@ class TestRenderOnceTps:
             "tps",
             renderer,
             ColorManager(enabled=False),
-            watch_mode=True,
             config=Config(),
             minutes=2,
         )

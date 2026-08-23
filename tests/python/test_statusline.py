@@ -1462,8 +1462,8 @@ class TestPacmanDisplay:
         assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
 
     def test_pacman_info_in_parts_list_package(self):
-        """pacman_info should also be concatenated after zone_info within the
-        package's single context-group part."""
+        """pacman segment should also be concatenated after zone within the
+        package's single context-group part (extracted _UsageSegments)."""
         package_path = (
             Path(__file__).parent.parent.parent
             / "src"
@@ -1474,11 +1474,13 @@ class TestPacmanDisplay:
         content = package_path.read_text(encoding="utf-8")
         parts_start = content.index("parts = [")
         parts_block = content[parts_start : parts_start + 2000]
-        assert "zone_info" in parts_block, "zone_info missing from parts list"
-        assert "pacman_info" in parts_block, "pacman_info missing from parts list"
-        zone_idx = parts_block.index("zone_info")
-        pacman_idx = parts_block.index("pacman_info")
-        assert pacman_idx > zone_idx, "pacman_info must come after zone_info in parts list"
+        assert "usage.zone" in parts_block, "zone missing from parts list"
+        assert "usage.pacman" in parts_block, "pacman missing from parts list"
+        group = parts_block.index("usage.context + usage.zone + usage.pacman")
+        assert group >= 0, "context group must stay one atomic part"
+        assert (
+            parts_block.index("usage.pacman") > parts_block.index("usage.zone") > parts_block.index("usage.context")
+        ), "pacman must come after zone after context in parts list"
 
     def test_pacman_icon_uses_zone_color(self, tmp_path):
         """The icon segment reuses the zone's traffic-light color (dark_red for ExDump)."""

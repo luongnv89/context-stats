@@ -80,6 +80,7 @@ from claude_statusline.graphs.intelligence import (
     ZONE_STD_DUMP_ZONE,
     ZONE_STD_HARD_LIMIT,
     ZONE_STD_WARN_BUFFER,
+    ZoneThresholds,
     calculate_context_pressure,
     get_context_zone,
     get_mi_color,
@@ -572,7 +573,7 @@ class TestIntelligencePairs:
     @pytest.mark.parametrize(("used", "size", "overrides"), ZONE_CASES, ids=str)
     def test_context_zone_grid(self, used, size, overrides):
         script_tuple = sl.get_context_zone(used, size, overrides or None)
-        info = get_context_zone(used, size, **overrides)
+        info = get_context_zone(used, size, ZoneThresholds(**overrides))
         assert script_tuple == (info.zone, info.color, info.recommendation)
 
 

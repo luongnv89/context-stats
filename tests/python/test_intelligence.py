@@ -18,6 +18,7 @@ from claude_statusline.graphs.intelligence import (
     ZONE_1M_D_MAX,
     ZONE_1M_P_MAX,
     ZONE_1M_X_MAX,
+    ZoneThresholds,
     calculate_context_pressure,
     calculate_intelligence,
     format_mi_score,
@@ -439,7 +440,7 @@ class TestConfigurableZoneThresholds:
         """Custom zone_1m_plan_max shifts P→C boundary."""
         # Default: 200k → Plan (< 150k P_MAX is for 150k, so 200k → Code with default).
         # With plan_max=210k → still Plan.
-        zone = get_context_zone(200_000, 1_000_000, zone_1m_plan_max=210_000)
+        zone = get_context_zone(200_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=210_000))
         assert zone.zone == "Plan"
         # Default: 200k → Code (150k–250k range)
         zone_default = get_context_zone(200_000, 1_000_000)
@@ -448,7 +449,7 @@ class TestConfigurableZoneThresholds:
     def test_1m_custom_code_max(self):
         """Custom zone_1m_code_max shifts C→D boundary."""
         # 180k is within default C range (150k–250k). With code_max=160k → Dump.
-        zone = get_context_zone(180_000, 1_000_000, zone_1m_code_max=160_000)
+        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_1m_code_max=160_000))
         assert zone.zone == "Dump"
         # Default would be Code
         zone_default = get_context_zone(180_000, 1_000_000)
@@ -457,7 +458,7 @@ class TestConfigurableZoneThresholds:
     def test_1m_custom_dump_max(self):
         """Custom zone_1m_dump_max shifts D→X boundary."""
         # 350k is within default D range (250k–400k). With dump_max=300k → ExDump.
-        zone = get_context_zone(350_000, 1_000_000, zone_1m_dump_max=300_000)
+        zone = get_context_zone(350_000, 1_000_000, ZoneThresholds(zone_1m_dump_max=300_000))
         assert zone.zone == "ExDump"
         # Default would be Dump
         zone_default = get_context_zone(350_000, 1_000_000)
@@ -466,7 +467,7 @@ class TestConfigurableZoneThresholds:
     def test_1m_custom_xdump_max(self):
         """Custom zone_1m_xdump_max shifts X→Z boundary."""
         # 430k is within default X range (400k–450k). With xdump_max=420k → Dead.
-        zone = get_context_zone(430_000, 1_000_000, zone_1m_xdump_max=420_000)
+        zone = get_context_zone(430_000, 1_000_000, ZoneThresholds(zone_1m_xdump_max=420_000))
         assert zone.zone == "Dead"
         # Default would be ExDump
         zone_default = get_context_zone(430_000, 1_000_000)
@@ -477,7 +478,7 @@ class TestConfigurableZoneThresholds:
     def test_std_custom_dump_ratio(self):
         """Custom zone_std_dump_ratio shifts dump zone start."""
         # 200k model, 50% dump ratio → dump at 100k. With 0.30 → dump at 60k.
-        zone = get_context_zone(70_000, 200_000, zone_std_dump_ratio=0.30)
+        zone = get_context_zone(70_000, 200_000, ZoneThresholds(zone_std_dump_ratio=0.30))
         assert zone.zone == "Dump"
         # Default 0.40 → 80k dump zone, warn_start=50k, 70k → Code
         zone_default = get_context_zone(70_000, 200_000)
@@ -485,7 +486,7 @@ class TestConfigurableZoneThresholds:
 
     def test_std_custom_hard_limit(self):
         """Custom zone_std_hard_limit shifts hard limit."""
-        zone = get_context_zone(110_000, 200_000, zone_std_hard_limit=0.50)
+        zone = get_context_zone(110_000, 200_000, ZoneThresholds(zone_std_hard_limit=0.50))
         assert zone.zone == "ExDump"
         # Default 0.70 → 140k hard limit, 110k → Dump
         zone_default = get_context_zone(110_000, 200_000)
@@ -494,7 +495,7 @@ class TestConfigurableZoneThresholds:
     def test_std_custom_dead_ratio(self):
         """Custom zone_std_dead_ratio shifts dead zone start."""
         # Default: dead at 75% (150k). With 0.72 → dead at 144k.
-        zone = get_context_zone(145_000, 200_000, zone_std_dead_ratio=0.72)
+        zone = get_context_zone(145_000, 200_000, ZoneThresholds(zone_std_dead_ratio=0.72))
         assert zone.zone == "Dead"
         # Default: 145k is between hard_limit (140k) and dead (150k) → ExDump
         zone_default = get_context_zone(145_000, 200_000)
@@ -506,9 +507,9 @@ class TestConfigurableZoneThresholds:
         """Custom large_model_threshold changes which model set is used."""
         # 400k context. Default threshold=500k → standard model.
         # With threshold=300k → treated as 1M model.
-        zone = get_context_zone(100_000, 400_000, large_model_threshold=300_000)
+        zone = get_context_zone(100_000, 400_000, ZoneThresholds(large_model_threshold=300_000))
         assert zone.zone == "Plan"  # Uses 1M thresholds (< 150k)
-        zone2 = get_context_zone(200_000, 400_000, large_model_threshold=300_000)
+        zone2 = get_context_zone(200_000, 400_000, ZoneThresholds(large_model_threshold=300_000))
         assert zone2.zone == "Code"  # 1M: 150k–250k
 
     # --- Zero override = use default ---
@@ -516,7 +517,7 @@ class TestConfigurableZoneThresholds:
     def test_zero_override_uses_default(self):
         """Override of 0 falls back to module-level default."""
         # 200k is in the Code zone (150k–250k) with default thresholds.
-        zone = get_context_zone(200_000, 1_000_000, zone_1m_plan_max=0)
+        zone = get_context_zone(200_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=0))
         assert zone.zone == "Code"  # Same as default (150k boundary)
 
 
@@ -715,3 +716,62 @@ class TestPacmanIcon:
             assert zone.zone == expected_zone
             icon = get_pacman_icon(zone.zone)
             assert icon == PACMAN_ICONS[expected_zone]
+
+
+# ---------------------------------------------------------------------------
+# Task 5.6 (#147) — F-CLEAN-006 structure guard + boundary table
+# ---------------------------------------------------------------------------
+
+
+class TestGetContextZoneStructure:
+    def test_get_context_zone_within_line_budget(self):
+        """get_context_zone stays <= 60 lines via the ZoneThresholds bundle."""
+        import ast
+
+        import claude_statusline.graphs.intelligence as intel_mod
+
+        source = Path(intel_mod.__file__).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        sizes = {
+            n.name: n.end_lineno - n.lineno + 1
+            for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef) and n.name == "get_context_zone"
+        }
+        assert sizes.get("get_context_zone", 10**9) <= 60
+
+    def test_zone_thresholds_from_config_roundtrip(self):
+        from claude_statusline.core.config import Config
+
+        config = Config()
+        config.zone_1m_plan_max = 160_000
+        config.zone_std_dump_ratio = 0.45
+        thresholds = ZoneThresholds.from_config(config)
+        assert thresholds == ZoneThresholds(zone_1m_plan_max=160_000, zone_std_dump_ratio=0.45)
+        # Lookup-table expansion feeds context_zone_tuple's exact kwargs
+        assert thresholds.overrides()["zone_1m_plan_max"] == 160_000
+
+    @pytest.mark.parametrize(
+        ("used", "size", "expected"),
+        [
+            # 1M boundaries: P|C at 150k, C|D at 250k, D|X at 400k, X|Z at 450k
+            (ZONE_1M_P_MAX - 1, 1_000_000, "Plan"),
+            (ZONE_1M_P_MAX, 1_000_000, "Code"),
+            (ZONE_1M_C_MAX - 1, 1_000_000, "Code"),
+            (ZONE_1M_C_MAX, 1_000_000, "Dump"),
+            (ZONE_1M_D_MAX - 1, 1_000_000, "Dump"),
+            (ZONE_1M_D_MAX, 1_000_000, "ExDump"),
+            (ZONE_1M_X_MAX - 1, 1_000_000, "ExDump"),
+            (ZONE_1M_X_MAX, 1_000_000, "Dead"),
+            # Standard 200k boundaries via ratio defaults:
+            # dump 40% (80k), hard limit 70% (140k), dead 75% (150k)
+            (79_999, 200_000, "Code"),
+            (80_000, 200_000, "Dump"),
+            (139_999, 200_000, "Dump"),
+            (140_000, 200_000, "ExDump"),
+            (149_999, 200_000, "ExDump"),
+            (150_000, 200_000, "Dead"),
+        ],
+    )
+    def test_zone_boundaries_table(self, used, size, expected):
+        """Every zone boundary keeps its pre-refactor output through the bundle."""
+        assert get_context_zone(used, size).zone == expected

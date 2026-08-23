@@ -6,7 +6,22 @@ from __future__ import annotations
 # the same bodies from claude_statusline._shared / its vendored copy.
 from claude_statusline._shared import BLUE, BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, YELLOW
 from claude_statusline._shared import COLOR_NAMES as COLOR_NAMES
+from claude_statusline._shared import (
+    ZONE_DARK_RED_ANSI as ZONE_DARK_RED_ANSI,
+)
+from claude_statusline._shared import (
+    ZONE_GRAY_ANSI as ZONE_GRAY_ANSI,
+)
+from claude_statusline._shared import (
+    ZONE_ORANGE_ANSI as ZONE_ORANGE_ANSI,
+)
 from claude_statusline._shared import parse_color as parse_color
+
+# Structural segment separators (Task 5.6, F-CLEAN-008): single home for the
+# literal glue the statusline segments are assembled from, so the CLI layer
+# carries no formatting literals.
+SEGMENT_SEPARATOR = " | "
+INLINE_SEPARATOR = "·"
 
 
 class ColorManager:
@@ -129,3 +144,25 @@ class ColorManager:
     @property
     def reset(self) -> str:
         return RESET if self.enabled else ""
+
+    def zone_color(self, color_name: str) -> str:
+        """Traffic-light ANSI for a zone color name (Task 5.6, F-CLEAN-008).
+
+        Maps the zone indicator's ``color`` field ("green", "yellow",
+        "orange", "dark_red", "gray") to its ANSI sequence: green/yellow go
+        through the override-aware slots, orange/dark_red/gray use the fixed
+        shared RGB constants. Unknown names fall back to the reset code.
+        Returns "" entirely when colors are disabled.
+        """
+        if color_name == "green":
+            return self.green
+        if color_name == "yellow":
+            return self.yellow
+        fixed = {
+            "orange": ZONE_ORANGE_ANSI,
+            "dark_red": ZONE_DARK_RED_ANSI,
+            "gray": ZONE_GRAY_ANSI,
+        }
+        if color_name in fixed:
+            return fixed[color_name] if self.enabled else ""
+        return self.reset
