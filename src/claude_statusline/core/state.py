@@ -322,11 +322,15 @@ class StateFile:
     def append_entry(self, entry: StateEntry) -> None:
         """Append an entry to the state file.
 
+        The file is created with owner-only permissions (0600) — state rows
+        carry session ids and costs, matching the pr-number-cache precedent.
+
         Args:
             entry: StateEntry to append
         """
         try:
-            with open(self.file_path, "a") as f:
+            fd = os.open(self.file_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "w") as f:
                 f.write(f"{entry.to_csv_line()}\n")
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to write state {self.file_path}: {e}\n")

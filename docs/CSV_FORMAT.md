@@ -29,6 +29,7 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 - Numeric fields default to `0` when absent. String fields default to empty string.
 - Lines are newline-terminated (`\n`).
 - Files are append-only.
+- Newly created files get owner-only `0600` permissions (rows carry session ids and costs).
 - Files are automatically rotated at 10,000 lines (keeps most recent 5,000) by the Python statusline script.
 - Duplicate entries (same token count as previous line) are skipped to prevent file bloat.
 
