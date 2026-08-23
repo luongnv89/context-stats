@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Publish toolchain floor: twine 7** — The `dev` extra now requires `twine>=7.0.0` (was `>=4.0.0`). The documented publish procedure (`twine check` / `twine upload`) is unchanged, but twine 7 no longer accepts metadata version 2.0 artifacts on upload; this project's hatchling-built dists emit metadata 2.5 and pass `twine check` unchanged (#135)
 
+### Fixed
+
+- **UTF-8 stdout guard drift (F-BUG-010)** — `context-stats` CLI now reuses the guarded `_ensure_utf8_stdout` implementation from `cli/statusline.py` instead of its own unguarded copy, so streams without `reconfigure()` (pytest capture, StringIO stand-ins) can no longer crash the CLI. Covered by the new parity suite (#136)
+
+### Added
+
+- **Cross-implementation parity suite** — `tests/python/test_parity.py` imports every synced symbol pair from the CLAUDE.md sync-points table and asserts behavioral equivalence over shared fixtures (constant equality, pure-function grids, rotation/migration/config flows, and byte-identical full renders through both entry points), with a registry test that fails when the table grows without coverage. Closes F-TEST-001 (#136)
+
 ## [1.24.0] - 2026-06-17
 
 ### Added
