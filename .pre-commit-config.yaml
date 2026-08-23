@@ -13,10 +13,15 @@ repos:
       - id: check-yaml
       - id: check-json
       - id: check-toml
+      # Generated golden fixtures are byte-compared against tool output in
+      # tests; they must never be rewritten by whitespace hooks.
       - id: end-of-file-fixer
+        exclude: ^tests/python/fixtures/
       - id: trailing-whitespace
+        exclude: ^tests/python/fixtures/
       - id: mixed-line-ending
         args: ['--fix=lf']
+        exclude: ^tests/python/fixtures/
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
       - id: detect-private-key
@@ -50,6 +55,9 @@ repos:
     hooks:
       - id: markdownlint
         args: ['--fix', '--disable', 'MD013', 'MD024', 'MD033', 'MD040', 'MD041', '--']
+        # Golden fixtures are generated output pinned byte-exactly by tests;
+        # table-style rules (MD060) do not apply to them.
+        exclude: ^tests/python/fixtures/
 
   # E2E clean install smoke tests (local script)
   - repo: local

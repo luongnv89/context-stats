@@ -1479,7 +1479,9 @@ class TestPacmanDisplay:
         group = parts_block.index("usage.context + usage.zone + usage.pacman")
         assert group >= 0, "context group must stay one atomic part"
         assert (
-            parts_block.index("usage.pacman") > parts_block.index("usage.zone") > parts_block.index("usage.context")
+            parts_block.index("usage.pacman")
+            > parts_block.index("usage.zone")
+            > parts_block.index("usage.context")
         ), "pacman must come after zone after context in parts list"
 
     def test_pacman_icon_uses_zone_color(self, tmp_path):

@@ -210,9 +210,7 @@ class TestRenderOnceEdges:
             _entry(timestamp=now_ts - 2),
         ]
         sf = _write_state(entries)
-        result = cs.render_once(
-            sf, "delta", _FakeRenderer(buffer=""), _Colors(), config=_Config()
-        )
+        result = cs.render_once(sf, "delta", _FakeRenderer(buffer=""), _Colors(), config=_Config())
         # Last entry within is_active's 30s window → rotating waiting text shown.
         assert "Working..." in result  # reduced_motion=True static text
 
