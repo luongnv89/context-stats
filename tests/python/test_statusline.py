@@ -630,9 +630,7 @@ class TestPRDisplay:
             "{not json at all",  # corrupt
         ],
     )
-    def test_pr_cache_get_corrupt_cache_returns_miss_package(
-        self, tmp_path, monkeypatch, payload
-    ):
+    def test_pr_cache_get_corrupt_cache_returns_miss_package(self, tmp_path, monkeypatch, payload):
         """A corrupt/partial cache file yields a miss, never an exception (#126)."""
         from claude_statusline.core import git as git_mod
 
@@ -685,7 +683,9 @@ class TestPRDisplay:
             calls["gh"] += 1
             return subprocess.CompletedProcess(cmd, gh_rc, stdout=gh_stdout, stderr="error")
 
-        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr(
+            "shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+        )
         monkeypatch.setattr("subprocess.run", mock_run)
 
         assert git_mod._get_pr_number(tmp_path) == ""
@@ -705,9 +705,7 @@ class TestPRDisplay:
             ("not json", 0),
         ],
     )
-    def test_gh_failure_negative_cached_standalone(
-        self, tmp_path, monkeypatch, gh_stdout, gh_rc
-    ):
+    def test_gh_failure_negative_cached_standalone(self, tmp_path, monkeypatch, gh_stdout, gh_rc):
         """Standalone copy: gh failure is negatively cached for one retry window."""
         from scripts import statusline as sl
 
@@ -719,7 +717,9 @@ class TestPRDisplay:
             calls["gh"] += 1
             return subprocess.CompletedProcess(cmd, gh_rc, stdout=gh_stdout, stderr="error")
 
-        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr(
+            "shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+        )
         monkeypatch.setattr("subprocess.run", mock_run)
 
         assert sl.get_pr_number(str(tmp_path)) == ""
@@ -739,7 +739,9 @@ class TestPRDisplay:
                 return subprocess.CompletedProcess(cmd, 0, stdout="feature-branch\n", stderr="")
             raise subprocess.TimeoutExpired(cmd, 5)
 
-        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr(
+            "shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+        )
         monkeypatch.setattr("subprocess.run", mock_run)
 
         assert git_mod._get_pr_number(tmp_path) == ""
@@ -765,7 +767,9 @@ class TestPRDisplay:
             return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error")
 
         monkeypatch.setattr(git_mod.time, "time", mock_time)
-        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr(
+            "shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+        )
         monkeypatch.setattr("subprocess.run", mock_run)
 
         assert git_mod._get_pr_number(tmp_path) == ""
@@ -794,7 +798,9 @@ class TestPRDisplay:
             return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error")
 
         monkeypatch.setattr(sl.time, "time", mock_time)
-        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git")
+        monkeypatch.setattr(
+            "shutil.which", lambda cmd: "/usr/bin/gh" if cmd == "gh" else "/usr/bin/git"
+        )
         monkeypatch.setattr("subprocess.run", mock_run)
 
         assert sl.get_pr_number(str(tmp_path)) == ""
