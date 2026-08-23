@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from claude_statusline._shared import AUTOCOMPACT_RATIO
+
 
 def format_tokens(count: int, detail: bool = True) -> str:
     """Format token count for display.
@@ -28,7 +30,7 @@ def calculate_context_usage(
     used_tokens: int,
     total_size: int,
     autocompact_enabled: bool = True,
-    autocompact_ratio: float = 0.225,
+    autocompact_ratio: float = AUTOCOMPACT_RATIO,
 ) -> tuple[int, float, int]:
     """Calculate context window usage statistics.
 

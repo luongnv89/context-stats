@@ -37,6 +37,7 @@ import subprocess
 import sys
 import time
 import traceback
+from typing import Any, NamedTuple
 
 try:
     import fcntl
@@ -127,10 +128,15 @@ _ZONE_RECOMMENDATIONS = _shared._ZONE_RECOMMENDATIONS
 COMPACTION_DROP_THRESHOLD = _shared.COMPACTION_DROP_THRESHOLD
 COMPACT_MI_WARN_THRESHOLD = _shared.COMPACT_MI_WARN_THRESHOLD
 
+# Fraction of the context window reserved as the autocompact buffer
+# (22.5% — 45k of a 200k window). Shared with the package via _shared.
+_AUTOCOMPACT_RATIO = _shared.AUTOCOMPACT_RATIO
+
 PACMAN_ICONS = _shared.PACMAN_ICONS
 
-# ANSI Colors (defaults, overridable via config — GREEN/YELLOW/RED are
-# reassigned by _render from config color overrides)
+# ANSI Colors (defaults, overridable via config — config overrides travel
+# through an explicit _Palette (see _resolve_palette); these module constants
+# are never reassigned)
 BLUE = _shared.BLUE
 MAGENTA = _shared.MAGENTA
 CYAN = _shared.CYAN
@@ -197,19 +203,55 @@ _pr_cache_get = _shared._pr_cache_get
 _pr_cache_set = _shared._pr_cache_set
 
 
-def _mi_color_ansi(mi, utilization=0.0):
-    """ANSI color for an MI score, honoring config overrides of the script palette."""
-    return {"red": RED, "yellow": YELLOW, "green": GREEN}[_shared.mi_color_name(mi, utilization)]
+class _Palette(NamedTuple):
+    """Immutable traffic-light palette resolved from config overrides.
+
+    F-CLEAN-009: config ``color_*`` overrides used to be applied by
+    reassigning the module-level GREEN/YELLOW/RED globals from inside
+    ``_render``; they are now carried explicitly by this value and passed to
+    every helper that colors MI scores or zone labels.
+    """
+
+    green: str
+    yellow: str
+    red: str
+    reset: str
+
+
+_DEFAULT_PALETTE = _Palette(green=GREEN, yellow=YELLOW, red=RED, reset=RESET)
+
+
+def _resolve_palette(overrides):
+    """Resolve color-config overrides into an explicit palette.
+
+    Module palette constants are never reassigned (F-CLEAN-009); callers pass
+    the returned palette onward instead of mutating shared state.
+    """
+    return _Palette(
+        green=overrides.get("green", _DEFAULT_PALETTE.green),
+        yellow=overrides.get("yellow", _DEFAULT_PALETTE.yellow),
+        red=overrides.get("red", _DEFAULT_PALETTE.red),
+        reset=_DEFAULT_PALETTE.reset,
+    )
+
+
+def _mi_color_ansi(mi, utilization=0.0, palette=None):
+    """ANSI color for an MI score, honoring config overrides via ``palette``."""
+    p = palette if palette is not None else _DEFAULT_PALETTE
+    return {"red": p.red, "yellow": p.yellow, "green": p.green}[
+        _shared.mi_color_name(mi, utilization)
+    ]
 
 
 # Parity row "MI colors": same tier decision as graphs/intelligence.get_mi_color,
-# rendered through this script's overridable palette globals.
+# rendered through the explicit palette parameter.
 get_mi_color = _mi_color_ansi
 
 
-def _zone_ansi_color(color_name):
-    """Map zone color name to ANSI escape code using the script palette."""
-    return _shared.zone_ansi_code(color_name, green=GREEN, yellow=YELLOW, reset=RESET)
+def _zone_ansi_color(color_name, palette=None):
+    """Map zone color name to ANSI escape code using the given palette."""
+    p = palette if palette is not None else _DEFAULT_PALETTE
+    return _shared.zone_ansi_code(color_name, green=p.green, yellow=p.yellow, reset=p.reset)
 
 
 def _context_zone_from_config(used_tokens, context_window_size, zone_config=None):
@@ -833,352 +875,428 @@ def main():
         sys.stdout.write("[Claude] ~\n")
 
 
-def _render(data):
-    """Render the status line for an already-parsed stdin payload."""
-    # Extract data — every lookup treats explicit JSON null like an absent key
+
+# ---------------------------------------------------------------------------
+# Render pipeline phases (Task 5.4, F-CLEAN-001)
+#
+# ``_render`` stays a small orchestrator; each phase below owns one concern,
+# mirroring the package's structure: palette resolution stands in for
+# ColorManager, the state helpers for StateFile, and the context computation
+# for calculate_context_usage. Config color overrides travel through an
+# explicit _Palette instead of module-global mutation (F-CLEAN-009).
+# ---------------------------------------------------------------------------
+
+
+class _RenderInputs(NamedTuple):
+    """Everything one render consumes from the stdin payload."""
+
+    dir_name: str
+    project_dir: str
+    model: str
+    model_id: str
+    thinking_budget: Any
+    effort_level: Any
+    session_id: Any
+    total_size: int
+    current_usage: Any
+    total_input_tokens: int
+    total_output_tokens: int
+    cost_usd: Any
+    lines_added: int
+    lines_removed: int
+    api_duration_ms: int
+    workspace_project_dir: str
+
+
+def _validated_session_id(data):
+    """Extract ``session_id``, degrading to None when unsafe.
+
+    Path-traversal defense (F-BUG-002): a session_id carrying '/', '\\',
+    '..' or null bytes must never reach state-file path construction.
+    """
+    session_id = _extract(data, "session_id")
+    if session_id is None:
+        return None
+    try:
+        _validate_session_id(session_id)
+    except ValueError as e:
+        sys.stderr.write(f"[statusline] warning: {e}\n")
+        return None
+    return session_id
+
+
+def _extract_render_inputs(data):
+    """Phase: extract every stdin payload field this render needs.
+
+    Every lookup treats explicit JSON null like an absent key (via
+    ``_extract``). Thinking budget and reasoning effort are forward-compatible
+    fields that may arrive as explicit null or an unexpected shape;
+    isinstance guards keep such shapes from crashing the refresh.
+    """
     workspace_data = _extract(data, "workspace", {})
     cwd = _extract(workspace_data, "current_dir", "~")
     project_dir = _extract(workspace_data, "project_dir", cwd)
     model_data = _extract(data, "model", {})
-    model = _extract(model_data, "display_name", "Claude")
-    # Extract thinking budget if present (forward-compatible: Claude Code may send this)
     thinking_budget = model_data.get("thinking_budget") or (
         model_data.get("thinking", {}).get("budget")
         if isinstance(model_data.get("thinking"), dict)
         else None
     )
-    # Reasoning effort level (low/medium/high/xhigh/max) if Claude Code sends it.
-    # `effort` is conditionally present and may arrive as explicit null or an
-    # unexpected shape; guard with isinstance so a non-dict value cannot crash
-    # the whole statusline (mirrors the `thinking` extraction above).
     effort_data = data.get("effort")
     effort_level = effort_data.get("level") if isinstance(effort_data, dict) else None
-    dir_name = os.path.basename(cwd) or "~"
+    context_data = _extract(data, "context_window", {})
+    cost_data = _extract(data, "cost", {})
+    return _RenderInputs(
+        dir_name=os.path.basename(cwd) or "~",
+        project_dir=project_dir,
+        model=_extract(model_data, "display_name", "Claude"),
+        model_id=_extract(model_data, "id", ""),
+        thinking_budget=thinking_budget,
+        effort_level=effort_level,
+        session_id=_validated_session_id(data),
+        total_size=_extract(context_data, "context_window_size", 0),
+        current_usage=_extract(context_data, "current_usage"),
+        total_input_tokens=_extract(context_data, "total_input_tokens", 0),
+        total_output_tokens=_extract(context_data, "total_output_tokens", 0),
+        cost_usd=_extract(cost_data, "total_cost_usd", 0) or 0,
+        lines_added=_extract(cost_data, "total_lines_added", 0),
+        lines_removed=_extract(cost_data, "total_lines_removed", 0),
+        api_duration_ms=_extract(cost_data, "total_api_duration_ms", 0),
+        workspace_project_dir=_extract(workspace_data, "project_dir", ""),
+    )
 
-    # Read settings from config file
-    config = read_config()
-    autocompact_enabled = config["autocompact"]
-    token_detail = config["token_detail"]
-    show_delta = config["show_delta"]
-    show_session = config["show_session"]
-    show_mi = config["show_mi"]
-    mi_curve_beta = config["mi_curve_beta"]
-    show_tps = config["show_tps"]
-    tps_precision = config["tps_precision"]
-    tps_unit = config["tps_unit"]
-    tps_window = config["tps_window"]
-    show_pr = config["show_pr"]
-    show_cost = config["show_cost"]
-    show_effort = config["show_effort"]
-    show_pacman = config["show_pacman"]
-    # Note: show_io_tokens setting is read but not yet implemented
 
-    # Apply color overrides from config
+def _resolve_render_colors(config):
+    """Phase: resolve config color overrides into palette + property colors.
+
+    Returns ``(palette, raw_overrides, prop)`` where ``prop`` carries the
+    per-property segment colors (with their backward-compatible fallbacks)
+    and ``raw_overrides`` is the unparsed ``colors`` config dict used for the
+    context_length/zone/mi_score property overrides.
+    """
     c = config.get("colors", {})
-    # Color overrides applied via module globals for MI/context coloring
-    # pylint: disable=global-statement
-    global GREEN, YELLOW, RED  # noqa: PLW0603
-    GREEN = c.get("green", GREEN)
-    YELLOW = c.get("yellow", YELLOW)
-    RED = c.get("red", RED)
+    palette = _resolve_palette(c)
     c_blue = c.get("blue", BLUE)
     c_magenta = c.get("magenta", MAGENTA)
-    c_cyan = c.get("cyan", CYAN)
+    separator = c.get("separator", DIM)
+    prop = {
+        # Per-property color defaults (highlighted key info). Falls back to
+        # old color keys for backward compatibility, then to new defaults.
+        "project_name": c.get("project_name", c_blue if "blue" in c else CYAN),
+        "branch_name": c.get(
+            "branch_name", c_magenta if "magenta" in c else palette.green
+        ),
+        "separator": separator,
+        # Structural elements default to the separator color, but each can be
+        # overridden independently (color_tps / color_delta / color_model / ...).
+        "tps": c.get("tps", separator),
+        "delta": c.get("delta", separator),
+        "cost": c.get("cost", separator),
+        "model": c.get("model", separator),
+        "session": c.get("session", separator),
+    }
+    return palette, c, prop
 
-    # Per-property color defaults (highlighted key info)
-    # Falls back to old color keys for backward compatibility, then to new defaults
-    c_project_name = c.get("project_name", c_blue if "blue" in c else CYAN)
-    c_branch_name = c.get("branch_name", c_magenta if "magenta" in c else GREEN)
-    c_separator = c.get("separator", DIM)
 
-    # Structural elements default to the separator color, but each can be
-    # overridden independently (color_tps / color_delta / color_model / color_session).
-    c_tps = c.get("tps", c_separator)
-    c_delta = c.get("delta", c_separator)
-    c_cost = c.get("cost", c_separator)
-    c_model = c.get("model", c_separator)
-    c_session = c.get("session", c_separator)
+def _repo_segments(project_dir, config, prop):
+    """Phase: git info + PR number, gated on the trusted project dir.
 
-    # Git info (use per-property branch color, fallback to green). Gated on
-    # the resolved project dir — see _resolve_project_dir (F-SEC-002).
-    safe_project_dir = _resolve_project_dir(project_dir)
+    See ``_resolve_project_dir`` (F-SEC-002): git/gh only run inside a
+    verified-existing directory.
+    """
     git_info = ""
-    if safe_project_dir:
-        git_info = get_git_info(safe_project_dir, magenta=c_branch_name, cyan=c_cyan)
-
-    session_id = _extract(data, "session_id")
-    if session_id is not None:
-        # Path-traversal defense (F-BUG-002): a session_id carrying '/', '\',
-        # '..' or null bytes must never reach state-file path construction.
-        try:
-            _validate_session_id(session_id)
-        except ValueError as e:
-            sys.stderr.write(f"[statusline] warning: {e}\n")
-            session_id = None
-
-    # Context window calculation
-    context_info = ""
-    delta_info = ""
-    mi_info = ""
-    tps_info = ""
-    cost_info = ""
-    zone_info = ""
-    pacman_info = ""
-    session_info = ""
     pr_info = ""
-
-    # PR number lookup
-    if show_pr and safe_project_dir:
+    safe_project_dir = _resolve_project_dir(project_dir)
+    if safe_project_dir:
+        c_cyan = config.get("colors", {}).get("cyan", CYAN)
+        git_info = get_git_info(safe_project_dir, magenta=prop["branch_name"], cyan=c_cyan)
+    if config["show_pr"] and safe_project_dir:
         pr_num = get_pr_number(safe_project_dir)
         if pr_num:
-            pr_info = f" | {c_separator}{pr_num}{RESET}"
-    context_data = _extract(data, "context_window", {})
-    total_size = _extract(context_data, "context_window_size", 0)
-    current_usage = _extract(context_data, "current_usage")
-    total_input_tokens = _extract(context_data, "total_input_tokens", 0)
-    total_output_tokens = _extract(context_data, "total_output_tokens", 0)
-    cost_data = _extract(data, "cost", {})
-    cost_usd = _extract(cost_data, "total_cost_usd", 0) or 0
-    lines_added = _extract(cost_data, "total_lines_added", 0)
-    lines_removed = _extract(cost_data, "total_lines_removed", 0)
-    api_duration_ms = _extract(cost_data, "total_api_duration_ms", 0)
-    model_id = _extract(model_data, "id", "")
-    workspace_project_dir = _extract(workspace_data, "project_dir", "")
+            pr_info = f" | {prop['separator']}{pr_num}{RESET}"
+    return git_info, pr_info
 
-    if total_size > 0 and current_usage:
-        # Get tokens from current_usage (includes cache)
-        input_tokens = current_usage.get("input_tokens", 0)
-        cache_creation = current_usage.get("cache_creation_input_tokens", 0)
-        cache_read = current_usage.get("cache_read_input_tokens", 0)
 
-        # Total used from current request
-        used_tokens = input_tokens + cache_creation + cache_read
+def _context_segments(inputs, config, palette):
+    """Phase: free-token budget + zone label + pacman icon.
 
-        # Calculate autocompact buffer (22.5% of context window = 45k for 200k)
-        autocompact_buffer = int(total_size * 0.225)
+    Returns ``(used_tokens, cache_creation, context_info, zone_info,
+    pacman_info)``. Callers gate on ``total_size > 0 and current_usage``.
+    """
+    current_usage = inputs.current_usage
+    input_tokens = current_usage.get("input_tokens", 0)
+    cache_creation = current_usage.get("cache_creation_input_tokens", 0)
+    cache_read = current_usage.get("cache_read_input_tokens", 0)
 
-        # Free tokens calculation depends on autocompact setting
-        if autocompact_enabled:
-            free_tokens = total_size - used_tokens - autocompact_buffer
-        else:
-            free_tokens = total_size - used_tokens
+    # Total used from current request
+    used_tokens = input_tokens + cache_creation + cache_read
 
-        if free_tokens < 0:
-            free_tokens = 0
+    # Calculate autocompact buffer (_AUTOCOMPACT_RATIO of window = 45k for 200k)
+    autocompact_buffer = int(inputs.total_size * _AUTOCOMPACT_RATIO)
 
-        # Calculate percentage with one decimal (relative to total size)
-        free_pct = (free_tokens * 100.0) / total_size
+    # Free tokens calculation depends on autocompact setting
+    if config["autocompact"]:
+        free_tokens = inputs.total_size - used_tokens - autocompact_buffer
+    else:
+        free_tokens = inputs.total_size - used_tokens
 
-        # Format tokens based on token_detail setting
-        if token_detail:
-            free_display = f"{free_tokens:,}"
-        else:
-            free_display = f"{free_tokens / 1000:.1f}k"
+    if free_tokens < 0:
+        free_tokens = 0
 
-        # Zone indicator — determines color for both context info and zone label
-        zone_word, zone_color_name, zone_recommendation = get_context_zone(
-            used_tokens, total_size, config.get("zone_config")
+    # Calculate percentage with one decimal (relative to total size)
+    free_pct = (free_tokens * 100.0) / inputs.total_size
+
+    # Format tokens based on token_detail setting
+    if config["token_detail"]:
+        free_display = f"{free_tokens:,}"
+    else:
+        free_display = f"{free_tokens / 1000:.1f}k"
+
+    # Zone indicator — determines color for both context info and zone label
+    zone_word, zone_color_name, zone_recommendation = get_context_zone(
+        used_tokens, inputs.total_size, config.get("zone_config")
+    )
+    zone_ansi = _zone_ansi_color(zone_color_name, palette)
+
+    c = config.get("colors", {})
+    # Context info uses zone color (traffic-light), with per-property override
+    effective_ctx_color = c.get("context_length", zone_ansi)
+
+    context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
+
+    # Zone label uses same color, with per-property override
+    effective_zone_color = c.get("zone", zone_ansi)
+    zone_info = f"·{effective_zone_color}{zone_word}{RESET}"
+
+    # Pacman-style icon reflecting the same zone — on by default.
+    pacman_info = ""
+    if config["show_pacman"]:
+        pacman_glyph = get_pacman_icon(zone_word)
+        if pacman_glyph:
+            pacman_info = f"·{effective_zone_color}{pacman_glyph}{RESET}"
+
+    return used_tokens, cache_creation, context_info, zone_info, pacman_info
+
+
+class _StateContext(NamedTuple):
+    """Prior-refresh state feeding the delta / MI / tok/s phases."""
+
+    state_file: str
+    has_prev: bool
+    prev_tokens: int
+    tps_samples: list
+
+
+def _load_state_history(state_file, show_tps, tps_window):
+    """Read the previous row (+ bounded tok/s tail) from ``state_file``.
+
+    Read failures degrade to "no previous usage" with a stderr warning
+    instead of killing the refresh.
+    """
+    has_prev = False
+    prev_tokens = 0
+    # Rolling tok/s samples: (output_tokens, api_duration_ms) per row,
+    # in chronological order. Only collected when show_tps is on.
+    tps_samples = []
+    try:
+        if os.path.exists(state_file):
+            has_prev = True
+            # Read all lines: last line drives delta/dedup; a bounded
+            # *tail* (when show_tps) feeds the rolling-average
+            # reconstruction. compute_tps only needs the last
+            # ``tps_window`` valid turns, so we parse at most the last
+            # ``_tps_tail_size(tps_window)`` rows instead of the whole
+            # file — matching the full-read value while bounding work.
+            with open(state_file) as f:
+                file_lines = f.readlines()
+                if file_lines:
+                    # Last line drives delta/dedup via parse_state_row
+                    # (F-CLEAN-007): one parser serves the last-entry read
+                    # and the bounded tail below. A trailing comma-bearing
+                    # row that fails to parse degrades to "no previous
+                    # usage" (prev_tokens stays 0) instead of killing the
+                    # whole tok/s sample collection like the old
+                    # index-magic path did on a ValueError.
+                    last_line = file_lines[-1].strip()
+                    parsed_last = parse_state_row(last_line)
+                    if parsed_last is not None:
+                        # Previous context usage: cur_input[3] +
+                        # cache_creation[5] + cache_read[6].
+                        prev_tokens = (
+                            parsed_last["current_input_tokens"]
+                            + parsed_last["cache_creation"]
+                            + parsed_last["cache_read"]
+                        )
+                    elif "," not in last_line:
+                        # Old format - single value
+                        prev_tokens = int(last_line or 0)
+                    if show_tps:
+                        # Reconstruct (output[4], api_duration[14]) for
+                        # each tail row. Legacy rows lack index 14 -> 0,
+                        # which compute_tps treats as "no prior reading".
+                        # Walk backward collecting up to tail_n parseable
+                        # rows (mirrors StateFile.read_tail's by-entry
+                        # bound), then restore chronological order.
+                        tail_n = _tps_tail_size(tps_window)
+                        for line in reversed(file_lines):
+                            parsed = parse_state_row(line)
+                            if parsed is None:
+                                continue
+                            tps_samples.append(
+                                (parsed["output_tokens"], parsed["api_duration_ms"])
+                            )
+                            if len(tps_samples) >= tail_n:
+                                break
+                        tps_samples.reverse()
+    except (OSError, ValueError) as e:
+        sys.stderr.write(f"[statusline] warning: failed to read state file: {e}\n")
+        prev_tokens = 0
+        tps_samples = []
+    return has_prev, prev_tokens, tps_samples
+
+
+def _open_state_context(session_id, show_tps, tps_window):
+    """Locate (and migrate) the session state file, reading prior history."""
+    state_dir = os.path.expanduser("~/.claude/statusline")
+    os.makedirs(state_dir, exist_ok=True)
+
+    _migrate_legacy_state_files(state_dir, os.path.expanduser("~/.claude"))
+
+    if session_id:
+        state_file = os.path.join(state_dir, f"statusline.{session_id}.state")
+    else:
+        state_file = os.path.join(state_dir, "statusline.state")
+    has_prev, prev_tokens, tps_samples = _load_state_history(
+        state_file, show_tps, tps_window
+    )
+    return _StateContext(state_file, has_prev, prev_tokens, tps_samples)
+
+
+def _delta_segment(state_ctx, used_tokens, token_detail, color):
+    """Segment: "+N" tokens since the previous refresh (deduped)."""
+    delta = used_tokens - state_ctx.prev_tokens
+    if not (state_ctx.has_prev and delta > 0):
+        return ""
+    if token_detail:
+        delta_display = f"{delta:,}"
+    else:
+        delta_display = f"{delta / 1000:.1f}k"
+    return f" | {color}+{delta_display}{RESET}"
+
+
+def _mi_segment(used_tokens, total_size, model_id, mi_curve_beta, overrides, palette):
+    """Segment: model-intelligence score colored by its traffic-light tier."""
+    mi_val = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
+    mi_util = used_tokens / total_size if total_size > 0 else 0.0
+    mi_color = _mi_color_ansi(mi_val, mi_util, palette)
+    # Use per-property mi_score color if configured, else MI-based color
+    effective_mi_color = overrides.get("mi_score", mi_color)
+    return f" | {effective_mi_color}MI:{mi_val:.3f}{RESET}"
+
+
+def _tps_segment(
+    state_ctx, current_usage, api_duration_ms, tps_window, tps_precision, tps_unit, color
+):
+    """Segment: rolling, token-weighted tok/s over the last N turns."""
+    cur_output = current_usage.get("output_tokens", 0)
+    samples = state_ctx.tps_samples + [(cur_output, api_duration_ms)]
+    tps = compute_tps(samples, window=tps_window)
+    if tps is None:
+        return ""
+    tps_display = format_tps(tps, tps_precision, tps_unit)
+    return f" | {color}{tps_display}{RESET}"
+
+
+def _persist_state_row(state_ctx, inputs, used_tokens, cache_creation):
+    """Phase: append this refresh's CSV row under the shared lock.
+
+    Only appends when context usage changed (avoid duplicates from multiple
+    refreshes). CSV-safety defense (F-BUG-006): string fields are validated
+    before joining so a comma/newline/control character can never shift the
+    15-field column indexes. The append and the subsequent rotation share one
+    exclusive advisory lock (F-BUG-008) so rotation cannot drop a
+    concurrently appended line; the file is created owner-only (F-SEC-003).
+    """
+    if state_ctx.has_prev and used_tokens == state_ctx.prev_tokens:
+        return
+    try:
+        cur_input_tokens = inputs.current_usage.get("input_tokens", 0)
+        cur_output_tokens = inputs.current_usage.get("output_tokens", 0)
+        _validate_csv_field("session_id", inputs.session_id or "")
+        _validate_csv_field("model_id", inputs.model_id)
+        state_data = ",".join(
+            str(x)
+            for x in [
+                int(time.time()),
+                inputs.total_input_tokens,
+                inputs.total_output_tokens,
+                cur_input_tokens,
+                cur_output_tokens,
+                cache_creation,
+                inputs.current_usage.get("cache_read_input_tokens", 0),
+                inputs.cost_usd,
+                inputs.lines_added,
+                inputs.lines_removed,
+                inputs.session_id or "",
+                inputs.model_id,
+                _sanitize_workspace_dir(inputs.workspace_project_dir),
+                inputs.total_size,
+                inputs.api_duration_ms,
+            ]
         )
-        zone_ansi = _zone_ansi_color(zone_color_name)
-
-        # Context info uses zone color (traffic-light), with per-property override
-        effective_ctx_color = c.get("context_length", zone_ansi)
-
-        context_info = f" | {effective_ctx_color}{free_display} ({free_pct:.1f}%){RESET}"
-
-        # Zone label uses same color, with per-property override
-        effective_zone_color = c.get("zone", zone_ansi)
-        zone_info = f"·{effective_zone_color}{zone_word}{RESET}"
-
-        # Pacman-style icon reflecting the same zone — on by default.
-        if show_pacman:
-            pacman_glyph = get_pacman_icon(zone_word)
-            if pacman_glyph:
-                pacman_info = f"·{effective_zone_color}{pacman_glyph}{RESET}"
-
-        # Read previous entry if needed for delta, MI, or throughput (tok/s).
-        # tok/s needs the previous row (for the API-time delta) and persists
-        # the current api_duration for the next refresh, so it widens this gate.
-        if show_delta or show_mi or show_tps:
-            state_dir = os.path.expanduser("~/.claude/statusline")
-            os.makedirs(state_dir, exist_ok=True)
-
-            _migrate_legacy_state_files(state_dir, os.path.expanduser("~/.claude"))
-
-            if session_id:
-                state_file = os.path.join(state_dir, f"statusline.{session_id}.state")
-            else:
-                state_file = os.path.join(state_dir, "statusline.state")
-            has_prev = False
-            prev_tokens = 0
-            # Rolling tok/s samples: (output_tokens, api_duration_ms) per row,
-            # in chronological order. Only collected when show_tps is on.
-            tps_samples = []
+    except ValueError as e:
+        sys.stderr.write(f"[statusline] warning: refusing to write state file: {e}\n")
+        return
+    try:
+        fd = os.open(state_ctx.state_file, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
+        with os.fdopen(fd, "a+") as f:
+            _lock_state_file(f)
             try:
-                if os.path.exists(state_file):
-                    has_prev = True
-                    # Read all lines: last line drives delta/dedup; a bounded
-                    # *tail* (when show_tps) feeds the rolling-average
-                    # reconstruction. compute_tps only needs the last
-                    # ``tps_window`` valid turns, so we parse at most the last
-                    # ``_tps_tail_size(tps_window)`` rows instead of the whole
-                    # file — matching the full-read value while bounding work.
-                    with open(state_file) as f:
-                        file_lines = f.readlines()
-                        if file_lines:
-                            # Last line drives delta/dedup via parse_state_row
-                            # (F-CLEAN-007): one parser serves the last-entry read
-                            # and the bounded tail below. A trailing comma-bearing
-                            # row that fails to parse degrades to "no previous
-                            # usage" (prev_tokens stays 0) instead of killing the
-                            # whole tok/s sample collection like the old
-                            # index-magic path did on a ValueError.
-                            last_line = file_lines[-1].strip()
-                            parsed_last = parse_state_row(last_line)
-                            if parsed_last is not None:
-                                # Previous context usage: cur_input[3] +
-                                # cache_creation[5] + cache_read[6].
-                                prev_tokens = (
-                                    parsed_last["current_input_tokens"]
-                                    + parsed_last["cache_creation"]
-                                    + parsed_last["cache_read"]
-                                )
-                            elif "," not in last_line:
-                                # Old format - single value
-                                prev_tokens = int(last_line or 0)
-                            if show_tps:
-                                # Reconstruct (output[4], api_duration[14]) for
-                                # each tail row. Legacy rows lack index 14 -> 0,
-                                # which compute_tps treats as "no prior reading".
-                                # Walk backward collecting up to tail_n parseable
-                                # rows (mirrors StateFile.read_tail's by-entry
-                                # bound), then restore chronological order.
-                                tail_n = _tps_tail_size(tps_window)
-                                for line in reversed(file_lines):
-                                    parsed = parse_state_row(line)
-                                    if parsed is None:
-                                        continue
-                                    tps_samples.append(
-                                        (parsed["output_tokens"], parsed["api_duration_ms"])
-                                    )
-                                    if len(tps_samples) >= tail_n:
-                                        break
-                                tps_samples.reverse()
-            except (OSError, ValueError) as e:
-                sys.stderr.write(f"[statusline] warning: failed to read state file: {e}\n")
-                prev_tokens = 0
-                tps_samples = []
+                f.write(f"{state_data}\n")
+                f.flush()
+                if fcntl is not None:
+                    # POSIX only: the rename may run while this
+                    # descriptor still holds the file open.
+                    # Windows cannot replace an open file, so
+                    # it falls back after the close below.
+                    _rotate_state_file_locked(state_ctx.state_file, f)
+            finally:
+                _unlock_state_file(f)
+    except OSError as e:
+        sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
+        return
+    if fcntl is None:
+        maybe_rotate_state_file(state_ctx.state_file)
 
-            # Calculate and display token delta if enabled
-            if show_delta:
-                delta = used_tokens - prev_tokens
-                if has_prev and delta > 0:
-                    if token_detail:
-                        delta_display = f"{delta:,}"
-                    else:
-                        delta_display = f"{delta / 1000:.1f}k"
-                    delta_info = f" | {c_delta}+{delta_display}{RESET}"
 
-            # Calculate and display MI score if enabled
-            if show_mi:
-                mi_val = compute_mi(used_tokens, total_size, model_id, mi_curve_beta)
-                mi_util = used_tokens / total_size if total_size > 0 else 0.0
-                mi_color = get_mi_color(mi_val, mi_util)
-                # Use per-property mi_score color if configured, else MI-based color
-                effective_mi_color = c.get("mi_score", mi_color)
-                mi_info = f" | {effective_mi_color}MI:{mi_val:.3f}{RESET}"
-
-            # Calculate and display model throughput (tok/s) if enabled — a
-            # rolling, token-weighted average over the last N turns from the
-            # state history plus the live reading.
-            if show_tps:
-                cur_output = current_usage.get("output_tokens", 0)
-                samples = tps_samples + [(cur_output, api_duration_ms)]
-                tps = compute_tps(samples, window=tps_window)
-                if tps is not None:
-                    tps_display = format_tps(tps, tps_precision, tps_unit)
-                    tps_info = f" | {c_tps}{tps_display}{RESET}"
-
-            # Only append if context usage changed (avoid duplicates from multiple refreshes)
-            if not has_prev or used_tokens != prev_tokens:
-                try:
-                    cur_input_tokens = current_usage.get("input_tokens", 0)
-                    cur_output_tokens = current_usage.get("output_tokens", 0)
-                    # CSV-safety defense (F-BUG-006): string fields are
-                    # validated before joining so a comma/newline/control
-                    # character can never shift the 15-field column indexes.
-                    _validate_csv_field("session_id", session_id or "")
-                    _validate_csv_field("model_id", model_id)
-                    state_data = ",".join(
-                        str(x)
-                        for x in [
-                            int(time.time()),
-                            total_input_tokens,
-                            total_output_tokens,
-                            cur_input_tokens,
-                            cur_output_tokens,
-                            cache_creation,
-                            cache_read,
-                            cost_usd,
-                            lines_added,
-                            lines_removed,
-                            session_id or "",
-                            model_id,
-                            _sanitize_workspace_dir(workspace_project_dir),
-                            total_size,
-                            api_duration_ms,
-                        ]
-                    )
-                except ValueError as e:
-                    sys.stderr.write(f"[statusline] warning: refusing to write state file: {e}\n")
-                else:
-                    try:
-                        # Create with owner-only permissions (F-SEC-003): state
-                        # rows carry session ids and costs. The append and the
-                        # subsequent rotation share one exclusive advisory lock
-                        # (F-BUG-008) so rotation cannot drop a concurrently
-                        # appended line.
-                        fd = os.open(state_file, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
-                        with os.fdopen(fd, "a+") as f:
-                            _lock_state_file(f)
-                            try:
-                                f.write(f"{state_data}\n")
-                                f.flush()
-                                if fcntl is not None:
-                                    # POSIX only: the rename may run while this
-                                    # descriptor still holds the file open.
-                                    # Windows cannot replace an open file, so
-                                    # it falls back after the close below.
-                                    _rotate_state_file_locked(state_file, f)
-                            finally:
-                                _unlock_state_file(f)
-                    except OSError as e:
-                        sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
-                    else:
-                        if fcntl is None:
-                            maybe_rotate_state_file(state_file)
-
-    # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
-    # segment doesn't flicker in and out across the first few turns.
-    if show_cost:
-        cost_info = f" | {c_cost}${cost_usd:.2f}{RESET}"
-
-    # Display session_id if enabled
-    if show_session and session_id:
-        session_info = f" | {c_session}{session_id}{RESET}"
-
+def _emit_status_line(
+    inputs,
+    prop,
+    show_effort,
+    git_info,
+    pr_info,
+    context_info,
+    zone_info,
+    pacman_info,
+    mi_info,
+    tps_info,
+    delta_info,
+    cost_info,
+    session_info,
+):
+    """Phase: assemble the atomic parts and emit the width-fitted line."""
     # Output: dir | branch [changes] | XXk free (XX%)·zone·pacman | MI | tok/s | +delta | $cost | [Model] [id]
     # Model name is lowest priority — wraps to a new line first when narrow
-    base = f"{c_project_name}{dir_name}{RESET}"
-    thinking_text = _format_thinking_info(thinking_budget)
+    base = f"{prop['project_name']}{inputs.dir_name}{RESET}"
+    thinking_text = _format_thinking_info(inputs.thinking_budget)
     # Build the model suffix from any present indicators (thinking budget,
     # reasoning effort). Effort hides gracefully when absent/null/disabled.
     model_suffix = ""
     if thinking_text:
         model_suffix += f"·{thinking_text}"
-    if show_effort and effort_level:
-        model_suffix += f"·{effort_level}"
-    model_info = f" | {c_model}{model}{model_suffix}{RESET}"
+    if show_effort and inputs.effort_level:
+        model_suffix += f"·{inputs.effort_level}"
+    model_info = f" | {prop['model']}{inputs.model}{model_suffix}{RESET}"
     max_width = get_terminal_width()
     parts = [
         base,
@@ -1197,6 +1315,95 @@ def _render(data):
         session_info,
     ]
     print(fit_to_width(parts, max_width))
+
+
+def _render(data):
+    """Render the status line for an already-parsed stdin payload.
+
+    Orchestrator only (Task 5.4, F-CLEAN-001): each phase lives in its own
+    helper above — payload extraction, config/palette resolution, repo
+    segments, context computation, state read/persist, and final assembly.
+    """
+    inputs = _extract_render_inputs(data)
+
+    # Read settings from config file
+    config = read_config()
+    palette, color_overrides, prop = _resolve_render_colors(config)
+
+    # Git + PR segments (gated on the resolved project dir — F-SEC-002)
+    git_info, pr_info = _repo_segments(inputs.project_dir, config, prop)
+
+    context_info = zone_info = pacman_info = ""
+    delta_info = mi_info = tps_info = ""
+    used_tokens = 0
+    cache_creation = 0
+
+    if inputs.total_size > 0 and inputs.current_usage:
+        used_tokens, cache_creation, context_info, zone_info, pacman_info = (
+            _context_segments(inputs, config, palette)
+        )
+
+        # Previous-refresh state feeds delta/MI/tok/s; tok/s also needs the
+        # previous row (for the API-time delta) and persists the current
+        # api_duration for the next refresh, so it widens this gate.
+        if config["show_delta"] or config["show_mi"] or config["show_tps"]:
+            state_ctx = _open_state_context(
+                inputs.session_id, config["show_tps"], config["tps_window"]
+            )
+            if config["show_delta"]:
+                delta_info = _delta_segment(
+                    state_ctx, used_tokens, config["token_detail"], prop["delta"]
+                )
+            if config["show_mi"]:
+                mi_info = _mi_segment(
+                    used_tokens,
+                    inputs.total_size,
+                    inputs.model_id,
+                    config["mi_curve_beta"],
+                    color_overrides,
+                    palette,
+                )
+            if config["show_tps"]:
+                tps_info = _tps_segment(
+                    state_ctx,
+                    inputs.current_usage,
+                    inputs.api_duration_ms,
+                    config["tps_window"],
+                    config["tps_precision"],
+                    config["tps_unit"],
+                    prop["tps"],
+                )
+            # Only append if context usage changed — handled inside.
+            _persist_state_row(state_ctx, inputs, used_tokens, cache_creation)
+
+    # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
+    # segment doesn't flicker in and out across the first few turns.
+    cost_info = (
+        f" | {prop['cost']}${inputs.cost_usd:.2f}{RESET}" if config["show_cost"] else ""
+    )
+
+    # Display session_id if enabled
+    session_info = (
+        f" | {prop['session']}{inputs.session_id}{RESET}"
+        if config["show_session"] and inputs.session_id
+        else ""
+    )
+
+    _emit_status_line(
+        inputs,
+        prop,
+        config["show_effort"],
+        git_info,
+        pr_info,
+        context_info,
+        zone_info,
+        pacman_info,
+        mi_info,
+        tps_info,
+        delta_info,
+        cost_info,
+        session_info,
+    )
 
 
 if __name__ == "__main__":
