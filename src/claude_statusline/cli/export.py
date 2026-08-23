@@ -12,8 +12,10 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from claude_statusline import __version__
 from claude_statusline.core.config import Config
@@ -323,42 +325,52 @@ def _generate_key_takeaways(
     return takeaways
 
 
-def _generate_exec_snapshot(
-    session_id: str,
-    project_name: str,
-    last_entry,
-    ctx_window: int,
-    final_used: int,
-    final_pct: float,
-    zone_label: str,
-    duration: int,
-    start_time: str,
-    end_time: str,
-    interactions: int,
-    zone_recommendation: str = "",
-) -> list[str]:
+@dataclass
+class SessionSnapshot:
+    """Everything the executive snapshot needs, bundled (Task 5.5, F-CLEAN-005).
+
+    Replaces the former 12-parameter signature of ``_generate_exec_snapshot``;
+    the fields keep the exact order the parameters had.
+    """
+
+    session_id: str
+    project_name: str
+    last_entry: Any
+    ctx_window: int
+    final_used: int
+    final_pct: float
+    zone_label: str
+    duration: int
+    start_time: str
+    end_time: str
+    interactions: int
+    zone_recommendation: str = ""
+
+
+def _generate_exec_snapshot(snapshot: SessionSnapshot) -> list[str]:
     """Generate a compact executive snapshot for the top of the report."""
+    last_entry = snapshot.last_entry
     cache_total = last_entry.cache_creation + last_entry.cache_read
-    cache_pct = (cache_total / final_used * 100) if final_used > 0 else 0
+    cache_pct = (cache_total / snapshot.final_used * 100) if snapshot.final_used > 0 else 0
     lines = [
         "## Executive Snapshot",
         "",
         "| Signal | Value | Why it matters |",
         "|--------|-------|----------------|",
-        f"| **Session** | `{session_id}` | Lets you link this export back to the source interaction stream. |",
-        f"| **Project** | **{project_name}** | Identifies where the report came from. |",
+        f"| **Session** | `{snapshot.session_id}` | Lets you link this export back to the source interaction stream. |",
+        f"| **Project** | **{snapshot.project_name}** | Identifies where the report came from. |",
         f"| **Model** | **{last_entry.model_id or 'Unknown'}** | Shows which model produced the session. |",
-        f"| **Duration** | **{_format_duration(duration)}** | Helps you relate context growth to session length. |",
-        f"| **Report span** | **{start_time} -> {end_time}** | Gives the exact time range covered by the export. |",
-        f"| **Interactions** | **{interactions}** | Shows how active the session was overall. |",
+        f"| **Duration** | **{_format_duration(snapshot.duration)}** | Helps you relate context growth to session length. |",
+        f"| **Report span** | **{snapshot.start_time} -> {snapshot.end_time}** | Gives the exact time range covered by the export. |",
+        f"| **Interactions** | **{snapshot.interactions}** | Shows how active the session was overall. |",
         f"| **Produced by** | **context-stats v{__version__}** | Shows which tool generated the report. |",
         f"| **Generated** | **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}** | Records when the report was produced. |",
-        f"| **Final usage** | **{format_tokens(final_used)}** ({final_pct:.1f}%) | Shows how close the session ended to the context limit. |",
-        f"| **Final zone** | **{zone_label}** | Indicates whether the session stayed in a safe working range. |",
+        f"| **Final usage** | **{format_tokens(snapshot.final_used)}** ({snapshot.final_pct:.1f}%) | Shows how close the session ended to the context limit. |",
+        f"| **Final zone** | **{snapshot.zone_label}** | Indicates whether the session stayed in a safe working range. |",
     ]
-    if zone_recommendation:
+    if snapshot.zone_recommendation:
         lines.append(
-            f"| **Recommendation** | {zone_recommendation} | Suggested next action based on context zone. |"
+            f"| **Recommendation** | {snapshot.zone_recommendation} | Suggested next action based on context zone. |"
         )
 
     if cache_total > 0:
@@ -414,18 +426,20 @@ def _generate_markdown(entries: list, session_id: str, config: Config) -> str:
     lines.append("")
 
     exec_snapshot = _generate_exec_snapshot(
-        session_id,
-        project_name,
-        last,
-        ctx_window,
-        final_used,
-        final_pct,
-        zone.label,
-        duration,
-        start_time,
-        end_time,
-        len(entries),
-        zone_recommendation=zone.recommendation,
+        SessionSnapshot(
+            session_id=session_id,
+            project_name=project_name,
+            last_entry=last,
+            ctx_window=ctx_window,
+            final_used=final_used,
+            final_pct=final_pct,
+            zone_label=zone.label,
+            duration=duration,
+            start_time=start_time,
+            end_time=end_time,
+            interactions=len(entries),
+            zone_recommendation=zone.recommendation,
+        )
     )
     lines.extend(exec_snapshot)
 

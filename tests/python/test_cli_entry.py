@@ -178,16 +178,19 @@ class TestParseArgs:
 
 
 class TestRenderOnceEdges:
-    def test_insufficient_data_watch_mode_returns_message(self, isolated):
+    def test_insufficient_data_raises_insufficient_data_error(self, isolated):
+        """Rendering is transport-free: too-few-points raises with the message."""
         sf = _write_state([_entry()])
-        result = cs.render_once(sf, "delta", _FakeRenderer(), _Colors(), watch_mode=True)
-        assert isinstance(result, str)
-        assert "Need at least 2 data points" in result
+        with pytest.raises(cs.InsufficientDataError) as ei:
+            cs.render_once(sf, "delta", _FakeRenderer(), _Colors())
+        assert "Need at least 2 data points" in str(ei.value)
 
-    def test_insufficient_data_non_watch_prints_and_returns_false(self, isolated, capsys):
-        sf = _write_state([])
-        assert cs.render_once(sf, "delta", _FakeRenderer(), _Colors()) is False
-        assert "Need at least 2 data points" in capsys.readouterr().out
+    def test_insufficient_message_carries_entry_count(self, isolated):
+        """The exception message explains how many entries were found."""
+        sf = _write_state([_entry()])
+        with pytest.raises(cs.InsufficientDataError) as ei:
+            cs.render_once(sf, "delta", _FakeRenderer(), _Colors())
+        assert "Found: 1 entry." in str(ei.value)
 
     def test_header_without_project_dir_uses_session_label(self, isolated, tmp_path):
         entries = [
@@ -196,7 +199,7 @@ class TestRenderOnceEdges:
         ]
         sf = _write_state(entries)
         renderer = _FakeRenderer(buffer="S")
-        result = cs.render_once(sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config())
+        result = cs.render_once(sf, "delta", renderer, _Colors(), config=_Config())
         assert "(Session: sess-cli)" in result
         assert "S" in result
 
@@ -207,9 +210,7 @@ class TestRenderOnceEdges:
             _entry(timestamp=now_ts - 2),
         ]
         sf = _write_state(entries)
-        result = cs.render_once(
-            sf, "delta", _FakeRenderer(buffer=""), _Colors(), watch_mode=True, config=_Config()
-        )
+        result = cs.render_once(sf, "delta", _FakeRenderer(buffer=""), _Colors(), config=_Config())
         # Last entry within is_active's 30s window → rotating waiting text shown.
         assert "Working..." in result  # reduced_motion=True static text
 
@@ -221,7 +222,7 @@ class TestRenderOnceEdges:
         ]
         sf = _write_state(entries)
         renderer = _FakeRenderer(buffer="")
-        result = cs.render_once(sf, "delta", renderer, _Colors(), watch_mode=True, config=_Config())
+        result = cs.render_once(sf, "delta", renderer, _Colors(), config=_Config())
         assert isinstance(result, str)
 
 

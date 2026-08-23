@@ -23,6 +23,7 @@ Source: x.com/trq212/status/2044548257058328723 ("Every Turn Is a Branching Poin
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from claude_statusline._shared import _ZONE_RECOMMENDATIONS as _ZONE_RECOMMENDATIONS
 
@@ -91,6 +92,51 @@ class ZoneInfo:
     recommendation: str  # One-line action guidance for the user
 
 
+# Lookup table (Task 5.6, F-CLEAN-006): field names of the zone-threshold
+# bundle, in the order ``_shared.context_zone_tuple`` consumes them. Drives
+# both config extraction and the override expansion — adding a threshold
+# means touching this tuple and the dataclass only.
+_ZONE_THRESHOLD_FIELDS: tuple[str, ...] = (
+    "zone_1m_plan_max",
+    "zone_1m_code_max",
+    "zone_1m_dump_max",
+    "zone_1m_xdump_max",
+    "zone_std_dump_ratio",
+    "zone_std_warn_buffer",
+    "zone_std_hard_limit",
+    "zone_std_dead_ratio",
+    "large_model_threshold",
+)
+
+
+@dataclass(frozen=True)
+class ZoneThresholds:
+    """Bundle of zone threshold overrides (Task 5.6, F-CLEAN-006).
+
+    Every field mirrors a Config attribute of the same name; a value of
+    0 (or 0.0) means "use the shared module-level default".
+    """
+
+    zone_1m_plan_max: int = 0
+    zone_1m_code_max: int = 0
+    zone_1m_dump_max: int = 0
+    zone_1m_xdump_max: int = 0
+    zone_std_dump_ratio: float = 0.0
+    zone_std_warn_buffer: int = 0
+    zone_std_hard_limit: float = 0.0
+    zone_std_dead_ratio: float = 0.0
+    large_model_threshold: int = 0
+
+    @classmethod
+    def from_config(cls, config: Any) -> ZoneThresholds:
+        """Extract the bundle from a Config's same-named attributes."""
+        return cls(**{name: getattr(config, name) for name in _ZONE_THRESHOLD_FIELDS})
+
+    def overrides(self) -> dict[str, Any]:
+        """Keyword form consumed by ``_shared.context_zone_tuple``."""
+        return {name: getattr(self, name) for name in _ZONE_THRESHOLD_FIELDS}
+
+
 # Zone recommendation strings and pacman glyphs are single-sourced in _shared
 # (imported above as _ZONE_RECOMMENDATIONS / PACMAN_ICONS).
 
@@ -140,64 +186,41 @@ def calculate_intelligence(
 def get_context_zone(
     used_tokens: int,
     context_window_size: int,
-    *,
-    zone_1m_plan_max: int = 0,
-    zone_1m_code_max: int = 0,
-    zone_1m_dump_max: int = 0,
-    zone_1m_xdump_max: int = 0,
-    zone_std_dump_ratio: float = 0.0,
-    zone_std_warn_buffer: int = 0,
-    zone_std_hard_limit: float = 0.0,
-    zone_std_dead_ratio: float = 0.0,
-    large_model_threshold: int = 0,
+    thresholds: ZoneThresholds | None = None,
 ) -> ZoneInfo:
     """Determine the context zone indicator based on token usage.
 
-    For 1M models (context_window >= 500k):
-      P: < 150k used
-      C: 150k–250k used
-      D: 250k–400k used
-      X: 400k–450k used
-      Z: >= 450k used
+    For 1M models (context_window >= large threshold):
+      P: < zone_1m_plan_max used
+      C: plan_max–code_max used
+      D: code_max–dump_max used
+      X: dump_max–xdump_max used
+      Z: >= xdump_max used
 
-    For standard models (< 500k context):
-      P: < (dump_zone - 30k)
-      C: (dump_zone - 30k) to dump_zone (40%)
+    For standard models (< large threshold):
+      P: below the warn buffer
+      C: warn buffer to dump ratio (40%)
       D: 40%–70% utilization
       X: 70%–75% utilization
-      Z: >= 75% utilization
+      Z: >= dead ratio (75%) utilization
 
-    All thresholds can be overridden via keyword arguments.
-    A value of 0 (or 0.0) means "use the module-level default".
+    Threshold overrides travel as one :class:`ZoneThresholds` bundle
+    (Task 5.6, F-CLEAN-006) instead of eleven keyword parameters; a field
+    of 0 (or 0.0) means "use the module-level default".
 
     Args:
         used_tokens: Number of tokens currently used
         context_window_size: Total context window size in tokens
-        zone_1m_plan_max: Override for ZONE_1M_P_MAX
-        zone_1m_code_max: Override for ZONE_1M_C_MAX
-        zone_1m_dump_max: Override for ZONE_1M_D_MAX
-        zone_1m_xdump_max: Override for ZONE_1M_X_MAX
-        zone_std_dump_ratio: Override for ZONE_STD_DUMP_ZONE
-        zone_std_warn_buffer: Override for ZONE_STD_WARN_BUFFER
-        zone_std_hard_limit: Override for ZONE_STD_HARD_LIMIT
-        zone_std_dead_ratio: Override for ZONE_STD_DEAD_ZONE
-        large_model_threshold: Override for LARGE_MODEL_THRESHOLD
+        thresholds: Optional threshold bundle; defaults when omitted
 
     Returns:
         ZoneInfo with zone letter, color name, and label
     """
+    effective = thresholds if thresholds is not None else ZoneThresholds()
     zone, color, recommendation = context_zone_tuple(
         used_tokens,
         context_window_size,
-        zone_1m_plan_max=zone_1m_plan_max,
-        zone_1m_code_max=zone_1m_code_max,
-        zone_1m_dump_max=zone_1m_dump_max,
-        zone_1m_xdump_max=zone_1m_xdump_max,
-        zone_std_dump_ratio=zone_std_dump_ratio,
-        zone_std_warn_buffer=zone_std_warn_buffer,
-        zone_std_hard_limit=zone_std_hard_limit,
-        zone_std_dead_ratio=zone_std_dead_ratio,
-        large_model_threshold=large_model_threshold,
+        **effective.overrides(),
     )
     return ZoneInfo(
         zone=zone,

@@ -342,6 +342,24 @@ def parse_args() -> argparse.Namespace:
 _TPS_RENDER_SCALE = 100
 
 
+class InsufficientDataError(RuntimeError):
+    """A graph frame cannot be rendered (fewer than 2 history points).
+
+    Task 5.6, F-CLEAN-004: replaces the old boolean-flag return-type switch.
+    The message is the user-facing explanation; transports decide how to
+    surface it (watch mode paints it into the frame, the CLI prints it and
+    exits non-zero).
+    """
+
+
+def _insufficient_data_message(entry_count: int, colors: ColorManager) -> str:
+    """User-facing message for the too-few-points condition."""
+    return (
+        f"\n{colors.yellow}Need at least 2 data points to generate graphs.{colors.reset}\n"
+        f"{colors.dim}Found: {entry_count} entry. Use Claude Code to accumulate more data.{colors.reset}"
+    )
+
+
 def _filter_entries_by_minutes(entries: list, minutes: int | None) -> list:
     """Return entries within the last ``minutes`` of recorded history.
 
@@ -443,48 +461,42 @@ def render_once(
     graph_type: str,
     renderer: GraphRenderer,
     colors: ColorManager,
-    watch_mode: bool = False,
+    *,
     config: Config | None = None,
     cycle_index: int = 0,
     minutes: int | None = None,
-) -> bool | str:
-    """Render graphs once.
+) -> str:
+    """Render one full graph frame and return it as a string.
+
+    Rendering is transport-free (Task 5.6, F-CLEAN-004): this function only
+    builds the frame; callers decide whether to print it, buffer it into a
+    watch-mode screen repaint, or exit non-zero.
 
     Args:
         state_file: StateFile instance
         graph_type: Type of graphs to render
         renderer: GraphRenderer instance
         colors: ColorManager instance
-        watch_mode: Whether running in watch mode
         config: Config instance for motion settings
         cycle_index: Watch mode refresh counter for rotating text
         minutes: Optional time window (last N minutes) for the tps trend graph
 
     Returns:
-        True if rendering was successful (non-watch mode),
-        buffered string if watch_mode is True,
-        False if not enough data
+        The complete rendered frame (header, graphs, summary).
+
+    Raises:
+        InsufficientDataError: When history holds fewer than 2 data points;
+            the exception message is the user-facing explanation.
     """
     entries = state_file.read_history()
 
     if len(entries) < 2:
-        msg = (
-            f"\n{colors.yellow}Need at least 2 data points to generate graphs.{colors.reset}\n"
-            f"{colors.dim}Found: {len(entries)} entry. Use Claude Code to accumulate more data.{colors.reset}"
-        )
-        if watch_mode:
-            return msg
-        print(msg)
-        return False
+        raise InsufficientDataError(_insufficient_data_message(len(entries), colors))
 
-    # In watch mode, buffer all output
     lines: list[str] = []
 
     def emit(line: str = "") -> None:
-        if watch_mode:
-            lines.append(line)
-        else:
-            print(line)
+        lines.append(line)
 
     # Extract data for graphs
     timestamps = [e.timestamp for e in entries]
@@ -510,9 +522,7 @@ def render_once(
         # Extract just the project folder name from the path
         project_name = Path(last_entry.workspace_project_dir).name
 
-    # Header
-    if not watch_mode:
-        emit()
+    emit()
     if project_name:
         emit(
             f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
@@ -536,9 +546,8 @@ def render_once(
     else:
         emit(f"  {colors.dim}{label}{colors.reset}")
 
-    # In watch mode, enable renderer buffering
-    if watch_mode:
-        renderer.begin_buffering()
+    # Buffer renderer output so the whole frame can travel as one string
+    renderer.begin_buffering()
 
     # Load config for compaction and MI settings
     mi_config = config if config else Config.load()
@@ -647,13 +656,9 @@ def render_once(
     )
     renderer.render_footer(__version__)
 
-    if watch_mode:
-        # Collect renderer buffer and combine with header lines
-        renderer_output = renderer.get_buffer()
-        lines.append(renderer_output)
-        return "\n".join(lines)
-
-    return True
+    # Collect renderer buffer and combine with header lines
+    lines.append(renderer.get_buffer())
+    return "\n".join(lines)
 
 
 def run_watch_mode(
@@ -721,19 +726,21 @@ def run_watch_mode(
                     )
                 )
             else:
-                # Render graphs (returns buffered string in watch mode)
-                result = render_once(
-                    state_file,
-                    graph_type,
-                    renderer,
-                    colors,
-                    watch_mode=True,
-                    config=config,
-                    cycle_index=cycle_counter,
-                    minutes=minutes,
-                )
-                if isinstance(result, str):
-                    buf_lines.append(result)
+                # Render the frame (transport: buffered screen repaint)
+                try:
+                    buf_lines.append(
+                        render_once(
+                            state_file,
+                            graph_type,
+                            renderer,
+                            colors,
+                            config=config,
+                            cycle_index=cycle_counter,
+                            minutes=minutes,
+                        )
+                    )
+                except InsufficientDataError as e:
+                    buf_lines.append(str(e))
 
             # Atomic write: CURSOR_HOME + content + CLEAR_TO_END (clean up stale trailing lines)
             buffered_content = "\n".join(buf_lines)
@@ -1015,11 +1022,16 @@ def main() -> None:
     # Run
     minutes = getattr(args, "minutes", None)  # type: ignore[assignment]
     if args.no_watch:
-        success = render_once(
-            state_file, args.type, renderer, colors, config=config, minutes=minutes
-        )
-        if not success:
+        # Transport for single-run mode: print the frame, exit non-zero
+        # when there was nothing to graph.
+        try:
+            frame = render_once(
+                state_file, args.type, renderer, colors, config=config, minutes=minutes
+            )
+        except InsufficientDataError as e:
+            print(e)
             sys.exit(1)
+        print(frame)
     else:
         run_watch_mode(
             state_file, args.type, args.watch, renderer, colors, config=config, minutes=minutes
