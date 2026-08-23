@@ -22,6 +22,9 @@ Features:
 - Duplicate-entry deduplication
 - State file rotation (10k/5k threshold)
 - Model Intelligence (MI) with per-model profiles
+- Context zones with pacman icon
+- Session cost, reasoning effort, PR number, and tok/s throughput segments
+- Multi-line reflow on narrow terminals (wraps instead of dropping elements)
 - 5-second git command timeout
 
 ## Context Stats CLI
@@ -30,9 +33,19 @@ The `context-stats` command is installed as part of the `context-stats` Python p
 
 ## Output Format
 
+Segments assemble in priority order (each is toggleable via `~/.claude/statusline.conf`):
+
 ```
-[Model] directory | branch [changes] | XXk free (XX%) [+delta] MI:0.XXX [AC:XXk] session_id
+project | branch [changes] | PR# | tokens_free (%)·Zone·pacman | MI:0.XXX | tok/s | +delta | $cost | Model·effort | session_id
 ```
+
+Example:
+
+```
+my-project | main [3] | #42 | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
+```
+
+On a narrow terminal the statusline wraps onto additional lines instead of dropping elements. See [Configuration](configuration.md) for every segment's toggle key and default.
 
 ## Architecture
 

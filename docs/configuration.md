@@ -31,13 +31,13 @@ show_delta=false   # Disable delta display
 show_session=true  # (default) Show session ID
 show_session=false # Hide session ID
 
-# Show cumulative session cost in USD (reported by Claude Code)
-show_cost=true     # (default) Show session cost like $0.42
-show_cost=false    # Hide session cost
+# Show input/output token breakdown
+show_io_tokens=true  # (default) Reserved for future use — read but not displayed
+show_io_tokens=false # Same behavior; key is accepted for forward compatibility
 
-# Show reasoning effort level next to the model name (reported by Claude Code)
-show_effort=true   # (default) Show effort like Opus 4.6·high
-show_effort=false  # Hide effort level
+# Show the associated PR number for the current branch
+show_pr=true     # (default) Show PR number like #42 (requires the gh CLI)
+show_pr=false    # Hide PR number
 
 # Disable rotating text animations
 reduced_motion=false  # (default) Animations enabled
@@ -47,6 +47,14 @@ reduced_motion=true   # Disable animations for accessibility
 show_pacman=true   # (default) Show icon next to the zone label
 show_pacman=false  # Icon hidden
 
+# Show cumulative session cost in USD (reported by Claude Code)
+show_cost=true     # (default) Show session cost like $0.42
+show_cost=false    # Hide session cost
+
+# Show reasoning effort level next to the model name (reported by Claude Code)
+show_effort=true   # (default) Show effort like Opus 4.6·high
+show_effort=false  # Hide effort level
+
 # Model Intelligence (MI) score display
 show_mi=false  # (default) MI score hidden
 show_mi=true   # Enable MI display in status line and summary
@@ -54,12 +62,23 @@ show_mi=true   # Enable MI display in status line and summary
 # MI curve beta override
 mi_curve_beta=0    # (default) Use model-specific profile (opus=1.8, sonnet=1.5, haiku=1.2)
 mi_curve_beta=1.5  # Override with custom beta for all models
+
+# Model throughput display (tokens per second)
+show_tps=false      # (default) Throughput hidden
+show_tps=true       # Show rolling tok/s like 42.5 tok/s
+tps_precision=1     # (default) Decimal places for the value (0 -> "42", 1 -> "42.5")
+tps_unit=tok/s      # (default) Unit label ("tok/s", or "tokens/s" to be explicit)
+tps_window=5        # (default) Recent turns averaged for the rolling throughput
+
+# Compaction detection thresholds (fractions strictly between 0 and 1)
+compaction_drop_threshold=0.5  # (default) Context drop fraction that qualifies as /compact
+compact_mi_warn_threshold=0.6  # (default) MI below this at compact time -> lossy warning
 ```
 
 ## Status Line Components
 
 ```
-my-project | main [3] | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | +2,500 | $0.42 | Opus 4.6·high | abc-123
+my-project | main [3] | #42 | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
 | Component    | Description              | Default Color | Config Key             |
@@ -68,6 +87,7 @@ my-project | main [3] | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | +2,500 | $0.42 |
 | `my-project` | Current directory        | Cyan          | `color_project_name`   |
 | `main`       | Git branch               | Green         | `color_branch_name`    |
 | `[3]`        | Uncommitted changes      | Cyan          | `color_cyan`           |
+| `#42`        | PR number for the branch | Dim           | `color_separator`      |
 | `130,000`    | Available tokens         | Bold White    | `color_context_length` |
 | `(65.0%)`    | Context usage percentage | -             | -                      |
 | `42.5 tok/s` | Model throughput         | Dim           | `color_tps`            |
@@ -81,7 +101,13 @@ my-project | main [3] | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | +2,500 | $0.42 |
 
 The five structural elements — model, tok/s, delta, cost, and session — default to
 `color_separator` when their own key is not set, so they can be colored together
-(via `color_separator`) or each given a distinct color.
+(via `color_separator`) or each given a distinct color. The PR number shares
+`color_separator` as well.
+
+The PR number is looked up with the GitHub CLI (`gh`) for the current branch and
+cached briefly per branch, so the network round-trip happens at most once per
+minute. It requires `gh` to be installed and authenticated; set `show_pr=false`
+to hide it (on by default).
 
 The session cost is the cumulative total for the whole session as reported by
 Claude Code (`cost.total_cost_usd`), shown even at `$0.00`. It is on by default;
@@ -150,6 +176,42 @@ The `[+X,XXX]` indicator shows tokens consumed since last refresh:
 - First run shows no delta (no baseline yet)
 - Each session has its own state file to avoid conflicts
 
+## Model Throughput (tok/s)
+
+Set `show_tps=true` to display the model's generation speed, e.g. `42.5 tok/s`.
+Speed is measured from the time Claude Code spent waiting for API responses
+(`cost.total_api_duration_ms`), so it reflects pure model throughput and
+excludes your idle time and tool execution.
+
+The displayed value is a rolling, token-weighted average over the last
+`tps_window` turns (default 5), not the raw per-turn speed — per-turn speed
+swings wildly (a 3-token reply looks like 1.5 tok/s, a long answer like 80
+tok/s), so the average is far steadier. Once established it persists across
+turns that carry no new timing information.
+
+```bash
+show_tps=true       # enable the segment
+tps_precision=1     # decimal places (0 -> "42", 1 -> "42.5", 2 -> "42.53")
+tps_unit=tok/s      # unit label appended after the value
+tps_window=5        # recent turns averaged; minimum 1
+```
+
+Like MI and delta, tok/s requires state-file I/O to track values across
+refreshes.
+
+## Compaction Detection
+
+These thresholds tune how `/compact` events are detected and flagged in
+graphs and reports:
+
+- `compaction_drop_threshold=0.5` — a single-step context drop larger than
+  this fraction qualifies as a compaction event (annotated with `▼`)
+- `compact_mi_warn_threshold=0.6` — when compaction occurs while the MI score
+  is below this value, the summary is flagged as potentially lossy
+
+Both accept fractions strictly between 0 and 1; invalid values (negative,
+non-numeric, outside 0-1) are ignored with a warning to stderr.
+
 ## Session ID
 
 The session ID at the end helps:
@@ -168,10 +230,10 @@ Override the default zone indicator thresholds to customize when zone transition
 
 ```bash
 # Token counts for 1M models
-zone_1m_plan_max=70000     # (default) Plan → Code boundary
-zone_1m_code_max=100000    # (default) Code → Dump boundary
-zone_1m_dump_max=250000    # (default) Dump → ExDump boundary
-zone_1m_xdump_max=275000   # (default) ExDump → Dead boundary
+zone_1m_plan_max=150000    # (default) Plan → Code boundary
+zone_1m_code_max=250000    # (default) Code → Dump boundary
+zone_1m_dump_max=400000    # (default) Dump → ExDump boundary
+zone_1m_xdump_max=450000   # (default) ExDump → Dead boundary
 ```
 
 ### Standard Models (< 500k context)

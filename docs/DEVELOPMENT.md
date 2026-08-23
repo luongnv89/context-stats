@@ -4,7 +4,6 @@
 
 - **Git** - Version control
 - **Python 3.10+** - For Python package and testing
-- **Bats** - Bash Automated Testing System (optional, for bash tests)
 - **pre-commit** - Git hook framework (optional, for automated code quality)
 
 ## Agent-Runnable Setup Notes
@@ -52,8 +51,8 @@ pip install -e .
 
 ```bash
 # Clone the repository
-git clone https://github.com/luongnv89/cc-context-stats.git
-cd cc-context-stats
+git clone https://github.com/luongnv89/context-stats.git
+cd context-stats
 
 # Python setup
 python3 -m venv venv
@@ -88,7 +87,7 @@ CI runs the same audit on every push/PR (`dependency-scan` job in `.github/workf
 ## Project Layout
 
 ```
-cc-context-stats/
+context-stats/
 ├── src/claude_statusline/    # Python package source
 │   ├── cli/                  #   CLI entry points (statusline, context-stats)
 │   ├── core/                 #   Config, state, git, colors
@@ -98,9 +97,8 @@ cc-context-stats/
 ├── scripts/                  # Standalone scripts
 │   └── statusline.py         #   Python standalone statusline
 ├── tests/
-│   ├── bash/                 # Bats tests (install/check scripts)
 │   └── python/               # Pytest tests
-├── config/                   # Configuration examples
+├── examples/                 # Configuration examples
 ├── docs/                     # Documentation
 ├── .github/workflows/        # CI/CD (ci.yml, release.yml)
 └── pyproject.toml            # Python build config (hatchling)
@@ -109,15 +107,9 @@ cc-context-stats/
 ## Running Tests
 
 ```bash
-# Python tests
+# Command of record
 source venv/bin/activate
-pytest tests/python/ -v
-
-# Bash integration tests (install/check scripts)
-bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
-
-# All tests
-pytest && bats tests/bash/test_check_install.bats tests/bash/test_context_stats_subcommands.bats tests/bash/test_e2e_install.bats tests/bash/test_install.bats
+pytest tests/python/ -q -p no:cacheprovider
 ```
 
 ### Coverage Reports
@@ -183,7 +175,4 @@ watch -n 1 'tail -5 ~/.claude/statusline/statusline.*.state'
 ```bash
 # Python with verbose output
 pytest tests/python/ -v -s
-
-# Bats with verbose output
-bats --verbose-run tests/bash/test_check_install.bats
 ```

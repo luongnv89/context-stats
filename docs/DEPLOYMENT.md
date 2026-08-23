@@ -45,12 +45,13 @@ CI is also run on every push and PR via `.github/workflows/ci.yml`.
 
 Versions must be updated in sync across these files:
 
-| File                                | Field                 |
-| ----------------------------------- | --------------------- |
-| `pyproject.toml`                    | `[project] version`   |
-| `src/claude_statusline/__init__.py` | `__version__`         |
-| `CHANGELOG.md`                      | New version entry     |
-| `RELEASE_NOTES.md`                  | Current release notes |
+| File                                | Field                                    |
+| ----------------------------------- | ---------------------------------------- |
+| `pyproject.toml`                    | `[project] version`                      |
+| `src/claude_statusline/__init__.py` | `__version__`                            |
+| `CHANGELOG.md`                      | New version entry (canonical history)    |
+
+`RELEASE_NOTES.md` is a pointer to `CHANGELOG.md`; no per-release edit needed there.
 
 ## Install Script
 

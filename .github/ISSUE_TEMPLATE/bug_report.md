@@ -12,7 +12,7 @@ A clear and concise description of what the bug is.
 
 ## Steps to Reproduce
 
-1. Install cc-context-stats via '...'
+1. Install context-stats via '...'
 2. Run '...'
 3. See error
 
@@ -32,7 +32,7 @@ If applicable, add screenshots to help explain your problem.
 
 - OS: [e.g., macOS 14.0, Ubuntu 22.04, Windows 11]
 - Shell: [e.g., zsh, bash, PowerShell]
-- cc-context-stats version: [e.g., 1.6.0]
+- context-stats version: [e.g., 1.6.0]
 - Installation method: [pip, shell script]
 - Python version: [if applicable]
 - Claude Code version: [if applicable]
