@@ -243,6 +243,11 @@ class TestNullTolerantExtraction:
 
     def test_package_null_heavy_payload_renders(self, tmp_path, monkeypatch, capsys):
         from claude_statusline.cli import statusline as pkg_statusline
+        from claude_statusline.core.state import StateFile
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", tmp_path / "state")
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
 
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(NULL_HEAVY_PAYLOAD)))
         monkeypatch.setenv("HOME", str(tmp_path))
