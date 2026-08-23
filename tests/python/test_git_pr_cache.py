@@ -193,7 +193,8 @@ class TestGetPrNumber:
         # gh was invoked exactly once; second call served from cache.
         cached = json.loads(cache_file.read_text())
         key = next(iter(cached))
-        assert "/proj" in key and "feature" in key
+        # str(project_dir) is platform-normalized (\proj on Windows).
+        assert key == f"{Path('/proj')}\tfeature"
         assert cached[key]["pr"] == "#42"
         assert cached[key]["exp"] == pytest.approx(100.0 + _PR_CACHE_TTL_SECONDS)
         assert sum(1 for c in calls if c[0] == "gh") == 1
