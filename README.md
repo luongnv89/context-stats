@@ -5,7 +5,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/context-stats)](https://pypi.org/project/context-stats/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/context-stats)](https://pypi.org/project/context-stats/)
-[![GitHub stars](https://img.shields.io/github/stars/luongnv89/cc-context-stats)](https://github.com/luongnv89/cc-context-stats)
+[![GitHub stars](https://img.shields.io/github/stars/luongnv89/context-stats)](https://github.com/luongnv89/context-stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Three levels of analytics — live session awareness, per-session deep dives, and multi-week cost reports — so you can use Claude Code at its best and know exactly where your tokens go.

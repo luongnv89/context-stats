@@ -70,26 +70,41 @@ The pip-installable package provides both the statusline and context-stats CLI:
 
 ```
 src/claude_statusline/
-├── __init__.py              # Package version and exports
-├── __main__.py              # python -m claude_statusline entry
+├── __init__.py                    # Package version and exports
+├── __main__.py                    # python -m claude_statusline entry
+├── _shared.py                     # Pure helpers single-sourced with the standalone script
+├── analytics.py                   # Aggregations shared by report/export commands
 ├── cli/
-│   ├── statusline.py        # claude-statusline entry point
-│   └── context_stats.py     # context-stats entry point
+│   ├── __init__.py
+│   ├── statusline.py              # claude-statusline entry point
+│   ├── context_stats.py           # context-stats dashboard entry point
+│   ├── cache_warm.py              # context-stats cache-warm subcommand
+│   ├── explain.py                 # context-stats explain subcommand
+│   ├── export.py                  # context-stats export subcommand
+│   └── report.py                  # context-stats report subcommand
 ├── core/
-│   ├── colors.py            # ANSI color management
-│   ├── config.py            # Configuration loading
-│   ├── git.py               # Git status detection (5s timeout)
-│   └── state.py             # State file reading/writing/rotation
+│   ├── __init__.py
+│   ├── colors.py                  # ANSI color management
+│   ├── config.py                  # Configuration loading
+│   ├── git.py                     # Git status detection + PR lookup (5s timeout)
+│   └── state.py                   # State file reading/writing/rotation
+├── data/
+│   ├── __init__.py
+│   └── statusline.conf.default    # Default config template written on first run
 ├── formatters/
-│   ├── layout.py            # Output width/layout management
-│   ├── time.py              # Duration formatting
-│   └── tokens.py            # Token count formatting
+│   ├── __init__.py
+│   ├── layout.py                  # Output width/layout management (reflow)
+│   ├── time.py                    # Duration formatting
+│   └── tokens.py                  # Token count formatting
 ├── graphs/
-│   ├── renderer.py          # ASCII graph rendering
-│   └── statistics.py        # Data statistics
+│   ├── __init__.py
+│   ├── intelligence.py            # MI score, zones, pacman icon
+│   ├── renderer.py                # ASCII graph rendering
+│   └── statistics.py              # Data statistics and tok/s computation
 └── ui/
-    ├── icons.py             # Unicode icons
-    └── waiting.py           # Waiting animation
+    ├── __init__.py
+    ├── icons.py                   # Unicode icons
+    └── waiting.py                 # Waiting animation
 ```
 
 ### State Files

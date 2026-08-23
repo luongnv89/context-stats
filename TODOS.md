@@ -80,8 +80,8 @@ Items identified from the HOLD SCOPE mega review (2026-03-12).
 
 ### ~~9. Add --version flag to context-stats CLI~~ ✅ Done
 
-**What:** Add `--version` argument to `parse_args()` that prints `cc-context-stats {version}` and exits.
+**What:** Add `--version` argument to `parse_args()` that prints `context-stats {version}` and exits.
 **Why:** Users can't determine installed version without running the full tool. The footer shows version but only on successful render.
 **Effort:** XS
 **Depends on:** None
-**Status:** Added `--version` / `-V` flag to `parse_args()` in `context_stats.py`. Prints `cc-context-stats {__version__}` and exits. Updated help text and module docstring.
+**Status:** Added `--version` / `-V` flag to `parse_args()` in `context_stats.py`. Prints `context-stats {__version__}` and exits. Updated help text and module docstring.

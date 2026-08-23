@@ -267,14 +267,15 @@ color_separator=dim
 #
 # The statusline elements are displayed in this order (highest priority first):
 #
-#   project_name | branch [changes] | tokens_free (%)·Zone·pacman | MI:score | +delta | $cost | Model·effort | session_id
+#   project_name | branch [changes] | pr_number | tokens_free (%)·Zone·pacman | MI:score | tok/s | +delta | $cost | Model·effort | session_id
 #
 # Example output:
-#   my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | +2,500 | $0.42 | Opus 4.6·high | abc-123
+#   my-project | main [3] | #42 | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
 #
-# If the terminal is too narrow, lower-priority elements drop out. Elements are
-# tried left-to-right (highest priority first) and each is kept only if it still
-# fits, so the rightmost elements — session_id, then model name, then session
-# cost — are the most likely to disappear. The project name (leftmost) is always
-# shown. A shorter low-priority element can survive when a longer higher-priority
-# one is skipped, so the exact drop order depends on each element's width.
+# If the terminal is too narrow for one line, the statusline wraps onto
+# additional lines instead of dropping elements — no information is lost.
+# Parts are packed greedily left-to-right (highest priority first); a part
+# that no longer fits starts the next line, so lower-priority elements —
+# session_id, then model name, then session cost — are the most likely to
+# move to a later line. The project name always starts the first line.
+# Requires Claude Code v2.1.153+, which reports the real terminal width.

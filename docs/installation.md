@@ -28,8 +28,8 @@ After installation, add to `~/.claude/settings.json`:
 ### Install from Source
 
 ```bash
-git clone https://github.com/luongnv89/cc-context-stats.git
-cd cc-context-stats
+git clone https://github.com/luongnv89/context-stats.git
+cd context-stats
 pip install .
 ```
 
@@ -42,7 +42,7 @@ pip install context-stats
 Or manually copy the script:
 
 ```powershell
-git clone https://github.com/luongnv89/cc-context-stats.git
+git clone https://github.com/luongnv89/context-stats.git
 copy context-stats\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
 copy context-stats\scripts\_statusline_shared.py %USERPROFILE%\.claude\_statusline_shared.py
 ```
