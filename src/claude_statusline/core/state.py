@@ -144,8 +144,11 @@ def _validate_session_id(session_id: str) -> None:
         session_id: Session ID to validate
 
     Raises:
-        ValueError: If session_id contains '/', '\\', '..', or null bytes
+        ValueError: If session_id is not a str, or contains '/', '\\', '..', or
+            null bytes
     """
+    if not isinstance(session_id, str):
+        raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
     for bad in ("/", "\\", "..", "\0"):
         if bad in session_id:
             raise ValueError(
@@ -322,11 +325,15 @@ class StateFile:
     def append_entry(self, entry: StateEntry) -> None:
         """Append an entry to the state file.
 
+        The file is created with owner-only permissions (0600) — state rows
+        carry session ids and costs, matching the pr-number-cache precedent.
+
         Args:
             entry: StateEntry to append
         """
         try:
-            with open(self.file_path, "a") as f:
+            fd = os.open(self.file_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "w") as f:
                 f.write(f"{entry.to_csv_line()}\n")
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to write state {self.file_path}: {e}\n")

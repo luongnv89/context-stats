@@ -106,6 +106,8 @@ Each line is a CSV record with 15 comma-separated fields (timestamp, token count
 
 **Session ID validation:** IDs are validated to reject path-traversal characters (`/`, `\`, `..`, null bytes).
 
+**Permissions:** Newly created state files get owner-only `0600` permissions — rows carry session ids and costs.
+
 ## Data Privacy
 
 All data stays local:
@@ -113,6 +115,21 @@ All data stays local:
 - State files are written to `~/.claude/statusline/`
 - No network requests are made
 - No telemetry or analytics
+
+### Local trust boundary
+
+The statusline's only external input is the JSON document Claude Code pipes to
+stdin. Everything downstream is treated as untrusted at the boundary:
+
+- `workspace.project_dir` is **resolved and verified to be an existing
+  directory** before any `git`/`gh` subprocess runs with it as the working
+  directory (F-SEC-002); otherwise git/PR lookups are skipped entirely.
+- `session_id` is **validated against path-traversal characters** before it is
+  ever interpolated into a state-file path (F-BUG-002).
+- Explicit JSON nulls are normalized to "absent" for every extracted field, so
+  a payload shape change degrades gracefully instead of crashing the render.
+- Any unexpected render exception emits a minimal fallback line on stdout and
+  diagnostics on stderr only.
 
 ## Configuration
 

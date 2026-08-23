@@ -38,6 +38,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
 ROTATION_THRESHOLD = 10_000
 ROTATION_KEEP = 5_000
@@ -1173,6 +1174,56 @@ def _ensure_utf8_stdout():
             pass
 
 
+def _validate_session_id(session_id):
+    """Validate that a session ID does not contain dangerous path characters.
+
+    Parity: identical logic to ``claude_statusline.core.state._validate_session_id``.
+
+    Raises:
+        ValueError: If session_id is not a str, or contains '/', '\\', '..', or
+            null bytes
+    """
+    if not isinstance(session_id, str):
+        raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
+    for bad in ("/", "\\", "..", "\0"):
+        if bad in session_id:
+            raise ValueError(
+                f"Invalid session_id: contains '{bad}'. "
+                "Session IDs must not contain '/', '\\', '..', or null bytes."
+            )
+
+
+def _extract(data, key, default=None):
+    """Read ``key`` from ``data``, treating explicit JSON null as absent.
+
+    External inputs (the stdin payload) may carry explicit nulls where older
+    builds sent no key at all; a bare ``dict.get`` chain returns None instead
+    of the default for those, which used to crash the render (F-BUG-003).
+    Non-dict containers also yield the default.
+    """
+    if not isinstance(data, dict):
+        return default
+    value = data.get(key, default)
+    return default if value is None else value
+
+
+def _resolve_project_dir(raw):
+    """Resolve a stdin-supplied project_dir to an existing directory, else None.
+
+    Local trust boundary (F-SEC-002): ``workspace.project_dir`` arrives
+    verbatim from untrusted stdin JSON. Git/gh subprocesses are only ever run
+    with a cwd that has been resolved and verified to exist; anything else
+    returns None so callers skip those lookups entirely.
+    """
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        candidate = os.path.realpath(os.path.expanduser(raw))
+    except OSError:
+        return None
+    return candidate if os.path.isdir(candidate) else None
+
+
 def main():
     _ensure_utf8_stdout()
 
@@ -1182,12 +1233,26 @@ def main():
         sys.stdout.write("[Claude] ~\n")
         return
 
-    # Extract data
-    cwd = data.get("workspace", {}).get("current_dir", "~")
-    project_dir = data.get("workspace", {}).get("project_dir", cwd)
-    model = data.get("model", {}).get("display_name", "Claude")
+    # Render catch-all (F-BUG-004): any unexpected exception degrades to a
+    # minimal status line on stdout with diagnostics on stderr only — never a
+    # raw traceback as the status line.
+    try:
+        _render(data)
+    except Exception:  # noqa: BLE001 - deliberate catch-all render boundary
+        sys.stderr.write("[statusline] warning: rendering failed; fallback line emitted\n")
+        sys.stderr.write(traceback.format_exc())
+        sys.stdout.write("[Claude] ~\n")
+
+
+def _render(data):
+    """Render the status line for an already-parsed stdin payload."""
+    # Extract data — every lookup treats explicit JSON null like an absent key
+    workspace_data = _extract(data, "workspace", {})
+    cwd = _extract(workspace_data, "current_dir", "~")
+    project_dir = _extract(workspace_data, "project_dir", cwd)
+    model_data = _extract(data, "model", {})
+    model = _extract(model_data, "display_name", "Claude")
     # Extract thinking budget if present (forward-compatible: Claude Code may send this)
-    model_data = data.get("model", {})
     thinking_budget = model_data.get("thinking_budget") or (
         model_data.get("thinking", {}).get("budget")
         if isinstance(model_data.get("thinking"), dict)
@@ -1245,10 +1310,22 @@ def main():
     c_model = c.get("model", c_separator)
     c_session = c.get("session", c_separator)
 
-    # Git info (use per-property branch color, fallback to green)
-    git_info = get_git_info(project_dir, magenta=c_branch_name, cyan=c_cyan)
+    # Git info (use per-property branch color, fallback to green). Gated on
+    # the resolved project dir — see _resolve_project_dir (F-SEC-002).
+    safe_project_dir = _resolve_project_dir(project_dir)
+    git_info = ""
+    if safe_project_dir:
+        git_info = get_git_info(safe_project_dir, magenta=c_branch_name, cyan=c_cyan)
 
-    session_id = data.get("session_id")
+    session_id = _extract(data, "session_id")
+    if session_id is not None:
+        # Path-traversal defense (F-BUG-002): a session_id carrying '/', '\',
+        # '..' or null bytes must never reach state-file path construction.
+        try:
+            _validate_session_id(session_id)
+        except ValueError as e:
+            sys.stderr.write(f"[statusline] warning: {e}\n")
+            session_id = None
 
     # Context window calculation
     context_info = ""
@@ -1262,20 +1339,22 @@ def main():
     pr_info = ""
 
     # PR number lookup
-    if show_pr:
-        pr_num = get_pr_number(project_dir)
+    if show_pr and safe_project_dir:
+        pr_num = get_pr_number(safe_project_dir)
         if pr_num:
             pr_info = f" | {c_separator}{pr_num}{RESET}"
-    total_size = data.get("context_window", {}).get("context_window_size", 0)
-    current_usage = data.get("context_window", {}).get("current_usage")
-    total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
-    total_output_tokens = data.get("context_window", {}).get("total_output_tokens", 0)
-    cost_usd = data.get("cost", {}).get("total_cost_usd", 0) or 0
-    lines_added = data.get("cost", {}).get("total_lines_added", 0)
-    lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
-    api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
-    model_id = data.get("model", {}).get("id", "")
-    workspace_project_dir = data.get("workspace", {}).get("project_dir", "")
+    context_data = _extract(data, "context_window", {})
+    total_size = _extract(context_data, "context_window_size", 0)
+    current_usage = _extract(context_data, "current_usage")
+    total_input_tokens = _extract(context_data, "total_input_tokens", 0)
+    total_output_tokens = _extract(context_data, "total_output_tokens", 0)
+    cost_data = _extract(data, "cost", {})
+    cost_usd = _extract(cost_data, "total_cost_usd", 0) or 0
+    lines_added = _extract(cost_data, "total_lines_added", 0)
+    lines_removed = _extract(cost_data, "total_lines_removed", 0)
+    api_duration_ms = _extract(cost_data, "total_api_duration_ms", 0)
+    model_id = _extract(model_data, "id", "")
+    workspace_project_dir = _extract(workspace_data, "project_dir", "")
 
     if total_size > 0 and current_usage:
         # Get tokens from current_usage (includes cache)
@@ -1463,7 +1542,11 @@ def main():
                             api_duration_ms,
                         ]
                     )
-                    with open(state_file, "a") as f:
+                    # Create with owner-only permissions (F-SEC-003): state
+                    # rows carry session ids and costs, matching the
+                    # pr-number-cache precedent (mkstemp is 0600).
+                    fd = os.open(state_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+                    with os.fdopen(fd, "w") as f:
                         f.write(f"{state_data}\n")
                     maybe_rotate_state_file(state_file)
                 except OSError as e:

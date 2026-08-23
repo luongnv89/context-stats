@@ -25,12 +25,14 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
+from typing import Any
 
 from claude_statusline.core.colors import ColorManager
 from claude_statusline.core.config import Config
 from claude_statusline.core.git import _get_pr_number, get_git_info
-from claude_statusline.core.state import StateEntry, StateFile
+from claude_statusline.core.state import StateEntry, StateFile, _validate_session_id
 from claude_statusline.formatters.layout import fit_to_width, get_terminal_width
 from claude_statusline.formatters.time import get_current_timestamp
 from claude_statusline.formatters.tokens import calculate_context_usage, format_tokens
@@ -102,6 +104,54 @@ def _ensure_utf8_stdout() -> None:
             pass
 
 
+def _validate_session_id_or_none(session_id: Any) -> Any:
+    """Return ``session_id`` when safe, else None after a stderr warning.
+
+    Path-traversal defense (F-BUG-002): a session_id carrying ``/``, ``\\``,
+    ``..`` or null bytes must never reach state-file path construction. The
+    package degrades to the default state file instead of crashing.
+    """
+    if session_id is None:
+        return None
+    try:
+        _validate_session_id(session_id)
+    except ValueError as e:
+        sys.stderr.write(f"[statusline] warning: {e}\n")
+        return None
+    return session_id
+
+
+def _extract(data: object, key: str, default: Any = None) -> Any:
+    """Read ``key`` from ``data``, treating explicit JSON null as absent.
+
+    External inputs (the stdin payload) may carry explicit nulls where older
+    builds sent no key at all; a bare ``dict.get`` chain returns None instead
+    of the default for those, which used to crash the render (F-BUG-003).
+    Non-dict containers also yield the default.
+    """
+    if not isinstance(data, dict):
+        return default
+    value = data.get(key, default)
+    return default if value is None else value
+
+
+def _resolve_project_dir(raw: object) -> str | None:
+    """Resolve a stdin-supplied project_dir to an existing directory, else None.
+
+    Local trust boundary (F-SEC-002): ``workspace.project_dir`` arrives
+    verbatim from untrusted stdin JSON. Git/gh subprocesses are only ever run
+    with a cwd that has been resolved and verified to exist; anything else
+    returns None so callers skip those lookups entirely.
+    """
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        candidate = Path(raw).expanduser().resolve()
+    except OSError:
+        return None
+    return str(candidate) if candidate.is_dir() else None
+
+
 def main() -> None:
     """Main entry point for claude-statusline CLI."""
     _ensure_utf8_stdout()
@@ -112,12 +162,27 @@ def main() -> None:
         print("[Claude] ~")
         return
 
-    # Extract data
-    cwd = data.get("workspace", {}).get("current_dir", "~")
-    project_dir = data.get("workspace", {}).get("project_dir", cwd)
-    model = data.get("model", {}).get("display_name", "Claude")
+    # Render catch-all (F-BUG-004): any unexpected exception degrades to a
+    # minimal status line on stdout with diagnostics on stderr only — never a
+    # raw traceback as the status line.
+    try:
+        _render(data)
+    except Exception:  # noqa: BLE001 - deliberate catch-all render boundary
+        sys.stderr.write("[statusline] warning: rendering failed; fallback line emitted\n")
+        sys.stderr.write(traceback.format_exc())
+        print("[Claude] ~")
+
+
+def _render(data: dict) -> None:
+    """Render the status line for an already-parsed stdin payload."""
+
+    # Extract data — every lookup treats explicit JSON null like an absent key
+    workspace_data = _extract(data, "workspace", {})
+    cwd = _extract(workspace_data, "current_dir", "~")
+    project_dir = _extract(workspace_data, "project_dir", cwd)
+    model_data = _extract(data, "model", {})
+    model = _extract(model_data, "display_name", "Claude")
     # Extract thinking budget if present (forward-compatible: Claude Code may send this)
-    model_data = data.get("model", {})
     thinking_budget = model_data.get("thinking_budget") or (
         model_data.get("thinking", {}).get("budget")
         if isinstance(model_data.get("thinking"), dict)
@@ -137,16 +202,20 @@ def main() -> None:
     # Build color manager with any user overrides
     colors = ColorManager(enabled=True, overrides=config.color_overrides)
 
-    # Git info (use per-property branch color if set, else fallback to magenta)
+    # Git info (use per-property branch color if set, else fallback to magenta).
+    # Gated on the resolved project dir — see _resolve_project_dir (F-SEC-002).
+    safe_project_dir = _resolve_project_dir(project_dir)
     branch_color = colors.branch_name
     # Build a color manager with branch_name mapped to magenta slot for git_info
     git_colors = ColorManager(
         enabled=True, overrides={**config.color_overrides, "magenta": branch_color}
     )
-    git_info = get_git_info(project_dir, color_manager=git_colors)
+    git_info = ""
+    if safe_project_dir:
+        git_info = get_git_info(safe_project_dir, color_manager=git_colors)
 
-    # Extract session_id once for reuse
-    session_id = data.get("session_id")
+    # Extract session_id once for reuse (validated — see F-BUG-002)
+    session_id = _validate_session_id_or_none(_extract(data, "session_id"))
 
     # Context window calculation
     context_info = ""
@@ -160,21 +229,23 @@ def main() -> None:
     pr_info = ""
 
     # PR number lookup (after other initialisations so we have the config)
-    if config.show_pr:
-        pr_num = _get_pr_number(Path(project_dir))
+    if config.show_pr and safe_project_dir:
+        pr_num = _get_pr_number(Path(safe_project_dir))
         if pr_num:
             pr_info = f" | {colors.separator}{pr_num}{colors.reset}"
 
-    total_size = data.get("context_window", {}).get("context_window_size", 0)
-    current_usage = data.get("context_window", {}).get("current_usage")
-    total_input_tokens = data.get("context_window", {}).get("total_input_tokens", 0)
-    total_output_tokens = data.get("context_window", {}).get("total_output_tokens", 0)
-    cost_usd = data.get("cost", {}).get("total_cost_usd", 0) or 0
-    lines_added = data.get("cost", {}).get("total_lines_added", 0)
-    lines_removed = data.get("cost", {}).get("total_lines_removed", 0)
-    api_duration_ms = data.get("cost", {}).get("total_api_duration_ms", 0)
-    model_id = data.get("model", {}).get("id", "")
-    workspace_project_dir = data.get("workspace", {}).get("project_dir", "")
+    context_data = _extract(data, "context_window", {})
+    total_size = _extract(context_data, "context_window_size", 0)
+    current_usage = _extract(context_data, "current_usage")
+    total_input_tokens = _extract(context_data, "total_input_tokens", 0)
+    total_output_tokens = _extract(context_data, "total_output_tokens", 0)
+    cost_data = _extract(data, "cost", {})
+    cost_usd = _extract(cost_data, "total_cost_usd", 0) or 0
+    lines_added = _extract(cost_data, "total_lines_added", 0)
+    lines_removed = _extract(cost_data, "total_lines_removed", 0)
+    api_duration_ms = _extract(cost_data, "total_api_duration_ms", 0)
+    model_id = _extract(model_data, "id", "")
+    workspace_project_dir = _extract(workspace_data, "project_dir", "")
 
     if total_size > 0 and current_usage:
         # Get tokens from current_usage (includes cache)
