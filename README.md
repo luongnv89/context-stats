@@ -306,7 +306,7 @@ Yes. MIT licensed, zero external dependencies.
 No. Session data stays local in `~/.claude/statusline/`. Analytics read from `~/.claude/projects/`.
 
 **What runtimes does it support?**
-Python 3.9+. Install via `pip install context-stats`.
+Python 3.10+. Install via `pip install context-stats`.
 
 ---
 

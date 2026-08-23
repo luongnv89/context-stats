@@ -74,7 +74,7 @@ echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline
 
 ### pip install fails
 
-1. Ensure Python 3.9+:
+1. Ensure Python 3.10+:
 
    ```bash
    python3 --version

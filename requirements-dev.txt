@@ -9,10 +9,7 @@ ruff>=0.1.0
 mypy>=1.7.0
 
 # Pre-commit hooks
-# Capped below 4.4: pre-commit >= 4.4 requires Python >= 3.10 while the CI
-# matrix floors at 3.9 (F-DEP-002). Raising the Python floor together with
-# this cap is owned by Task 3.1 (#133) — do not widen the cap until then.
-pre-commit>=3.6.0,<4.4
+pre-commit>=3.6.0
 
 # Security auditing
 pip-audit>=2.7,<3

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **Git** - Version control
-- **Python 3.9+** - For Python package and testing
+- **Python 3.10+** - For Python package and testing
 - **Bats** - Bash Automated Testing System (optional, for bash tests)
 - **pre-commit** - Git hook framework (optional, for automated code quality)
 
@@ -67,11 +67,9 @@ pre-commit install
 
 ### Regenerating the dev-dependency constraints file
 
-`requirements-dev.constraints.txt` pins every dev requirement (and its transitive dependencies) to exact versions so local installs and CI are reproducible; it is consumed via `pip install -r requirements-dev.txt -c requirements-dev.constraints.txt` in every CI job that installs dev dependencies (`python-lint`, `python-test`, and the release workflow's test job). To regenerate it after editing `requirements-dev.txt`, resolve at the **Python 3.9 floor** — the oldest version CI supports — so the pins stay installable across the whole 3.9–3.12 matrix: run `pip download --dest /tmp/wheels --python-version 3.9 --only-binary=:all: -r requirements-dev.txt`, read the exact resolved versions from the downloaded wheel filenames, and write them into the constraints file as `name==version` lines (canonical PyPI names, alphabetically sorted).
+`requirements-dev.constraints.txt` pins every dev requirement (and its transitive dependencies) to exact versions so local installs and CI are reproducible; it is consumed via `pip install -r requirements-dev.txt -c requirements-dev.constraints.txt` in every CI job that installs dev dependencies (`python-lint`, `python-test`, and the release workflow's test job). To regenerate it after editing `requirements-dev.txt`, resolve at the **Python 3.10 floor** — the oldest version CI supports — so the pins stay installable across the whole 3.10–3.14 matrix: run `pip download --dest /tmp/wheels --python-version 3.10 --only-binary=:all: -r requirements-dev.txt`, read the exact resolved versions from the downloaded wheel filenames, and write them into the constraints file as `name==version` lines (canonical PyPI names, alphabetically sorted).
 
-**Version-capped floor dependencies (F-DEP-002):** when a dependency's newer releases drop a matrix Python, `requirements-dev.txt` must carry an explicit **upper cap** at that boundary alongside the floor — e.g. pre-commit ≥ 4.4 requires Python ≥ 3.10 while the matrix floors at 3.9, so it is declared as `pre-commit>=3.6.0,<4.4` (raising that floor/cap pair is owned by Task 3.1, [#133](https://github.com/luongnv89/context-stats/issues/133)). The constraints file then pins a single unmarked version below the cap (the newest release whose [`Requires-Python`](https://pypi.org/pypi/pre-commit/json) admits the oldest supported Python — 4.3.0 today). Never replace the cap with PEP 508 environment-marker-scoped pins in the constraints file: `pip download --python-version` evaluates `python_version` markers against the _running_ interpreter rather than the target one, so marked pins cannot be verified with the cross-version procedure below and silently resolve wrong on other legs.
-
-Then verify before committing: re-run that same download command with `-c requirements-dev.constraints.txt` for each matrix Python (`3.9`, `3.10`, `3.11`, `3.12`) — all four must resolve without conflicts — and run the recorded test command in a clean venv installed with the constraints.
+Then verify before committing: re-run that same download command with `-c requirements-dev.constraints.txt` for each matrix Python (`3.10`, `3.11`, `3.12`, `3.13`, `3.14`) — all five must resolve without conflicts — and run the recorded test command in a clean venv installed with the constraints.
 
 ### Security auditing
 
@@ -85,7 +83,7 @@ bash scripts/pip-audit-locked.sh
 
 CI runs the same audit on every push/PR (`dependency-scan` job in `.github/workflows/ci.yml`) and weekly ([`.github/workflows/security-audit.yml`](../.github/workflows/security-audit.yml)). The gate fails on **any** known advisory — stricter than the High/Critical requirement.
 
-**Exception policy:** an advisory may only be silenced with a filed ticket. Add one `--ignore-vuln <ID>` line per advisory to `scripts/pip-audit-locked.sh`, reference the ticket in that script's header comment, and note it in `requirements-dev.constraints.txt`. Current exceptions are tracked in [#161](https://github.com/luongnv89/context-stats/issues/161): every fix version requires Python >= 3.10 directly, or conflicts across the CI matrix with the Python 3.9-floor pins, so they become actionable when the minimum supported Python rises to 3.10+ — bump the affected pins and delete the matching flags then. When a **new** advisory appears: first try bumping the pin within what resolves at the 3.9 floor; only if no fix installs, file a ticket and add the flag.
+**Exception policy:** an advisory may only be silenced with a filed ticket. Add one `--ignore-vuln <ID>` line per advisory to `scripts/pip-audit-locked.sh`, reference the ticket in that script's header comment, and note it in `requirements-dev.constraints.txt`. The exceptions tracked in [#161](https://github.com/luongnv89/context-stats/issues/161) — every fix version required Python >= 3.10 directly, or conflicted across the CI matrix with the old Python 3.9-floor pins — became actionable when the minimum supported Python rose to 3.10 ([ADR 0001](adr/python-support-floor.md), #133/#134): the affected pins were bumped and their flags deleted as part of that task. When a **new** advisory appears: first try bumping the pin within what resolves at the 3.10 floor; only if no fix installs, file a ticket and add the flag.
 
 ## Project Layout
 
