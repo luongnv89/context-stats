@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Single-sourced shared statusline logic (Tasks 5.2/5.3)** — Extracted the pure, stdlib-only primitives duplicated between the package and the standalone script into `src/claude_statusline/_shared.py` (colors, MI/zone/pacman logic, tok/s compute, layout helpers, stdin trust-boundary helpers, session/CSV validation, lock/rotate cores, git-info core), closing F-DEAD-001. Package modules import from `_shared` under their historical names; `scripts/statusline.py` loads the same module through a resolution chain (installed package → byte-identical vendored copy at `scripts/_statusline_shared.py` → repository `src/` bootstrap), so it still runs without the package — manual installs now copy **both** script files. The AST name-match duplication recount drops to ~18% of the script (from ~78% by the same measure); the remainder is the documented `main`/`_render` orchestration boundaries. The parity suite guards the vendored-copy equality, a <25% duplication ceiling, and no-package rendering (#143)
+- **Standalone config parser rewritten** — `read_config()` hoisted its 287-line default-config template into `_DEFAULT_CONF_TEMPLATE` and replaced its elif chain with parser dispatch tables mirroring `core/config.py` (shared key sets, identical ranges/warnings); the function body is now 50 lines. Both state-file read paths (last-entry delta read and tok/s bounded tail) use one shared `parse_state_row()` instead of hand-rolled index-magic CSV access, closing F-CLEAN-003/F-CLEAN-007 (#144)
+
 ### Removed
 
 - **Dead-code cleanup sweep (Task 5.1)** — Dropped the JS-only ESLint/prettier pre-commit hooks (and the orphaned `.prettierrc`), so `pre-commit run` no longer needs a Node toolchain; removed the unwired `format_percentage()`/`_format_timestamp()` helpers; untracked `.gitissue/` snapshots and `.gitissue.yml` (IDD state is now fully local, matching the existing `.gitignore`); deleted the tracked generated reports (`context-stats-cache-misses.md`, `context-stats-export-output.md`), `README.backup.md`, and `INSTALLATION_FIX.md` — its still-useful version-mismatch diagnosis moved to [docs/troubleshooting.md](docs/troubleshooting.md). Closes F-DEAD-002/-004/-005/-006/-007 (#142)

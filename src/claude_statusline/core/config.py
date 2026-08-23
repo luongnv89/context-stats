@@ -8,53 +8,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from claude_statusline._shared import (
+    _COLOR_KEYS as _COLOR_KEYS,
+)
+from claude_statusline._shared import (
+    _COMPACTION_FLOAT_KEYS as _COMPACTION_FLOAT_KEYS,
+)
+from claude_statusline._shared import (
+    _ZONE_FLOAT_KEYS as _ZONE_FLOAT_KEYS,
+)
+from claude_statusline._shared import (
+    _ZONE_INT_KEYS as _ZONE_INT_KEYS,
+)
 from claude_statusline.core.colors import parse_color
-
-# Color config keys and which ColorManager slot they map to
-_COLOR_KEYS: dict[str, str] = {
-    "color_green": "green",
-    "color_yellow": "yellow",
-    "color_red": "red",
-    "color_blue": "blue",
-    "color_magenta": "magenta",
-    "color_cyan": "cyan",
-    # Per-property color keys
-    "color_context_length": "context_length",
-    "color_project_name": "project_name",
-    "color_branch_name": "branch_name",
-    "color_mi_score": "mi_score",
-    "color_zone": "zone",
-    "color_separator": "separator",
-    "color_tps": "tps",
-    "color_delta": "delta",
-    "color_cost": "cost",
-    "color_model": "model",
-    "color_session": "session",
-}
-
-# Zone threshold config keys (integer token counts)
-_ZONE_INT_KEYS: set[str] = {
-    "zone_1m_plan_max",
-    "zone_1m_code_max",
-    "zone_1m_dump_max",
-    "zone_1m_xdump_max",
-    "zone_std_warn_buffer",
-    "large_model_threshold",
-}
-
-# Zone threshold config keys (float ratios 0-1)
-_ZONE_FLOAT_KEYS: set[str] = {
-    "zone_std_dump_ratio",
-    "zone_std_hard_limit",
-    "zone_std_dead_ratio",
-}
-
-# Compaction-related float config keys (fractions in (0, 1))
-_COMPACTION_FLOAT_KEYS: set[str] = {
-    "compaction_drop_threshold",
-    "compact_mi_warn_threshold",
-}
-
 
 # ---------------------------------------------------------------------------
 # Default config template — loaded at runtime from package data

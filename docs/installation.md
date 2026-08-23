@@ -44,6 +44,7 @@ Or manually copy the script:
 ```powershell
 git clone https://github.com/luongnv89/cc-context-stats.git
 copy context-stats\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
+copy context-stats\scripts\_statusline_shared.py %USERPROFILE%\.claude\_statusline_shared.py
 ```
 
 ## Manual Installation
@@ -51,9 +52,14 @@ copy context-stats\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
 ### macOS / Linux
 
 ```bash
-cp scripts/statusline.py ~/.claude/statusline.py
+cp scripts/statusline.py scripts/_statusline_shared.py ~/.claude/
 chmod +x ~/.claude/statusline.py
 ```
+
+> The statusline script loads its shared logic from the sibling
+> `_statusline_shared.py` when the `context-stats` package is not installed,
+> so both files must be copied together (the copy is kept byte-identical to
+> the package module by the parity test suite).
 
 ## Configure Claude Code
 

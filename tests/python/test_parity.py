@@ -26,6 +26,7 @@ this module.
 
 from __future__ import annotations
 
+import ast as ast_mod
 import io
 import json
 import os
@@ -92,6 +93,8 @@ from claude_statusline.graphs.statistics import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "statusline.py"
+SHARED_MODULE_PATH = PROJECT_ROOT / "src" / "claude_statusline" / "_shared.py"
+VENDORED_SHARED_PATH = PROJECT_ROOT / "scripts" / "_statusline_shared.py"
 
 PKG_ROTATION_THRESHOLD = StateFile.ROTATION_THRESHOLD
 PKG_ROTATION_KEEP = StateFile.ROTATION_KEEP
@@ -153,6 +156,11 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "tok/s state field": ("test_api_duration_state_field_index14",),
     "tok/s rolling read (bounded tail)": ("test_render_byte_parity_tps_rolling_read",),
     "tok/s tail size helper": ("test_tps_tail_size_grid",),
+    "State-row parsing (`parse_state_row`: last-entry + bounded-tail reads replace index-magic CSV access)": (
+        "test_parse_state_row_grid",
+        "test_used_tokens_agree_with_state_entry",
+        "test_render_byte_parity_tps_rolling_read",
+    ),
     "Session cost display (`$X.XX`, default on)": (
         "test_render_byte_parity_basic",
         "test_render_byte_parity_show_cost_off",
@@ -899,6 +907,38 @@ class TestConfigParsingPair:
         assert scfg["compaction_drop_threshold"] == pcfg.compaction_drop_threshold
         assert scfg["compact_mi_warn_threshold"] == pcfg.compact_mi_warn_threshold
 
+    def test_zone_1m_and_unit_overrides_agree(self, tmp_path, monkeypatch):
+        """Customized config: 1M-class integer thresholds and remaining keys
+        parse identically through both parsers (Task 5.3 acceptance)."""
+        conf = write_conf(
+            tmp_path,
+            FULL_CONF
+            + "zone_1m_plan_max=70000\n"
+            + "zone_1m_code_max=100000\n"
+            + "zone_1m_dump_max=250000\n"
+            + "zone_1m_xdump_max=275000\n"
+            + "color_context_length=bold_white\n"
+            + "color_delta=#FFF8DC\n",
+        )
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+
+        scfg = sl.read_config()
+        pcfg = Config.load(conf)
+
+        for key in (
+            "zone_1m_plan_max",
+            "zone_1m_code_max",
+            "zone_1m_dump_max",
+            "zone_1m_xdump_max",
+        ):
+            assert scfg["zone_config"][key] == getattr(pcfg, key), key
+        # Per-property color slots land in the same override map on both sides.
+        assert scfg["colors"]["context_length"] == pcfg.color_overrides["context_length"]
+        assert scfg["colors"]["delta"] == pcfg.color_overrides["delta"]
+        # And the whole shared key-table contract still matches.
+        assert sl._COLOR_KEYS == PKG_COLOR_KEYS
+
     def test_defaults_with_comment_only_conf(self, isolated_home):
         scfg = sl.read_config()
         pcfg = Config.load(isolated_home / ".claude" / "statusline.conf")
@@ -957,6 +997,61 @@ class TestConfigParsingPair:
             assert scfg[key] == pcfg.mi_curve_beta == 0.0
         else:
             assert scfg[key] == getattr(pcfg, key)
+
+
+# ---------------------------------------------------------------------------
+# Row: State-row parsing (Task 5.3 — parse_state_row)
+# ---------------------------------------------------------------------------
+
+
+class TestStateRowParsingPair:
+    """parse_state_row replaces index-magic CSV access at both script read paths."""
+
+    ROWS = [
+        # (line, expected) — expected None means "row skipped by both paths"
+        ("1700000000,1,2,3,4,5,6,0.5,7,8,s,m,w,9,12345\n", 4),
+        ("1700000000,1,2,3,4\n", None),  # minimal 5-field row: no dur -> api 0
+        ("1700000000,1,2,3,4,5\n", None),
+        ("\n", None),  # blank noise row
+        ("   \n", None),
+        ("1700000000,1000\n", None),  # legacy 2-field row
+        ("garbage\n", None),
+        ("1,2,3,x,5,6,7,8,9,10,s,m,w,14,15\n", None),  # non-int numeric field
+    ]
+
+    @pytest.mark.parametrize(("line", "_"), ROWS, ids=lambda v: repr(v)[:30])
+    def test_parse_state_row_grid(self, line, _):
+        from claude_statusline._shared import parse_state_row as pkg_parse
+
+        assert sl.parse_state_row(line) == pkg_parse(line)
+
+    @pytest.mark.parametrize(
+        ("line", "out", "dur"),
+        [
+            ("1700000000,1,2,3,4,5,6,0.5,7,8,s,m,w,9,12345\n", 4, 12345),
+            ("1700000000,1,2,3,4\n", 4, 0),  # legacy row without index 14
+            ("1700000000,1,2,3,4,5,6\n", 4, 0),
+        ],
+        ids=str,
+    )
+    def test_parse_state_row_tail_fields(self, line, out, dur):
+        parsed = sl.parse_state_row(line)
+        assert parsed is not None
+        assert parsed["output_tokens"] == out
+        assert parsed["api_duration_ms"] == dur
+
+    def test_used_tokens_agree_with_state_entry(self):
+        """For valid rows the parsed usage equals StateEntry.current_used_tokens."""
+        line = "1700000000,1,2,300,4,50,6,0.5,7,8,s,m,w,9,12345\n"
+        entry = StateEntry.from_csv_line(line)
+        parsed = sl.parse_state_row(line)
+        assert parsed is not None and entry is not None
+        used = parsed["current_input_tokens"] + parsed["cache_creation"] + parsed["cache_read"]
+        assert used == entry.current_used_tokens == 356
+
+    def test_invalid_rows_yield_none_on_both_sides(self):
+        for bad in ("a,b,c,d,e,f\n", "1,2,3\n", ""):
+            assert sl.parse_state_row(bad) is None
 
 
 # ---------------------------------------------------------------------------
@@ -1030,7 +1125,13 @@ class TestRotationPair:
         assert lines[:-1] == state[-PKG_ROTATION_KEEP + 1 :]
 
     def test_lock_unlock_noop_without_fcntl(self):
-        """Both lock helpers are best-effort no-ops when fcntl is absent."""
+        """Both lock helpers are best-effort no-ops when fcntl is absent.
+
+        Lock/unlock bodies are single-sourced in ``claude_statusline._shared``
+        (Task 5.2): the package re-exports them via ``core.state`` and the
+        standalone script binds them from its loaded shared module, so one
+        patch covers both sides.
+        """
 
         class FakeFH:
             def fileno(self):
@@ -1038,23 +1139,25 @@ class TestRotationPair:
 
         import scripts.statusline as sl_mod
 
-        saved = sl_mod.fcntl
-        sl_mod.fcntl = None
+        import claude_statusline._shared as shared
+
+        assert sl_mod._lock_state_file.__module__ == shared.__name__
+        assert (
+            __import__(
+                "claude_statusline.core.state", fromlist=["_lock_state_file"]
+            )._lock_state_file
+            is shared._lock_state_file
+        )
+
+        saved = shared.fcntl
+        shared.fcntl = None
         try:
+            shared._lock_state_file(FakeFH())
+            shared._unlock_state_file(FakeFH())
             sl_mod._lock_state_file(FakeFH())
             sl_mod._unlock_state_file(FakeFH())
         finally:
-            sl_mod.fcntl = saved
-
-        import claude_statusline.core.state as state_mod
-
-        saved_pkg = state_mod.fcntl
-        state_mod.fcntl = None
-        try:
-            state_mod._lock_state_file(FakeFH())
-            state_mod._unlock_state_file(FakeFH())
-        finally:
-            state_mod.fcntl = saved_pkg
+            shared.fcntl = saved
 
 
 # ---------------------------------------------------------------------------
@@ -1433,3 +1536,126 @@ def test_placeholder_import_symmetry():
 
     source = inspect.getsource(cs)
     assert "from claude_statusline.cli.statusline import _ensure_utf8_stdout" in source
+
+
+# ---------------------------------------------------------------------------
+# Task 5.2/5.3 arrangement: single-sourced shared module + vendored copy
+# ---------------------------------------------------------------------------
+
+
+class TestSharedModuleArrangement:
+    """The extracted shared module (F-DEAD-001) and its standalone contract."""
+
+    def test_vendored_copy_byte_identical(self):
+        """scripts/_statusline_shared.py must equal src/claude_statusline/_shared.py.
+
+        The standalone script falls back to this vendored sibling when the
+        package is not importable; any drift between the two copies would
+        silently fork the synced logic, so equality is enforced byte-for-byte.
+        """
+        assert VENDORED_SHARED_PATH.exists(), "vendored copy missing from scripts/"
+        assert VENDORED_SHARED_PATH.read_bytes() == SHARED_MODULE_PATH.read_bytes()
+
+    def test_script_binds_shared_symbols(self):
+        """The standalone module resolves its moved symbols from the loaded
+        shared module rather than defining duplicate bodies."""
+        for name in (
+            "compute_tps",
+            "format_tps",
+            "detect_compaction_events",
+            "visible_width",
+            "fit_to_width",
+            "get_terminal_width",
+            "get_pacman_icon",
+            "compute_mi",
+            "get_model_profile",
+            "_parse_color",
+            "_validate_session_id",
+            "_validate_csv_field",
+            "_csv_unsafe_reason",
+            "_sanitize_workspace_dir",
+            "_extract",
+            "_resolve_project_dir",
+            "_ensure_utf8_stdout",
+            "_format_thinking_info",
+            "_tps_tail_size",
+            "get_git_info",
+        ):
+            fn = getattr(sl, name)
+            assert getattr(fn, "__module__", "").endswith("_shared"), name
+        # Palette-aware wrappers stay script-local by design.
+        assert sl.get_mi_color.__module__ == "scripts.statusline"
+        assert sl._zone_ansi_color.__module__ == "scripts.statusline"
+
+    def test_ast_duplicated_function_ratio_below_threshold(self):
+        """AST recount of name-matched duplicated functions stays below 25%.
+
+        Acceptance criterion of Task 5.2 (#143). The two remaining name matches
+        are documented remainder, not duplicated logic:
+          - ``main``  — per-implementation entry point / render catch-all boundary.
+          - ``_render`` — the standalone dict-based renderer; its package twin
+            uses ColorManager/StateFile abstractions, and its decomposition is
+            owned by a later modernization task.
+        """
+
+        def normalized(node):
+            body = node.body
+            if (
+                len(body) == 1
+                and isinstance(body[0], ast_mod.Expr)
+                and isinstance(body[0].value, ast_mod.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                body = []
+            return ast_mod.dump(ast_mod.Module(body=body, type_ignores=[]))
+
+        tree = ast_mod.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+        script_fns = {
+            n.name: normalized(n) for n in ast_mod.walk(tree) if isinstance(n, ast_mod.FunctionDef)
+        }
+
+        pkg_names: set[str] = set()
+        pkg_bodies: dict[str, set[str]] = {}
+        for p in (PROJECT_ROOT / "src").rglob("*.py"):
+            t = ast_mod.parse(p.read_text(encoding="utf-8"))
+            for n in ast_mod.walk(t):
+                if isinstance(n, ast_mod.FunctionDef):
+                    pkg_names.add(n.name)
+                    pkg_bodies.setdefault(n.name, set()).add(normalized(n))
+
+        matched = [name for name in script_fns if name in pkg_names]
+        ratio = len(matched) / len(script_fns)
+        assert ratio < 0.25, f"name-matched duplication {ratio:.1%} >= 25%: {sorted(matched)}"
+        # The documented remainder must be exactly these orchestration boundaries.
+        assert set(matched) <= {"main", "_render"}
+
+    def test_standalone_renders_without_package(self, tmp_path):
+        """End-to-end smoke: with ``claude_statusline`` made unimportable, the
+        script still renders via its vendored sibling copy."""
+        blocker_dir = tmp_path / "blocker"
+        blocker_dir.mkdir()
+        (blocker_dir / "claude_statusline.py").write_text(
+            "raise ImportError('blocked for standalone smoke test')\n", encoding="utf-8"
+        )
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(blocker_dir)
+        env["HOME"] = str(home)
+        env["USERPROFILE"] = str(home)
+        env.pop("COLUMNS", None)
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_PATH),
+            ],
+            input=json.dumps({"session_id": "no-pkg-smoke"}),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            timeout=120,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "Claude" in ANSI_RE.sub("", result.stdout)
+        assert "no-pkg-smoke" in ANSI_RE.sub("", result.stdout)
