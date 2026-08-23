@@ -574,8 +574,9 @@ class TestPRDisplay:
         content = SCRIPT_PATH.read_text(encoding="utf-8")
         # Check that show_pr is in the config default dict
         assert '"show_pr": True' in content or "'show_pr': True" in content
-        # Check show_pr parsing
-        assert 'key == "show_pr"' in content or "key == 'show_pr'" in content
+        # Check show_pr parsing: it is dispatched through _BOOL_CONFIG_KEYS
+        # (Task 5.3 replaced the elif chain with parser dispatch tables).
+        assert '"show_pr"' in content and "_BOOL_CONFIG_KEYS" in content
 
     def test_config_has_show_pr_in_to_dict(self, tmp_path):
         """Config.to_dict() should include show_pr key."""

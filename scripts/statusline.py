@@ -152,6 +152,9 @@ _ZONE_INT_KEYS = _shared._ZONE_INT_KEYS
 # Zone threshold config keys (float ratios 0-1)
 _ZONE_FLOAT_KEYS = _shared._ZONE_FLOAT_KEYS
 
+# Compaction-related float config keys (fractions in (0, 1))
+_COMPACTION_FLOAT_KEYS = _shared._COMPACTION_FLOAT_KEYS
+
 # Pattern to strip ANSI escape sequences
 _ANSI_RE = _shared._ANSI_RE
 
@@ -183,6 +186,7 @@ _validate_session_id = _shared._validate_session_id
 _validate_csv_field = _shared._validate_csv_field
 _csv_unsafe_reason = _shared._csv_unsafe_reason
 _sanitize_workspace_dir = _shared._sanitize_workspace_dir
+parse_state_row = _shared.parse_state_row
 _lock_state_file = _shared._lock_state_file
 _unlock_state_file = _shared._unlock_state_file
 _rotate_lines = _shared.rotate_lines
@@ -300,6 +304,91 @@ def _migrate_legacy_state_files(state_dir, old_state_dir):
                 )
 
 
+# Config keys parsed as booleans ("false" — case-insensitive — means off).
+_BOOL_CONFIG_KEYS = frozenset(
+    {
+        "autocompact",
+        "token_detail",
+        "show_delta",
+        "show_session",
+        "show_io_tokens",
+        "reduced_motion",
+        "show_mi",
+        "show_tps",
+        "show_pr",
+        "show_cost",
+        "show_effort",
+        "show_pacman",
+    }
+)
+
+# Config keys parsed as integers with a per-key inclusive minimum.
+_MIN_INT_CONFIG_KEYS = {"tps_precision": 0, "tps_window": 1}
+
+# Config keys parsed as floats constrained to the open interval (0, 1).
+_RANGE01_CONFIG_KEYS = frozenset(_ZONE_FLOAT_KEYS | _COMPACTION_FLOAT_KEYS)
+
+
+def _apply_config_value(config, key, raw_value):
+    """Apply one ``key=value`` config pair via the parser dispatch tables.
+
+    Mirrors ``claude_statusline.core.config.Config._read_config`` branch by
+    branch: identical accepted ranges, defaults, and stderr warnings.
+    """
+    if key in _BOOL_CONFIG_KEYS:
+        config[key] = raw_value.lower() != "false"
+    elif key == "mi_curve_beta":
+        try:
+            config["mi_curve_beta"] = float(raw_value)
+        except ValueError:
+            pass
+    elif key in _MIN_INT_CONFIG_KEYS:
+        minimum = _MIN_INT_CONFIG_KEYS[key]
+        try:
+            v = int(raw_value)
+        except ValueError:
+            sys.stderr.write(f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n")
+            return
+        if v >= minimum:
+            config[key] = v
+        else:
+            sys.stderr.write(
+                f"[statusline] warning: {key} must be >= {minimum}, ignoring '{raw_value}'\n"
+            )
+    elif key == "tps_unit":
+        if raw_value:
+            config["tps_unit"] = raw_value
+    elif key in _ZONE_INT_KEYS:
+        try:
+            v = int(raw_value)
+        except ValueError:
+            sys.stderr.write(f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n")
+            return
+        if v > 0:
+            config["zone_config"][key] = v
+        else:
+            sys.stderr.write(
+                f"[statusline] warning: {key} must be positive, ignoring '{raw_value}'\n"
+            )
+    elif key in _RANGE01_CONFIG_KEYS:
+        target = config["zone_config"] if key in _ZONE_FLOAT_KEYS else config
+        try:
+            v = float(raw_value)
+        except ValueError:
+            sys.stderr.write(f"[statusline] warning: invalid number for {key}: '{raw_value}'\n")
+            return
+        if 0.0 < v < 1.0:
+            target[key] = v
+        else:
+            sys.stderr.write(
+                f"[statusline] warning: {key} must be between 0 and 1, ignoring '{raw_value}'\n"
+            )
+    elif key in _COLOR_KEYS:
+        ansi = _parse_color(raw_value)
+        if ansi:
+            config["colors"][_COLOR_KEYS[key]] = ansi
+
+
 def read_config():
     """Read settings from config file"""
     config = {
@@ -346,116 +435,7 @@ def read_config():
                 if line.startswith("#") or "=" not in line:
                     continue
                 key, value = line.split("=", 1)
-                key = key.strip()
-                raw_value = value.strip()
-                value_lower = raw_value.lower()
-                if key == "autocompact":
-                    config["autocompact"] = value_lower != "false"
-                elif key == "token_detail":
-                    config["token_detail"] = value_lower != "false"
-                elif key == "show_delta":
-                    config["show_delta"] = value_lower != "false"
-                elif key == "show_session":
-                    config["show_session"] = value_lower != "false"
-                elif key == "show_io_tokens":
-                    config["show_io_tokens"] = value_lower != "false"
-                elif key == "reduced_motion":
-                    config["reduced_motion"] = value_lower != "false"
-                elif key == "show_mi":
-                    config["show_mi"] = value_lower != "false"
-                elif key == "mi_curve_beta":
-                    try:
-                        config["mi_curve_beta"] = float(raw_value)
-                    except ValueError:
-                        pass
-                elif key == "show_tps":
-                    config["show_tps"] = value_lower != "false"
-                elif key == "show_pr":
-                    config["show_pr"] = value_lower != "false"
-                elif key == "show_cost":
-                    config["show_cost"] = value_lower != "false"
-                elif key == "show_effort":
-                    config["show_effort"] = value_lower != "false"
-                elif key == "show_pacman":
-                    config["show_pacman"] = value_lower != "false"
-                elif key == "tps_precision":
-                    try:
-                        v = int(raw_value)
-                        if v >= 0:
-                            config["tps_precision"] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: tps_precision must be >= 0, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for tps_precision: "
-                            f"'{raw_value}'\n"
-                        )
-                elif key == "tps_unit":
-                    if raw_value:
-                        config["tps_unit"] = raw_value
-                elif key == "tps_window":
-                    try:
-                        v = int(raw_value)
-                        if v >= 1:
-                            config["tps_window"] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: tps_window must be >= 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for tps_window: '{raw_value}'\n"
-                        )
-                elif key in _COLOR_KEYS:
-                    ansi = _parse_color(raw_value)
-                    if ansi:
-                        config["colors"][_COLOR_KEYS[key]] = ansi
-                elif key in _ZONE_INT_KEYS:
-                    try:
-                        v = int(raw_value)
-                        if v > 0:
-                            config["zone_config"][key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be positive, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n"
-                        )
-                elif key in _ZONE_FLOAT_KEYS:
-                    try:
-                        v = float(raw_value)
-                        if 0.0 < v < 1.0:
-                            config["zone_config"][key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be between 0 and 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
-                        )
-                elif key in ("compaction_drop_threshold", "compact_mi_warn_threshold"):
-                    try:
-                        v = float(raw_value)
-                        if 0.0 < v < 1.0:
-                            config[key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be between 0 and 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
-                        )
+                _apply_config_value(config, key.strip(), value.strip())
     except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
     return config
@@ -1037,17 +1017,24 @@ def _render(data):
                     with open(state_file) as f:
                         file_lines = f.readlines()
                         if file_lines:
+                            # Last line drives delta/dedup via parse_state_row
+                            # (F-CLEAN-007): one parser serves the last-entry read
+                            # and the bounded tail below. A trailing comma-bearing
+                            # row that fails to parse degrades to "no previous
+                            # usage" (prev_tokens stays 0) instead of killing the
+                            # whole tok/s sample collection like the old
+                            # index-magic path did on a ValueError.
                             last_line = file_lines[-1].strip()
-                            if "," in last_line:
-                                csv_parts = last_line.split(",")
-                                # Calculate previous context usage:
-                                # cur_input + cache_creation + cache_read
-                                # CSV indices: cur_in[3], cache_create[5], cache_read[6]
-                                prev_cur_input = int(csv_parts[3]) if len(csv_parts) > 3 else 0
-                                prev_cache_creation = int(csv_parts[5]) if len(csv_parts) > 5 else 0
-                                prev_cache_read = int(csv_parts[6]) if len(csv_parts) > 6 else 0
-                                prev_tokens = prev_cur_input + prev_cache_creation + prev_cache_read
-                            else:
+                            parsed_last = parse_state_row(last_line)
+                            if parsed_last is not None:
+                                # Previous context usage: cur_input[3] +
+                                # cache_creation[5] + cache_read[6].
+                                prev_tokens = (
+                                    parsed_last["current_input_tokens"]
+                                    + parsed_last["cache_creation"]
+                                    + parsed_last["cache_read"]
+                                )
+                            elif "," not in last_line:
                                 # Old format - single value
                                 prev_tokens = int(last_line or 0)
                             if show_tps:
@@ -1059,15 +1046,12 @@ def _render(data):
                                 # bound), then restore chronological order.
                                 tail_n = _tps_tail_size(tps_window)
                                 for line in reversed(file_lines):
-                                    parts = line.strip().split(",")
-                                    if len(parts) < 5:
+                                    parsed = parse_state_row(line)
+                                    if parsed is None:
                                         continue
-                                    try:
-                                        out = int(parts[4])
-                                        dur = int(parts[14]) if len(parts) > 14 else 0
-                                    except ValueError:
-                                        continue
-                                    tps_samples.append((out, dur))
+                                    tps_samples.append(
+                                        (parsed["output_tokens"], parsed["api_duration_ms"])
+                                    )
                                     if len(tps_samples) >= tail_n:
                                         break
                                 tps_samples.reverse()

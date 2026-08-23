@@ -156,6 +156,11 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "tok/s state field": ("test_api_duration_state_field_index14",),
     "tok/s rolling read (bounded tail)": ("test_render_byte_parity_tps_rolling_read",),
     "tok/s tail size helper": ("test_tps_tail_size_grid",),
+    "State-row parsing (`parse_state_row`: last-entry + bounded-tail reads replace index-magic CSV access)": (
+        "test_parse_state_row_grid",
+        "test_used_tokens_agree_with_state_entry",
+        "test_render_byte_parity_tps_rolling_read",
+    ),
     "Session cost display (`$X.XX`, default on)": (
         "test_render_byte_parity_basic",
         "test_render_byte_parity_show_cost_off",
@@ -902,6 +907,38 @@ class TestConfigParsingPair:
         assert scfg["compaction_drop_threshold"] == pcfg.compaction_drop_threshold
         assert scfg["compact_mi_warn_threshold"] == pcfg.compact_mi_warn_threshold
 
+    def test_zone_1m_and_unit_overrides_agree(self, tmp_path, monkeypatch):
+        """Customized config: 1M-class integer thresholds and remaining keys
+        parse identically through both parsers (Task 5.3 acceptance)."""
+        conf = write_conf(
+            tmp_path,
+            FULL_CONF
+            + "zone_1m_plan_max=70000\n"
+            + "zone_1m_code_max=100000\n"
+            + "zone_1m_dump_max=250000\n"
+            + "zone_1m_xdump_max=275000\n"
+            + "color_context_length=bold_white\n"
+            + "color_delta=#FFF8DC\n",
+        )
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+
+        scfg = sl.read_config()
+        pcfg = Config.load(conf)
+
+        for key in (
+            "zone_1m_plan_max",
+            "zone_1m_code_max",
+            "zone_1m_dump_max",
+            "zone_1m_xdump_max",
+        ):
+            assert scfg["zone_config"][key] == getattr(pcfg, key), key
+        # Per-property color slots land in the same override map on both sides.
+        assert scfg["colors"]["context_length"] == pcfg.color_overrides["context_length"]
+        assert scfg["colors"]["delta"] == pcfg.color_overrides["delta"]
+        # And the whole shared key-table contract still matches.
+        assert sl._COLOR_KEYS == PKG_COLOR_KEYS
+
     def test_defaults_with_comment_only_conf(self, isolated_home):
         scfg = sl.read_config()
         pcfg = Config.load(isolated_home / ".claude" / "statusline.conf")
@@ -960,6 +997,63 @@ class TestConfigParsingPair:
             assert scfg[key] == pcfg.mi_curve_beta == 0.0
         else:
             assert scfg[key] == getattr(pcfg, key)
+
+
+# ---------------------------------------------------------------------------
+# Row: State-row parsing (Task 5.3 — parse_state_row)
+# ---------------------------------------------------------------------------
+
+
+class TestStateRowParsingPair:
+    """parse_state_row replaces index-magic CSV access at both script read paths."""
+
+    ROWS = [
+        # (line, expected) — expected None means "row skipped by both paths"
+        ("1700000000,1,2,3,4,5,6,0.5,7,8,s,m,w,9,12345\n", 4),
+        ("1700000000,1,2,3,4\n", None),  # minimal 5-field row: no dur -> api 0
+        ("1700000000,1,2,3,4,5\n", None),
+        ("\n", None),  # blank noise row
+        ("   \n", None),
+        ("1700000000,1000\n", None),  # legacy 2-field row
+        ("garbage\n", None),
+        ("1,2,3,x,5,6,7,8,9,10,s,m,w,14,15\n", None),  # non-int numeric field
+    ]
+
+    @pytest.mark.parametrize(("line", "_"), ROWS, ids=lambda v: repr(v)[:30])
+    def test_parse_state_row_grid(self, line, _):
+        from claude_statusline._shared import parse_state_row as pkg_parse
+
+        assert sl.parse_state_row(line) == pkg_parse(line)
+
+    @pytest.mark.parametrize(
+        ("line", "out", "dur"),
+        [
+            ("1700000000,1,2,3,4,5,6,0.5,7,8,s,m,w,9,12345\n", 4, 12345),
+            ("1700000000,1,2,3,4\n", 4, 0),  # legacy row without index 14
+            ("1700000000,1,2,3,4,5,6\n", 4, 0),
+        ],
+        ids=str,
+    )
+    def test_parse_state_row_tail_fields(self, line, out, dur):
+        parsed = sl.parse_state_row(line)
+        assert parsed is not None
+        assert parsed["output_tokens"] == out
+        assert parsed["api_duration_ms"] == dur
+
+    def test_used_tokens_agree_with_state_entry(self):
+        """For valid rows the parsed usage equals StateEntry.current_used_tokens."""
+        line = "1700000000,1,2,300,4,50,6,0.5,7,8,s,m,w,9,12345\n"
+        entry = StateEntry.from_csv_line(line)
+        parsed = sl.parse_state_row(line)
+        assert parsed is not None and entry is not None
+        used = (
+            parsed["current_input_tokens"] + parsed["cache_creation"] + parsed["cache_read"]
+        )
+        assert used == entry.current_used_tokens == 356
+
+    def test_invalid_rows_yield_none_on_both_sides(self):
+        for bad in ("a,b,c,d,e,f\n", "1,2,3\n", ""):
+            assert sl.parse_state_row(bad) is None
 
 
 # ---------------------------------------------------------------------------
