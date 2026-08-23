@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
+import claude_statusline.analytics as analytics_mod
+import claude_statusline.cli.report as report_mod
 from claude_statusline.analytics import (
     ProjectStats,
     SessionStats,
@@ -11,12 +13,38 @@ from claude_statusline.analytics import (
 )
 from claude_statusline.cli.report import generate_report
 
+# Frozen clock shared by every datetime.now() read in this module (F-TEST-008).
+# The fixture below swaps it into both modules that read the wall clock, so a
+# midnight straddle during a CI run can no longer split two reads across days.
+_FROZEN_NOW = datetime(2026, 6, 15, 12, 0, 0)
+
+
+class _FrozenDatetime(datetime):
+    """datetime stand-in whose now() always returns _FROZEN_NOW.
+
+    Everything else (fromtimestamp, strftime via instances) delegates to the
+    real implementation because it subclasses datetime.
+    """
+
+    @classmethod
+    def now(cls, tz=None):  # noqa: N802 - mirrors datetime API
+        if tz is not None:
+            return _FROZEN_NOW.replace(tzinfo=tz)
+        return _FROZEN_NOW
+
+
+@pytest.fixture(autouse=True)
+def frozen_report_clock(monkeypatch):
+    """Pin datetime.now() in report and analytics to _FROZEN_NOW."""
+    monkeypatch.setattr(report_mod, "datetime", _FrozenDatetime)
+    monkeypatch.setattr(analytics_mod, "datetime", _FrozenDatetime)
+
 
 def _make_session(
     session_id, start_offset_days=0, end_offset_days=0, project_dir="/home/user/proj"
 ):
-    """Return a SessionStats with start/end times relative to now."""
-    now = int(datetime.now().timestamp())
+    """Return a SessionStats with start/end times relative to the frozen clock."""
+    now = int(_FROZEN_NOW.timestamp())
     start = now - int(start_offset_days * 86400)
     end = now - int(end_offset_days * 86400)
     return SessionStats(
@@ -156,7 +184,8 @@ def test_report_period_with_since_days():
     since_days = 7
     report = generate_report([project], since_days=since_days)
 
-    expected_start = (datetime.now() - timedelta(days=since_days)).strftime("%Y-%m-%d")
+    # Same frozen clock the report reads — no independent live read (F-TEST-008).
+    expected_start = (_FROZEN_NOW - timedelta(days=since_days)).strftime("%Y-%m-%d")
     assert expected_start in report
     # The old session start date (2023) must NOT appear as the period start
     assert "2023-11-14" not in report.split("Period:")[1].split("\n")[0]
