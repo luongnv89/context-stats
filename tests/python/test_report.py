@@ -1,8 +1,10 @@
 """Tests for the report command."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
+from tests.python.test_golden_snapshots import _golden_projects
 
 import claude_statusline.analytics as analytics_mod
 import claude_statusline.cli.report as report_mod
@@ -278,3 +280,45 @@ def test_report_survives_corrupt_start_time(bad_ts):
     assert "Token Usage Analytics Report" in report
     # The weekly trend excludes the unknown bucket rather than crashing.
     assert "unknown" not in report.split("## Weekly Activity Trend")[1].split("```mermaid")[1]
+
+
+# ---------------------------------------------------------------------------
+# Task 5.5 (#146) — F-CLEAN-002 structure guards: generate_report is an
+# orchestrator over per-section helpers, each within the 60-line budget.
+# ---------------------------------------------------------------------------
+
+
+class TestReportStructure:
+    @staticmethod
+    def _functions():
+        import ast
+
+        source = Path(report_mod.__file__).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        return {
+            n.name: n.end_lineno - n.lineno + 1
+            for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef)
+        }
+
+    def test_generate_report_is_small_orchestrator(self):
+        sizes = self._functions()
+        assert "generate_report" in sizes
+        assert sizes["generate_report"] <= 60
+
+    def test_section_helpers_within_budget(self):
+        sizes = self._functions()
+        sections = {n: s for n, s in sizes.items() if n.startswith("_section_")}
+        assert len(sections) >= 10, f"expected per-section helpers, got {sorted(sections)}"
+        offenders = {n: s for n, s in sections.items() if s > 60}
+        assert offenders == {}, f"section helpers exceed 60 lines: {offenders}"
+
+    def test_collector_and_sections_cover_full_pipeline(self):
+        from claude_statusline.cli.report import _REPORT_SECTIONS, _collect_report_data
+
+        data = _collect_report_data(_golden_projects(), None)
+        assert data.total_sessions == 5
+        assert len(data.fake_sessions) == 1
+        # Every registered section contributes its lines without error.
+        for section in _REPORT_SECTIONS:
+            assert isinstance(section(data), list)
