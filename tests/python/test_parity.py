@@ -26,6 +26,7 @@ this module.
 
 from __future__ import annotations
 
+import ast as ast_mod
 import io
 import json
 import os
@@ -92,6 +93,8 @@ from claude_statusline.graphs.statistics import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "statusline.py"
+SHARED_MODULE_PATH = PROJECT_ROOT / "src" / "claude_statusline" / "_shared.py"
+VENDORED_SHARED_PATH = PROJECT_ROOT / "scripts" / "_statusline_shared.py"
 
 PKG_ROTATION_THRESHOLD = StateFile.ROTATION_THRESHOLD
 PKG_ROTATION_KEEP = StateFile.ROTATION_KEEP
@@ -1030,7 +1033,13 @@ class TestRotationPair:
         assert lines[:-1] == state[-PKG_ROTATION_KEEP + 1 :]
 
     def test_lock_unlock_noop_without_fcntl(self):
-        """Both lock helpers are best-effort no-ops when fcntl is absent."""
+        """Both lock helpers are best-effort no-ops when fcntl is absent.
+
+        Lock/unlock bodies are single-sourced in ``claude_statusline._shared``
+        (Task 5.2): the package re-exports them via ``core.state`` and the
+        standalone script binds them from its loaded shared module, so one
+        patch covers both sides.
+        """
 
         class FakeFH:
             def fileno(self):
@@ -1038,23 +1047,23 @@ class TestRotationPair:
 
         import scripts.statusline as sl_mod
 
-        saved = sl_mod.fcntl
-        sl_mod.fcntl = None
+        import claude_statusline._shared as shared
+
+        assert sl_mod._lock_state_file.__module__ == shared.__name__
+        assert (
+            __import__("claude_statusline.core.state", fromlist=["_lock_state_file"])._lock_state_file
+            is shared._lock_state_file
+        )
+
+        saved = shared.fcntl
+        shared.fcntl = None
         try:
+            shared._lock_state_file(FakeFH())
+            shared._unlock_state_file(FakeFH())
             sl_mod._lock_state_file(FakeFH())
             sl_mod._unlock_state_file(FakeFH())
         finally:
-            sl_mod.fcntl = saved
-
-        import claude_statusline.core.state as state_mod
-
-        saved_pkg = state_mod.fcntl
-        state_mod.fcntl = None
-        try:
-            state_mod._lock_state_file(FakeFH())
-            state_mod._unlock_state_file(FakeFH())
-        finally:
-            state_mod.fcntl = saved_pkg
+            shared.fcntl = saved
 
 
 # ---------------------------------------------------------------------------
@@ -1433,3 +1442,123 @@ def test_placeholder_import_symmetry():
 
     source = inspect.getsource(cs)
     assert "from claude_statusline.cli.statusline import _ensure_utf8_stdout" in source
+
+
+# ---------------------------------------------------------------------------
+# Task 5.2/5.3 arrangement: single-sourced shared module + vendored copy
+# ---------------------------------------------------------------------------
+
+
+class TestSharedModuleArrangement:
+    """The extracted shared module (F-DEAD-001) and its standalone contract."""
+
+    def test_vendored_copy_byte_identical(self):
+        """scripts/_statusline_shared.py must equal src/claude_statusline/_shared.py.
+
+        The standalone script falls back to this vendored sibling when the
+        package is not importable; any drift between the two copies would
+        silently fork the synced logic, so equality is enforced byte-for-byte.
+        """
+        assert VENDORED_SHARED_PATH.exists(), "vendored copy missing from scripts/"
+        assert VENDORED_SHARED_PATH.read_bytes() == SHARED_MODULE_PATH.read_bytes()
+
+    def test_script_binds_shared_symbols(self):
+        """The standalone module resolves its moved symbols from the loaded
+        shared module rather than defining duplicate bodies."""
+        for name in (
+            "compute_tps",
+            "format_tps",
+            "detect_compaction_events",
+            "visible_width",
+            "fit_to_width",
+            "get_terminal_width",
+            "get_pacman_icon",
+            "compute_mi",
+            "get_model_profile",
+            "_parse_color",
+            "_validate_session_id",
+            "_validate_csv_field",
+            "_csv_unsafe_reason",
+            "_sanitize_workspace_dir",
+            "_extract",
+            "_resolve_project_dir",
+            "_ensure_utf8_stdout",
+            "_format_thinking_info",
+            "_tps_tail_size",
+            "get_git_info",
+        ):
+            fn = getattr(sl, name)
+            assert getattr(fn, "__module__", "").endswith("_shared"), name
+        # Palette-aware wrappers stay script-local by design.
+        assert sl.get_mi_color.__module__ == "scripts.statusline"
+        assert sl._zone_ansi_color.__module__ == "scripts.statusline"
+
+    def test_ast_duplicated_function_ratio_below_threshold(self):
+        """AST recount of name-matched duplicated functions stays below 25%.
+
+        Acceptance criterion of Task 5.2 (#143). The two remaining name matches
+        are documented remainder, not duplicated logic:
+          - ``main``  — per-implementation entry point / render catch-all boundary.
+          - ``_render`` — the standalone dict-based renderer; its package twin
+            uses ColorManager/StateFile abstractions, and its decomposition is
+            owned by a later modernization task.
+        """
+        def normalized(node):
+            body = node.body
+            if (
+                len(body) == 1
+                and isinstance(body[0], ast_mod.Expr)
+                and isinstance(body[0].value, ast_mod.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                body = []
+            return ast_mod.dump(ast_mod.Module(body=body, type_ignores=[]))
+
+        tree = ast_mod.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+        script_fns = {n.name: normalized(n) for n in ast_mod.walk(tree) if isinstance(n, ast_mod.FunctionDef)}
+
+        pkg_names: set[str] = set()
+        pkg_bodies: dict[str, set[str]] = {}
+        for p in (PROJECT_ROOT / "src").rglob("*.py"):
+            t = ast_mod.parse(p.read_text(encoding="utf-8"))
+            for n in ast_mod.walk(t):
+                if isinstance(n, ast_mod.FunctionDef):
+                    pkg_names.add(n.name)
+                    pkg_bodies.setdefault(n.name, set()).add(normalized(n))
+
+        matched = [name for name in script_fns if name in pkg_names]
+        ratio = len(matched) / len(script_fns)
+        assert ratio < 0.25, f"name-matched duplication {ratio:.1%} >= 25%: {sorted(matched)}"
+        # The documented remainder must be exactly these orchestration boundaries.
+        assert set(matched) <= {"main", "_render"}
+
+    def test_standalone_renders_without_package(self, tmp_path):
+        """End-to-end smoke: with ``claude_statusline`` made unimportable, the
+        script still renders via its vendored sibling copy."""
+        blocker_dir = tmp_path / "blocker"
+        blocker_dir.mkdir()
+        (blocker_dir / "claude_statusline.py").write_text(
+            "raise ImportError('blocked for standalone smoke test')\n", encoding="utf-8"
+        )
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(blocker_dir)
+        env["HOME"] = str(home)
+        env["USERPROFILE"] = str(home)
+        env.pop("COLUMNS", None)
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_PATH),
+            ],
+            input=json.dumps({"session_id": "no-pkg-smoke"}),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            timeout=120,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "Claude" in ANSI_RE.sub("", result.stdout)
+        assert "no-pkg-smoke" in ANSI_RE.sub("", result.stdout)

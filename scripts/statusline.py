@@ -32,11 +32,9 @@ State file format (CSV):
 
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import traceback
 
@@ -45,308 +43,195 @@ try:
 except ImportError:  # pragma: no cover - Windows has no fcntl
     fcntl = None  # type: ignore[assignment]
 
-ROTATION_THRESHOLD = 10_000
-ROTATION_KEEP = 5_000
 
+def _load_shared_module():
+    """Locate the single-sourced shared logic module for this script.
 
-def _lock_state_file(fh):
-    """Take an exclusive advisory lock on ``fh`` (best-effort, POSIX only).
+    Resolution order (Task 5.2, F-DEAD-001):
 
-    Parity: mirrors ``claude_statusline.core.state._lock_state_file``.
-    Serializes append + rotation between concurrent processes (F-BUG-008).
+    1. The installed package (``claude_statusline._shared``) — repo checkouts
+       and pip installs.
+    2. The vendored copy shipped beside this script
+       (``scripts/_statusline_shared.py``) — byte-identical to the package
+       module; equality is enforced by ``tests/python/test_parity.py``.
+    3. A repository ``src/`` checkout found next to the script's parent
+       directory, bootstrapped onto ``sys.path``.
+
+    Exits with guidance when none is available (an incomplete deployment).
     """
-    if fcntl is None:
-        return
     try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-    except OSError:
+        from claude_statusline import _shared
+
+        return _shared
+    except ImportError:
         pass
 
+    here = os.path.dirname(os.path.abspath(__file__))
+    vendored = os.path.join(here, "_statusline_shared.py")
+    if os.path.exists(vendored):
+        import importlib.util
 
-def _unlock_state_file(fh):
-    """Release the lock taken by :func:`_lock_state_file`."""
-    if fcntl is None:
-        return
-    try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-    except OSError:
-        pass
+        spec = importlib.util.spec_from_file_location("_statusline_shared", vendored)
+        if spec is not None and spec.loader is not None:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["_statusline_shared"] = module
+            spec.loader.exec_module(module)
+            return module
 
+    src_root = os.path.join(os.path.dirname(here), "src")
+    if os.path.isdir(src_root):
+        sys.path.insert(0, src_root)
+        try:
+            from claude_statusline import _shared
 
-# Model Intelligence color thresholds
-MI_GREEN_THRESHOLD = 0.90
-MI_YELLOW_THRESHOLD = 0.80
-MI_CONTEXT_YELLOW = 0.40  # 40% context used
-MI_CONTEXT_RED = 0.80  # 80% context used
+            return _shared
+        except ImportError:
+            pass
 
-# Per-model degradation profiles: beta controls curve shape
-# Higher beta = quality retained longer (degradation happens later)
-MODEL_PROFILES = {
-    "opus": 1.8,
-    "sonnet": 1.5,
-    "haiku": 1.2,
-    "default": 1.5,
-}
-
-# Zone indicator thresholds
-LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
-# 1M thresholds recalibrated from observed context rot onset at 300-400k tokens.
-# Source: x.com/trq212/status/2044548257058328723
-ZONE_1M_P_MAX = 150_000  # P zone: < 150k used
-ZONE_1M_C_MAX = 250_000  # C zone: 150k–250k used
-ZONE_1M_D_MAX = 400_000  # D zone: 250k–400k used
-ZONE_1M_X_MAX = 450_000  # X zone: 400k–450k used; Z zone: >= 450k
-ZONE_STD_DUMP_ZONE = 0.40
-ZONE_STD_WARN_BUFFER = 30_000
-ZONE_STD_HARD_LIMIT = 0.70
-ZONE_STD_DEAD_ZONE = 0.75
-
-# Compaction detection defaults
-COMPACTION_DROP_THRESHOLD = 0.5  # fraction of context that must be lost to count as compaction
-COMPACT_MI_WARN_THRESHOLD = 0.6  # MI below this at compact time → warning
-
-# Zone recommendation strings — one-line action guidance per zone
-_ZONE_RECOMMENDATIONS = {
-    "Plan": "Safe to plan and code",
-    "Code": "Avoid starting new tasks; finish current one",
-    "Dump": "Consider `/compact focus on X` or delegate to subagent",
-    "ExDump": "Run `/compact` now before quality degrades further",
-    "Dead": "Start a new session with `/clear`",
-}
-
-# Pacman-style icon per zone — a distinct glyph per zone alongside the zone
-# text, from a healthy default (Plan) to a "game over" marker (Dead). Glyphs
-# are single-codepoint, width-1 characters (Canadian Aboriginal Syllabics,
-# matching the historical activity-tier icons removed in #13) so they render
-# predictably in any terminal and are counted correctly by visible_width()'s
-# plain len() (no east_asian_width handling).
-PACMAN_ICONS = {
-    "Plan": "ᗧ",  # healthy default
-    "Code": "ᗤ",  # distinct orientation, still fine
-    "Dump": "ᗣ",  # distinct orientation, warning
-    "ExDump": "ᗢ",  # distinct orientation, critical
-    "Dead": "×",  # outside the pacman family — game over
-}
+    sys.stderr.write(
+        "[statusline] error: cannot locate the shared statusline module "
+        "(install context-stats, or ship scripts/_statusline_shared.py "
+        "alongside this script).\n"
+    )
+    raise SystemExit(1)
 
 
-def get_model_profile(model_id):
-    """Match model_id to degradation beta."""
-    model_lower = (model_id or "").lower()
-    for family in ("opus", "sonnet", "haiku"):
-        if family in model_lower:
-            return MODEL_PROFILES[family]
-    return MODEL_PROFILES["default"]
+_shared = _load_shared_module()
+
+# ---------------------------------------------------------------------------
+# Single-sourced constants (canonical home: claude_statusline/_shared.py)
+# ---------------------------------------------------------------------------
+
+ROTATION_THRESHOLD = _shared.ROTATION_THRESHOLD
+ROTATION_KEEP = _shared.ROTATION_KEEP
+
+MI_GREEN_THRESHOLD = _shared.MI_GREEN_THRESHOLD
+MI_YELLOW_THRESHOLD = _shared.MI_YELLOW_THRESHOLD
+MI_CONTEXT_YELLOW = _shared.MI_CONTEXT_YELLOW_THRESHOLD
+MI_CONTEXT_RED = _shared.MI_CONTEXT_RED_THRESHOLD
+
+MODEL_PROFILES = _shared.MODEL_PROFILES
+
+LARGE_MODEL_THRESHOLD = _shared.LARGE_MODEL_THRESHOLD
+ZONE_1M_P_MAX = _shared.ZONE_1M_P_MAX
+ZONE_1M_C_MAX = _shared.ZONE_1M_C_MAX
+ZONE_1M_D_MAX = _shared.ZONE_1M_D_MAX
+ZONE_1M_X_MAX = _shared.ZONE_1M_X_MAX
+ZONE_STD_DUMP_ZONE = _shared.ZONE_STD_DUMP_ZONE
+ZONE_STD_WARN_BUFFER = _shared.ZONE_STD_WARN_BUFFER
+ZONE_STD_HARD_LIMIT = _shared.ZONE_STD_HARD_LIMIT
+ZONE_STD_DEAD_ZONE = _shared.ZONE_STD_DEAD_ZONE
+
+_ZONE_RECOMMENDATIONS = _shared._ZONE_RECOMMENDATIONS
+
+COMPACTION_DROP_THRESHOLD = _shared.COMPACTION_DROP_THRESHOLD
+COMPACT_MI_WARN_THRESHOLD = _shared.COMPACT_MI_WARN_THRESHOLD
+
+PACMAN_ICONS = _shared.PACMAN_ICONS
+
+# ANSI Colors (defaults, overridable via config — GREEN/YELLOW/RED are
+# reassigned by _render from config color overrides)
+BLUE = _shared.BLUE
+MAGENTA = _shared.MAGENTA
+CYAN = _shared.CYAN
+GREEN = _shared.GREEN
+YELLOW = _shared.YELLOW
+RED = _shared.RED
+DIM = _shared.DIM
+RESET = _shared.RESET
+
+# Named colors for config parsing
+_COLOR_NAMES = _shared.COLOR_NAMES
+
+# Color config keys and which color slot they map to
+_COLOR_KEYS = _shared._COLOR_KEYS
+
+# Zone threshold config keys (integer token counts)
+_ZONE_INT_KEYS = _shared._ZONE_INT_KEYS
+
+# Zone threshold config keys (float ratios 0-1)
+_ZONE_FLOAT_KEYS = _shared._ZONE_FLOAT_KEYS
+
+# Pattern to strip ANSI escape sequences
+_ANSI_RE = _shared._ANSI_RE
+
+_PART_SEPARATOR = _shared._PART_SEPARATOR
+
+_PR_CACHE_TTL_SECONDS = _shared._PR_CACHE_TTL_SECONDS
+_PR_CACHE_NEGATIVE_TTL_SECONDS = _shared._PR_CACHE_NEGATIVE_TTL_SECONDS
+
+# ---------------------------------------------------------------------------
+# Single-sourced functions (bodies live only in _shared / the vendored copy)
+# ---------------------------------------------------------------------------
+
+_parse_color = _shared.parse_color
+get_model_profile = _shared.get_model_profile
+compute_mi = _shared.compute_mi
+compute_tps = _shared.compute_tps
+format_tps = _shared.format_tps
+detect_compaction_events = _shared.detect_compaction_events
+visible_width = _shared.visible_width
+get_terminal_width = _shared.get_terminal_width
+fit_to_width = _shared.fit_to_width
+_ensure_utf8_stdout = _shared._ensure_utf8_stdout
+_extract = _shared._extract
+_resolve_project_dir = _shared._resolve_project_dir
+_format_thinking_info = _shared._format_thinking_info
+_tps_tail_size = _shared._tps_tail_size
+_TPS_TAIL_BUFFER = _shared._TPS_TAIL_BUFFER
+_validate_session_id = _shared._validate_session_id
+_validate_csv_field = _shared._validate_csv_field
+_csv_unsafe_reason = _shared._csv_unsafe_reason
+_sanitize_workspace_dir = _shared._sanitize_workspace_dir
+_lock_state_file = _shared._lock_state_file
+_unlock_state_file = _shared._unlock_state_file
+_rotate_lines = _shared.rotate_lines
+get_pacman_icon = _shared.get_pacman_icon
+get_git_info = _shared.git_info
+_pr_cache_file = _shared._pr_cache_file
+_pr_cache_get = _shared._pr_cache_get
+_pr_cache_set = _shared._pr_cache_set
 
 
-def compute_mi(used_tokens, context_window_size, model_id="", beta_override=0.0):
-    """Compute Model Intelligence score. Returns mi (float).
-
-    MI(u) = max(0, 1 - u^beta) where beta is model-specific.
-    """
-    # Guard clause
-    if context_window_size == 0:
-        return 1.0
-
-    beta_from_profile = get_model_profile(model_id)
-    beta = beta_override if beta_override > 0 else beta_from_profile
-
-    u = used_tokens / context_window_size
-    if u <= 0:
-        return 1.0
-    return max(0.0, 1.0 - u**beta)
+def _mi_color_ansi(mi, utilization=0.0):
+    """ANSI color for an MI score, honoring config overrides of the script palette."""
+    return {"red": RED, "yellow": YELLOW, "green": GREEN}[_shared.mi_color_name(mi, utilization)]
 
 
-# Extra rows read beyond ``tps_window`` when tail-reading state history for
-# tok/s. compute_tps needs the last ``tps_window`` valid *turns* (=
-# ``tps_window + 1`` valid rows); this headroom absorbs the sparse, isolated
-# dropped rows real histories contain (non-positive API-time delta, zero
-# output) plus any legacy/blank rows, so the rendered value matches a
-# full-history read. Kept small so each refresh still parses only a bounded
-# tail. Legacy rows (no api_duration) can only be a leading prefix once tok/s
-# is enabled. Mirrors cli/statusline.py:_TPS_TAIL_BUFFER.
-_TPS_TAIL_BUFFER = 8
+# Parity row "MI colors": same tier decision as graphs/intelligence.get_mi_color,
+# rendered through this script's overridable palette globals.
+get_mi_color = _mi_color_ansi
 
 
-def _tps_tail_size(tps_window):
-    """Number of trailing state rows to read for the tok/s rolling average.
-
-    ``tps_window`` valid turns need ``tps_window + 1`` valid rows; doubling the
-    window plus a fixed buffer leaves ample room for interleaved dropped rows
-    while staying bounded (independent of total file size). Mirrors the package
-    helper cli/statusline.py:_tps_tail_size.
-    """
-    return max(1, tps_window) * 2 + _TPS_TAIL_BUFFER
+def _zone_ansi_color(color_name):
+    """Map zone color name to ANSI escape code using the script palette."""
+    return _shared.zone_ansi_code(color_name, green=GREEN, yellow=YELLOW, reset=RESET)
 
 
-def compute_tps(samples, window=5):
-    """Compute a smoothed, session-rolling model throughput in tokens/second.
-
-    Rather than the jumpy per-turn instantaneous speed (which swings between,
-    say, 1.5 and 80 tok/s depending on how many tokens a turn happened to
-    emit), this returns a rolling, token-weighted average over the most recent
-    turns. Weighting by output tokens means a tiny 3-token turn cannot drag the
-    number down the way a plain mean-of-ratios would — the result tracks the
-    genuine "speed of the model" across the session.
-
-    Each sample is an (output_tokens, api_duration_ms) pair from a state row
-    (plus the live reading), where api_duration_ms is the cumulative
-    cost.total_api_duration_ms ("time spent waiting for API responses" — it
-    excludes user idle time, tool execution, and thinking). A *turn* is the
-    transition between two consecutive samples: its output is that row's
-    current_usage.output_tokens and its API time is the delta of the
-    cumulative durations. Turns with a non-positive API-time delta (same
-    response refreshed twice) or non-positive output are dropped.
-
-    Average over the last `window` valid turns, token-weighted:
-
-        tok/s = sum(output) / (sum(api_time_ms) / 1000)
-
-    A turn that contributes no valid sample simply isn't in the sums, so the
-    previously established average persists ("keep last average" on missing
-    data) as long as one valid turn remains in the window.
-
-    Returns tokens/second, or None when no valid turn exists yet (first row,
-    all legacy rows, or no real API time elapsed) — None means "hide".
-    """
-    if window < 1:
-        window = 1
-    turns = []
-    for i in range(1, len(samples)):
-        prev_dur = samples[i - 1][1]
-        out, cur_dur = samples[i]
-        # A zero/negative previous cumulative means a legacy row without the
-        # field — differencing against it would understate throughput badly.
-        if prev_dur <= 0:
-            continue
-        delta_ms = cur_dur - prev_dur
-        if delta_ms <= 0 or out <= 0:
-            continue
-        turns.append((out, delta_ms))
-    if not turns:
-        return None
-    recent = turns[-window:]
-    total_output = sum(out for out, _ in recent)
-    total_ms = sum(ms for _, ms in recent)
-    if total_ms <= 0:
-        return None
-    return total_output / (total_ms / 1000.0)
-
-
-def format_tps(tps, precision=1, unit="tok/s"):
-    """Format a tokens-per-second value for display (e.g. '42.5 tok/s')."""
-    precision = min(10, max(0, precision))
-    return f"{tps:.{precision}f} {unit}"
-
-
-def get_mi_color(mi, utilization=0.0):
-    """Return ANSI color code for MI score considering both MI and context utilization."""
-    if mi <= MI_YELLOW_THRESHOLD or utilization >= MI_CONTEXT_RED:
-        return RED
-    if mi < MI_GREEN_THRESHOLD or utilization >= MI_CONTEXT_YELLOW:
-        return YELLOW
-    return GREEN
-
-
-def get_context_zone(used_tokens, context_window_size, zone_config=None):
+def _context_zone_from_config(used_tokens, context_window_size, zone_config=None):
     """Determine context zone indicator based on token usage.
 
     Returns (zone_word, color_name, recommendation) tuple.
     zone_config is an optional dict of threshold overrides (0 = use default).
     """
-    if context_window_size == 0:
-        return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
-
     zc = zone_config or {}
-
-    lmt = zc.get("large_model_threshold") or LARGE_MODEL_THRESHOLD
-    is_large = context_window_size >= lmt
-
-    if is_large:
-        p_max = zc.get("zone_1m_plan_max") or ZONE_1M_P_MAX
-        c_max = zc.get("zone_1m_code_max") or ZONE_1M_C_MAX
-        d_max = zc.get("zone_1m_dump_max") or ZONE_1M_D_MAX
-        x_max = zc.get("zone_1m_xdump_max") or ZONE_1M_X_MAX
-
-        if used_tokens < p_max:
-            return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
-        if used_tokens < c_max:
-            return ("Code", "yellow", _ZONE_RECOMMENDATIONS["Code"])
-        if used_tokens < d_max:
-            return ("Dump", "orange", _ZONE_RECOMMENDATIONS["Dump"])
-        if used_tokens < x_max:
-            return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
-        return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
-
-    dump_ratio = zc.get("zone_std_dump_ratio") or ZONE_STD_DUMP_ZONE
-    warn_buf = zc.get("zone_std_warn_buffer") or ZONE_STD_WARN_BUFFER
-    hard_lim = zc.get("zone_std_hard_limit") or ZONE_STD_HARD_LIMIT
-    dead_rat = zc.get("zone_std_dead_ratio") or ZONE_STD_DEAD_ZONE
-
-    dump_zone_tokens = int(context_window_size * dump_ratio)
-    warn_start = max(0, dump_zone_tokens - warn_buf)
-    hard_limit_tokens = int(context_window_size * hard_lim)
-    dead_zone_tokens = int(context_window_size * dead_rat)
-
-    if used_tokens < warn_start:
-        return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
-    if used_tokens < dump_zone_tokens:
-        return ("Code", "yellow", _ZONE_RECOMMENDATIONS["Code"])
-    if used_tokens < hard_limit_tokens:
-        return ("Dump", "orange", _ZONE_RECOMMENDATIONS["Dump"])
-    if used_tokens < dead_zone_tokens:
-        return ("ExDump", "dark_red", _ZONE_RECOMMENDATIONS["ExDump"])
-    return ("Dead", "gray", _ZONE_RECOMMENDATIONS["Dead"])
+    return _shared.context_zone_tuple(
+        used_tokens,
+        context_window_size,
+        large_model_threshold=zc.get("large_model_threshold") or 0,
+        zone_1m_plan_max=zc.get("zone_1m_plan_max") or 0,
+        zone_1m_code_max=zc.get("zone_1m_code_max") or 0,
+        zone_1m_dump_max=zc.get("zone_1m_dump_max") or 0,
+        zone_1m_xdump_max=zc.get("zone_1m_xdump_max") or 0,
+        zone_std_dump_ratio=zc.get("zone_std_dump_ratio") or 0.0,
+        zone_std_warn_buffer=zc.get("zone_std_warn_buffer") or 0,
+        zone_std_hard_limit=zc.get("zone_std_hard_limit") or 0.0,
+        zone_std_dead_ratio=zc.get("zone_std_dead_ratio") or 0.0,
+    )
 
 
-def get_pacman_icon(zone):
-    """Get the pacman-style icon for a context zone.
-
-    Returns "" for an unrecognized zone (defensive default so an unexpected
-    zone name cannot crash the statusline render).
-    """
-    return PACMAN_ICONS.get(zone, "")
-
-
-def detect_compaction_events(values, drop_threshold=None):
-    """Detect compaction events in a list of token counts.
-
-    A compaction event is identified when ``values[i] < values[i-1] * (1 - drop_threshold)``,
-    i.e., the context dropped by more than *drop_threshold* fraction in a single step.
-
-    Args:
-        values: Sequence of token counts (e.g., current_used_tokens over time).
-        drop_threshold: Fraction of context that must be lost to qualify as compaction
-                        (default: COMPACTION_DROP_THRESHOLD = 0.5).
-
-    Returns:
-        List of indices i (into values) where a compaction was detected.
-    """
-    if drop_threshold is None:
-        drop_threshold = COMPACTION_DROP_THRESHOLD
-    if len(values) < 2:
-        return []
-    events = []
-    for i in range(1, len(values)):
-        prev = values[i - 1]
-        curr = values[i]
-        if prev > 0 and curr < prev * (1.0 - drop_threshold):
-            events.append(i)
-    return events
-
-
-def _zone_ansi_color(color_name):
-    """Map zone color name to ANSI escape code."""
-    if color_name == "green":
-        return GREEN
-    if color_name == "yellow":
-        return YELLOW
-    if color_name == "orange":
-        return "\033[38;2;255;165;0m"  # RGB orange
-    if color_name == "dark_red":
-        return "\033[38;2;139;0;0m"  # RGB dark red
-    if color_name == "gray":
-        return "\033[0;90m"  # bright black / gray
-    return RESET
+# Parity row "Zone indicator": tuple-returning adapter over the shared core.
+get_context_zone = _context_zone_from_config
 
 
 def _rotate_state_file_locked(state_file, fh):
@@ -360,28 +245,9 @@ def _rotate_state_file_locked(state_file, fh):
         lines = fh.readlines()
         if len(lines) <= ROTATION_THRESHOLD:
             return
-        _rotate_lines(state_file, lines)
+        _rotate_lines(state_file, lines, keep=ROTATION_KEEP)
     except OSError as e:
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
-
-
-def _rotate_lines(state_file, lines):
-    """Atomically keep the most recent ROTATION_KEEP of ``lines``.
-
-    Parity: mirrors ``claude_statusline.core.state.StateFile._rotate_lines``.
-    """
-    keep = lines[-ROTATION_KEEP:]
-    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(state_file) or ".", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w") as tmp_f:
-            tmp_f.writelines(keep)
-        os.replace(tmp_path, state_file)
-    except BaseException:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
 
 
 def maybe_rotate_state_file(state_file):
@@ -405,361 +271,9 @@ def maybe_rotate_state_file(state_file):
                 _unlock_state_file(f)
         if len(lines) <= ROTATION_THRESHOLD:
             return
-        _rotate_lines(state_file, lines)
+        _rotate_lines(state_file, lines, keep=ROTATION_KEEP)
     except OSError as e:
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
-
-
-# ANSI Colors (defaults, overridable via config)
-BLUE = "\033[0;34m"
-MAGENTA = "\033[0;35m"
-CYAN = "\033[0;36m"
-GREEN = "\033[0;32m"
-YELLOW = "\033[0;33m"
-RED = "\033[0;31m"
-DIM = "\033[2m"
-RESET = "\033[0m"
-
-# Named colors for config parsing
-_COLOR_NAMES = {
-    "black": "\033[0;30m",
-    "red": "\033[0;31m",
-    "green": "\033[0;32m",
-    "yellow": "\033[0;33m",
-    "blue": "\033[0;34m",
-    "magenta": "\033[0;35m",
-    "cyan": "\033[0;36m",
-    "white": "\033[0;37m",
-    "bright_black": "\033[0;90m",
-    "bright_red": "\033[0;91m",
-    "bright_green": "\033[0;92m",
-    "bright_yellow": "\033[0;93m",
-    "bright_blue": "\033[0;94m",
-    "bright_magenta": "\033[0;95m",
-    "bright_cyan": "\033[0;96m",
-    "bright_white": "\033[0;97m",
-    "bold_white": "\033[1;97m",
-    "dim": "\033[2m",
-}
-
-
-def _parse_color(value):
-    """Parse a color name or #rrggbb hex into an ANSI escape code."""
-    value = value.strip().lower()
-    if value in _COLOR_NAMES:
-        return _COLOR_NAMES[value]
-    if re.match(r"^#[0-9a-f]{6}$", value):
-        r, g, b = int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16)
-        return f"\033[38;2;{r};{g};{b}m"
-    return None
-
-
-# Color config keys and which color slot they map to
-_COLOR_KEYS = {
-    "color_green": "green",
-    "color_yellow": "yellow",
-    "color_red": "red",
-    "color_blue": "blue",
-    "color_magenta": "magenta",
-    "color_cyan": "cyan",
-    # Per-property color keys
-    "color_context_length": "context_length",
-    "color_project_name": "project_name",
-    "color_branch_name": "branch_name",
-    "color_mi_score": "mi_score",
-    "color_zone": "zone",
-    "color_separator": "separator",
-    "color_tps": "tps",
-    "color_delta": "delta",
-    "color_cost": "cost",
-    "color_model": "model",
-    "color_session": "session",
-}
-
-# Zone threshold config keys (integer token counts)
-_ZONE_INT_KEYS = {
-    "zone_1m_plan_max",
-    "zone_1m_code_max",
-    "zone_1m_dump_max",
-    "zone_1m_xdump_max",
-    "zone_std_warn_buffer",
-    "large_model_threshold",
-}
-
-# Zone threshold config keys (float ratios 0-1)
-_ZONE_FLOAT_KEYS = {
-    "zone_std_dump_ratio",
-    "zone_std_hard_limit",
-    "zone_std_dead_ratio",
-}
-
-# Pattern to strip ANSI escape sequences
-_ANSI_RE = re.compile(r"\033\[[0-9;]*m")
-
-
-def visible_width(s):
-    """Return the visible width of a string after stripping ANSI escape sequences."""
-    return len(_ANSI_RE.sub("", s))
-
-
-def get_terminal_width():
-    """Return the terminal width in columns.
-
-    Claude Code captures the statusline script's output rather than
-    connecting it to a TTY, so ``shutil.get_terminal_size()`` cannot read
-    the real width and falls back to 80. Since Claude Code v2.1.153, the
-    harness exports ``COLUMNS`` (and ``LINES``) with the real terminal
-    dimensions before running the script, so we trust ``COLUMNS`` when it
-    is set. When it is absent (older Claude Code, or a non-TTY context
-    where the width is genuinely undetectable), we use a generous default
-    of 200 so the single line is not wrapped or truncated on a fallback
-    artifact; Claude Code's own UI handles any overflow.
-    """
-    # If COLUMNS is explicitly set, trust it (real terminal, Claude Code
-    # >= v2.1.153, or a test override).
-    if os.environ.get("COLUMNS"):
-        return shutil.get_terminal_size().columns
-    # No COLUMNS env var — width is undetectable in this context.
-    # shutil falls back to 80, which is too narrow. Use 200 instead.
-    cols = shutil.get_terminal_size(fallback=(200, 24)).columns
-    return 200 if cols == 80 else cols
-
-
-# Separator that prefixes every part except the base. When a part starts a
-# new line during reflow, this leading separator is stripped so wrapped
-# lines do not begin with a dangling " | ".
-_PART_SEPARATOR = " | "
-
-
-def fit_to_width(parts, max_width):
-    """Assemble parts into lines that each fit within max_width.
-
-    Parts are packed greedily in priority order (first = highest priority).
-    The first part (base) always starts the first line. Each subsequent
-    part is appended to the current line when it fits; otherwise it starts
-    a new line so no information is dropped on narrow terminals. Lines are
-    joined with newlines, which Claude Code renders as separate rows.
-
-    When all parts fit within ``max_width`` (e.g. the default width of 200),
-    the result is a single line, byte-identical to the legacy single-line
-    output. A part wider than ``max_width`` on its own is emitted whole on
-    its own line rather than truncated. Empty parts are skipped.
-    """
-    if not parts:
-        return ""
-
-    lines = []
-    # Base part always starts the first line.
-    current = parts[0]
-    current_width = visible_width(current)
-
-    for part in parts[1:]:
-        if not part:
-            continue
-        part_width = visible_width(part)
-        if current_width + part_width <= max_width:
-            current += part
-            current_width += part_width
-        else:
-            # Part does not fit — flush the current line and start a new
-            # one with this part, stripping its leading separator so the
-            # wrapped line does not begin with " | ".
-            lines.append(current)
-            if part.startswith(_PART_SEPARATOR):
-                part = part[len(_PART_SEPARATOR) :]
-            current = part
-            current_width = visible_width(part)
-
-    lines.append(current)
-    return "\n".join(lines)
-
-
-# PR-number lookups shell out to ``gh`` (a network call). Because the
-# statusline re-renders frequently, the result is cached per-branch for a
-# short TTL so the network round-trip happens at most once per window.
-_PR_CACHE_TTL_SECONDS = 60
-# Failed lookups (gh errors, timeouts) get a much shorter TTL so a broken
-# environment recovers quickly instead of stalling every render for a full
-# positive-TTL window.
-_PR_CACHE_NEGATIVE_TTL_SECONDS = 10
-
-
-def _pr_cache_file():
-    """Location of the shared PR-number cache file."""
-    return os.path.join(os.path.expanduser("~/.claude/statusline"), "pr_number_cache.json")
-
-
-def _pr_cache_get(key: str) -> "str | None":
-    """Return the cached PR string for ``key`` if present and unexpired.
-
-    Returns ``None`` on any miss (no entry, expired, or read error) so the
-    caller falls through to a live lookup. Never raises.
-    """
-    try:
-        with open(_pr_cache_file(), encoding="utf-8") as fh:
-            cache = json.load(fh)
-        if not isinstance(cache, dict):
-            return None
-        entry = cache.get(key)
-        if isinstance(entry, dict) and entry.get("exp", 0) > time.time():
-            return str(entry.get("pr", ""))
-    except (OSError, ValueError):
-        pass
-    return None
-
-
-def _pr_cache_set(key, pr, ttl=None):
-    """Store ``pr`` for ``key`` with a TTL, pruning expired entries.
-
-    Best-effort and atomic: any IO error is swallowed so a render never fails
-    on a cache write. A shorter ``ttl`` negatively caches a failed lookup.
-    """
-    try:
-        path = _pr_cache_file()
-        now = time.time()
-        try:
-            with open(path, encoding="utf-8") as fh:
-                cache = json.load(fh)
-            if not isinstance(cache, dict):
-                cache = {}
-        except (OSError, ValueError):
-            cache = {}
-        cache = {k: v for k, v in cache.items() if isinstance(v, dict) and v.get("exp", 0) > now}
-        cache[key] = {
-            "pr": pr,
-            "exp": now + (ttl if ttl is not None else _PR_CACHE_TTL_SECONDS),
-        }
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(cache, fh)
-            os.replace(tmp, path)
-        except OSError:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-    except OSError:
-        pass
-
-
-def get_pr_number(project_dir: str) -> str:
-    """Look up the PR number for the current branch via gh CLI.
-
-    Returns a formatted string like ``#42`` when an open PR exists,
-    or an empty string when no PR is associated or gh CLI is unavailable.
-    """
-    if shutil.which("gh") is None:
-        return ""
-
-    cache_key = None
-    try:
-        branch = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if branch.returncode != 0:
-            return ""
-        branch_name = branch.stdout.strip()
-        if not branch_name:
-            return ""
-
-        cache_key = f"{project_dir}\t{branch_name}"
-        cached = _pr_cache_get(cache_key)
-        if cached is not None:
-            return cached
-
-        result = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "list",
-                "--head",
-                branch_name,
-                "--state",
-                "open",
-                "--json",
-                "number",
-                "--limit",
-                "1",
-            ],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            # Negatively cache the failure (short TTL) so a broken gh
-            # environment does not stall every render on a live lookup.
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
-            return ""
-
-        try:
-            data = json.loads(result.stdout.strip())
-        except (json.JSONDecodeError, ValueError):
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
-            return ""
-
-        pr_str = ""
-        if data and len(data) > 0:
-            pr_num = data[0].get("number", "")
-            if pr_num:
-                pr_str = f"#{pr_num}"
-        _pr_cache_set(cache_key, pr_str)
-        return pr_str
-    except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
-        if cache_key is not None:
-            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS)
-        return ""
-
-
-def get_git_info(project_dir, magenta=None, cyan=None):
-    """Get git branch and change count"""
-    if magenta is None:
-        magenta = MAGENTA
-    if cyan is None:
-        cyan = CYAN
-    git_dir = os.path.join(project_dir, ".git")
-    # ``.git`` is a directory in normal checkouts but a *file* containing a
-    # ``gitdir:`` pointer in worktrees and submodules (F-BUG-007). Accept
-    # either; a bogus ``.git`` entry is still safe because the git commands
-    # below fail cleanly and yield "".
-    if not os.path.exists(git_dir):
-        return ""
-
-    try:
-        # Get branch name (skip optional locks for performance)
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        branch = result.stdout.strip()
-
-        if not branch:
-            return ""
-
-        # Count changes
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "status", "--porcelain"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        changes = len([line for line in result.stdout.split("\n") if line.strip()])
-
-        if changes > 0:
-            return f" | {magenta}{branch}{RESET} {cyan}[{changes}]{RESET}"
-        return f" | {magenta}{branch}{RESET}"
-    except (subprocess.TimeoutExpired, OSError):
-        return ""
 
 
 def _migrate_legacy_state_files(state_dir, old_state_dir):
@@ -817,8 +331,139 @@ def read_config():
         try:
             os.makedirs(os.path.dirname(config_path), exist_ok=True)
             with open(config_path, "w", encoding="utf-8") as f:
-                f.write(
-                    """\
+                f.write(_DEFAULT_CONF_TEMPLATE)
+        except Exception as e:
+            sys.stderr.write(f"[statusline] warning: failed to create config: {e}\n")
+            return config
+
+    if not os.path.exists(config_path):
+        return config
+
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                raw_value = value.strip()
+                value_lower = raw_value.lower()
+                if key == "autocompact":
+                    config["autocompact"] = value_lower != "false"
+                elif key == "token_detail":
+                    config["token_detail"] = value_lower != "false"
+                elif key == "show_delta":
+                    config["show_delta"] = value_lower != "false"
+                elif key == "show_session":
+                    config["show_session"] = value_lower != "false"
+                elif key == "show_io_tokens":
+                    config["show_io_tokens"] = value_lower != "false"
+                elif key == "reduced_motion":
+                    config["reduced_motion"] = value_lower != "false"
+                elif key == "show_mi":
+                    config["show_mi"] = value_lower != "false"
+                elif key == "mi_curve_beta":
+                    try:
+                        config["mi_curve_beta"] = float(raw_value)
+                    except ValueError:
+                        pass
+                elif key == "show_tps":
+                    config["show_tps"] = value_lower != "false"
+                elif key == "show_pr":
+                    config["show_pr"] = value_lower != "false"
+                elif key == "show_cost":
+                    config["show_cost"] = value_lower != "false"
+                elif key == "show_effort":
+                    config["show_effort"] = value_lower != "false"
+                elif key == "show_pacman":
+                    config["show_pacman"] = value_lower != "false"
+                elif key == "tps_precision":
+                    try:
+                        v = int(raw_value)
+                        if v >= 0:
+                            config["tps_precision"] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: tps_precision must be >= 0, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for tps_precision: "
+                            f"'{raw_value}'\n"
+                        )
+                elif key == "tps_unit":
+                    if raw_value:
+                        config["tps_unit"] = raw_value
+                elif key == "tps_window":
+                    try:
+                        v = int(raw_value)
+                        if v >= 1:
+                            config["tps_window"] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: tps_window must be >= 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for tps_window: '{raw_value}'\n"
+                        )
+                elif key in _COLOR_KEYS:
+                    ansi = _parse_color(raw_value)
+                    if ansi:
+                        config["colors"][_COLOR_KEYS[key]] = ansi
+                elif key in _ZONE_INT_KEYS:
+                    try:
+                        v = int(raw_value)
+                        if v > 0:
+                            config["zone_config"][key] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: {key} must be positive, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n"
+                        )
+                elif key in _ZONE_FLOAT_KEYS:
+                    try:
+                        v = float(raw_value)
+                        if 0.0 < v < 1.0:
+                            config["zone_config"][key] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: {key} must be between 0 and 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
+                        )
+                elif key in ("compaction_drop_threshold", "compact_mi_warn_threshold"):
+                    try:
+                        v = float(raw_value)
+                        if 0.0 < v < 1.0:
+                            config[key] = v
+                        else:
+                            sys.stderr.write(
+                                f"[statusline] warning: {key} must be between 0 and 1, "
+                                f"ignoring '{raw_value}'\n"
+                            )
+                    except ValueError:
+                        sys.stderr.write(
+                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
+                        )
+    except (OSError, UnicodeDecodeError) as e:
+        sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
+    return config
+
+# Default config template written when ~/.claude/statusline.conf does not
+# exist yet. Hoisted to a module constant (Task 5.3, F-CLEAN-003) so
+# read_config() stays focused on parsing.
+_DEFAULT_CONF_TEMPLATE = """\
 # ============================================================================
 # context-stats — statusline configuration
 # ============================================================================
@@ -1106,284 +751,78 @@ color_separator=dim
 #   8. git info
 #   9. project name  (base — always starts the first line)
 """
-                )
-        except Exception as e:
-            sys.stderr.write(f"[statusline] warning: failed to create config: {e}\n")
-            return config
 
-    if not os.path.exists(config_path):
-        return config
+def get_pr_number(project_dir: str) -> str:
+    """Look up the PR number for the current branch via gh CLI.
 
+    Returns a formatted string like ``#42`` when an open PR exists,
+    or an empty string when no PR is associated or gh CLI is unavailable.
+    """
+    if shutil.which("gh") is None:
+        return ""
+
+    cache_key = None
     try:
-        with open(config_path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("#") or "=" not in line:
-                    continue
-                key, value = line.split("=", 1)
-                key = key.strip()
-                raw_value = value.strip()
-                value_lower = raw_value.lower()
-                if key == "autocompact":
-                    config["autocompact"] = value_lower != "false"
-                elif key == "token_detail":
-                    config["token_detail"] = value_lower != "false"
-                elif key == "show_delta":
-                    config["show_delta"] = value_lower != "false"
-                elif key == "show_session":
-                    config["show_session"] = value_lower != "false"
-                elif key == "show_io_tokens":
-                    config["show_io_tokens"] = value_lower != "false"
-                elif key == "reduced_motion":
-                    config["reduced_motion"] = value_lower != "false"
-                elif key == "show_mi":
-                    config["show_mi"] = value_lower != "false"
-                elif key == "mi_curve_beta":
-                    try:
-                        config["mi_curve_beta"] = float(raw_value)
-                    except ValueError:
-                        pass
-                elif key == "show_tps":
-                    config["show_tps"] = value_lower != "false"
-                elif key == "show_pr":
-                    config["show_pr"] = value_lower != "false"
-                elif key == "show_cost":
-                    config["show_cost"] = value_lower != "false"
-                elif key == "show_effort":
-                    config["show_effort"] = value_lower != "false"
-                elif key == "show_pacman":
-                    config["show_pacman"] = value_lower != "false"
-                elif key == "tps_precision":
-                    try:
-                        v = int(raw_value)
-                        if v >= 0:
-                            config["tps_precision"] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: tps_precision must be >= 0, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for tps_precision: "
-                            f"'{raw_value}'\n"
-                        )
-                elif key == "tps_unit":
-                    if raw_value:
-                        config["tps_unit"] = raw_value
-                elif key == "tps_window":
-                    try:
-                        v = int(raw_value)
-                        if v >= 1:
-                            config["tps_window"] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: tps_window must be >= 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for tps_window: '{raw_value}'\n"
-                        )
-                elif key in _COLOR_KEYS:
-                    ansi = _parse_color(raw_value)
-                    if ansi:
-                        config["colors"][_COLOR_KEYS[key]] = ansi
-                elif key in _ZONE_INT_KEYS:
-                    try:
-                        v = int(raw_value)
-                        if v > 0:
-                            config["zone_config"][key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be positive, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid integer for {key}: '{raw_value}'\n"
-                        )
-                elif key in _ZONE_FLOAT_KEYS:
-                    try:
-                        v = float(raw_value)
-                        if 0.0 < v < 1.0:
-                            config["zone_config"][key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be between 0 and 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
-                        )
-                elif key in ("compaction_drop_threshold", "compact_mi_warn_threshold"):
-                    try:
-                        v = float(raw_value)
-                        if 0.0 < v < 1.0:
-                            config[key] = v
-                        else:
-                            sys.stderr.write(
-                                f"[statusline] warning: {key} must be between 0 and 1, "
-                                f"ignoring '{raw_value}'\n"
-                            )
-                    except ValueError:
-                        sys.stderr.write(
-                            f"[statusline] warning: invalid number for {key}: '{raw_value}'\n"
-                        )
-    except (OSError, UnicodeDecodeError) as e:
-        sys.stderr.write(f"[statusline] warning: failed to read config: {e}\n")
-    return config
-
-
-def _format_thinking_info(budget) -> str:
-    """Format thinking budget for display next to model name.
-
-    Returns an empty string when budget is None or zero.
-    Small budgets (< 1000) are shown exactly.
-    Medium budgets (1000–9999) are shown as "Nk" only when rounding is reasonable (>= 5k).
-    Large budgets (>= 1M) are shown as "NM" tokens thinking.
-    """
-    if budget is None or budget == 0:
-        return ""
-    try:
-        tokens = int(budget)
-    except (ValueError, TypeError):
-        return ""
-    if tokens <= 0:
-        return ""
-    if tokens >= 1_000_000:
-        return f"{tokens // 1_000_000}M tokens thinking"
-    if tokens >= 10_000:
-        k = round(tokens / 1_000)
-        return f"{k}k tokens thinking"
-    if tokens >= 5_000:
-        return f"{tokens // 1_000}k tokens thinking"
-    return f"{tokens} tokens thinking"
-
-
-def _ensure_utf8_stdout():
-    """Reconfigure stdout/stderr to UTF-8 on Windows where cp1252 is the default.
-
-    Guarded with getattr because pytest's CaptureIO (and StringIO stand-ins used
-    by tests) do not implement reconfigure().
-    """
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is None:
-            continue
-        encoding = getattr(stream, "encoding", None)
-        if encoding and encoding.lower().replace("-", "") == "utf8":
-            continue
-        try:
-            reconfigure(encoding="utf-8", errors="replace")
-        except (ValueError, OSError):  # pragma: no cover - detached/closed stream
-            pass
-
-
-def _validate_session_id(session_id):
-    """Validate that a session ID does not contain dangerous path characters.
-
-    Path-traversal defense plus CSV-safety defense (F-BUG-006): a session_id
-    carrying a comma, newline, or other control character would corrupt the
-    unquoted 15-field CSV rows (shifting column indexes for index-based
-    readers like ``csv_parts[14]``), so those are rejected too.
-
-    Parity: identical logic to ``claude_statusline.core.state._validate_session_id``.
-
-    Raises:
-        ValueError: If session_id is not a str, contains '/', '\\', '..', or
-            null bytes, or is not CSV-safe (comma/newline/control chars).
-    """
-    if not isinstance(session_id, str):
-        raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
-    for bad in ("/", "\\", "..", "\0"):
-        if bad in session_id:
-            raise ValueError(
-                f"Invalid session_id: contains '{bad}'. "
-                "Session IDs must not contain '/', '\\', '..', null bytes, "
-                "commas, newlines, or control characters."
-            )
-    _validate_csv_field("session_id", session_id)
-
-
-def _csv_unsafe_reason(value):
-    """Describe why ``value`` cannot be written into an unquoted CSV field.
-
-    Returns ``None`` when the value is safe. Parity: mirrors
-    ``claude_statusline.core.state._csv_unsafe_reason``.
-    """
-    for i, ch in enumerate(value):
-        if ch == ",":
-            return f"comma at position {i}"
-        code = ord(ch)
-        if code < 0x20 or code == 0x7F:
-            return f"control character U+{code:04X} at position {i}"
-    return None
-
-
-def _validate_csv_field(field, value):
-    """Validate that a string field is safe to write into a CSV state row.
-
-    Parity: mirrors ``claude_statusline.core.state._validate_csv_field``.
-
-    Raises:
-        ValueError: If value is not a str, or contains commas, newlines, or
-            other control characters (F-BUG-006).
-    """
-    if not isinstance(value, str):
-        raise ValueError(f"Invalid {field}: expected str, got {type(value).__name__}.")
-    reason = _csv_unsafe_reason(value)
-    if reason is not None:
-        raise ValueError(
-            f"Invalid {field}: contains {reason}. "
-            "String fields must not contain commas, newlines, or control "
-            "characters (the state CSV has no quoting/escaping)."
+        branch = subprocess.run(
+            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
+        if branch.returncode != 0:
+            return ""
+        branch_name = branch.stdout.strip()
+        if not branch_name:
+            return ""
 
+        cache_key = f"{project_dir}\t{branch_name}"
+        cached = _pr_cache_get(cache_key, cache_file=_pr_cache_file())
+        if cached is not None:
+            return str(cached)
 
-def _sanitize_workspace_dir(value):
-    """Sanitize ``workspace_project_dir`` before writing (CSV_FORMAT contract).
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch_name,
+                "--state",
+                "open",
+                "--json",
+                "number",
+                "--limit",
+                "1",
+            ],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            # Negatively cache the failure (short TTL) so a broken gh
+            # environment does not stall every render on a live lookup.
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
+            return ""
 
-    Commas — and, defensively, newlines/other control characters — are
-    replaced with underscores. Parity: mirrors
-    ``claude_statusline.core.state._sanitize_workspace_dir``.
-    """
-    if not isinstance(value, str):
+        try:
+            data = json.loads(result.stdout.strip())
+        except (json.JSONDecodeError, ValueError):
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
+            return ""
+
+        pr_str = ""
+        if data and len(data) > 0:
+            pr_num = data[0].get("number", "")
+            if pr_num:
+                pr_str = f"#{pr_num}"
+        _pr_cache_set(cache_key, pr_str, cache_file=_pr_cache_file())
+        return pr_str
+    except (subprocess.TimeoutExpired, OSError, FileNotFoundError):
+        if cache_key is not None:
+            _pr_cache_set(cache_key, "", ttl=_PR_CACHE_NEGATIVE_TTL_SECONDS, cache_file=_pr_cache_file())
         return ""
-    return "".join("_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value)
-
-
-def _extract(data, key, default=None):
-    """Read ``key`` from ``data``, treating explicit JSON null as absent.
-
-    External inputs (the stdin payload) may carry explicit nulls where older
-    builds sent no key at all; a bare ``dict.get`` chain returns None instead
-    of the default for those, which used to crash the render (F-BUG-003).
-    Non-dict containers also yield the default.
-    """
-    if not isinstance(data, dict):
-        return default
-    value = data.get(key, default)
-    return default if value is None else value
-
-
-def _resolve_project_dir(raw):
-    """Resolve a stdin-supplied project_dir to an existing directory, else None.
-
-    Local trust boundary (F-SEC-002): ``workspace.project_dir`` arrives
-    verbatim from untrusted stdin JSON. Git/gh subprocesses are only ever run
-    with a cwd that has been resolved and verified to exist; anything else
-    returns None so callers skip those lookups entirely.
-    """
-    if not isinstance(raw, str) or not raw:
-        return None
-    try:
-        candidate = os.path.realpath(os.path.expanduser(raw))
-    except OSError:
-        return None
-    return candidate if os.path.isdir(candidate) else None
-
 
 def main():
     _ensure_utf8_stdout()
@@ -1572,8 +1011,6 @@ def _render(data):
         # tok/s needs the previous row (for the API-time delta) and persists
         # the current api_duration for the next refresh, so it widens this gate.
         if show_delta or show_mi or show_tps:
-            import time
-
             state_dir = os.path.expanduser("~/.claude/statusline")
             os.makedirs(state_dir, exist_ok=True)
 
