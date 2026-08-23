@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Publish toolchain floor: twine 7** — The `dev` extra now requires `twine>=7.0.0` (was `>=4.0.0`). The documented publish procedure (`twine check` / `twine upload`) is unchanged, but twine 7 no longer accepts metadata version 2.0 artifacts on upload; this project's hatchling-built dists emit metadata 2.5 and pass `twine check` unchanged (#135)
+
 ## [1.24.0] - 2026-06-17
 
 ### Added
@@ -19,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logo path in changelog** — Fixed the logo path references in the changelog navigation and footer (#93)
 - **Changelog nav layout** — Removed the search box and fixed the changelog navigation layout for better usability (#101)
 
+[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.0...HEAD
 [1.24.0]: https://github.com/luongnv89/context-stats/compare/v1.23.0...v1.24.0
 
 ## [1.23.0] - 2026-06-16

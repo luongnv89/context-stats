@@ -57,7 +57,7 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",
     "build>=1.0.0",
-    "twine>=4.0.0",
+    "twine>=7.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
