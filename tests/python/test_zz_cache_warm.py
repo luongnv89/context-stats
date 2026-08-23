@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import time
@@ -15,7 +16,9 @@ import pytest
 
 from claude_statusline.cli.cache_warm import (
     _clear_warm_state,
+    _is_same_process,
     _parse_duration,
+    _process_start_token,
     _save_warm_state,
     cmd_cache_warm_off,
     cmd_cache_warm_on,
@@ -296,3 +299,198 @@ class TestRunCacheWarm:
 
         with pytest.raises(SystemExit):
             run_cache_warm("sess", ["status"], colors)
+
+
+# ---------------------------------------------------------------------------
+# Issue #130 / F-BUG-009 — atomic writes + PID-reuse detection
+# ---------------------------------------------------------------------------
+
+
+class TestAtomicWarmStateWrites:
+    def test_save_uses_replace_and_leaves_no_temp(self, tmp_dir):
+        """Successful save must replace atomically and clean up its temp file."""
+        replaced = {}
+        real_replace = os.replace
+
+        def tracking_replace(src, dst):
+            replaced["src"] = src
+            return real_replace(src, dst)
+
+        with patch("claude_statusline.cli.cache_warm.os.replace", tracking_replace):
+            _save_warm_state("atomic", {"pid": 1})
+
+        assert "src" in replaced  # went through os.replace (mkstemp + rename)
+        assert not list(tmp_dir.glob("*.tmp"))
+        state_path = tmp_dir / "cache-warm.atomic.json"
+        assert state_path.exists()
+        # mkstemp creates the temp owner-only; the replaced file keeps 0600.
+        assert stat.S_IMODE(state_path.stat().st_mode) == 0o600
+
+    def test_failed_replace_preserves_previous_state(self, tmp_dir):
+        """A crash mid-save must leave the previous valid state untouched."""
+        original = {"pid": 111, "expiry_time": 999}
+        _save_warm_state("keepme", original)
+
+        with patch(
+            "claude_statusline.cli.cache_warm.os.replace",
+            side_effect=OSError("disk full"),
+        ):
+            with pytest.raises(OSError):
+                _save_warm_state("keepme", {"pid": 222})
+
+        assert load_warm_state("keepme") == original
+        # The abandoned temp file is cleaned up on failure.
+        assert not list(tmp_dir.glob("*.tmp"))
+
+
+class TestPidReuseDetection:
+    def test_process_start_token_self_nonzero_on_linux(self):
+        if not Path("/proc/self/stat").exists():
+            pytest.skip("/proc not available")
+        token = _process_start_token(os.getpid())
+        assert token is not None
+        assert token.isdigit()
+
+    def test_process_start_token_invalid_pid(self):
+        assert _process_start_token(0) is None
+        assert _process_start_token(-5) is None
+
+    def test_same_process_legacy_state_without_token(self):
+        """States written before reuse detection keep plain liveness behavior."""
+        with patch("claude_statusline.cli.cache_warm._is_process_alive", return_value=True):
+            assert _is_same_process(12345, None) is True
+            assert _is_same_process(12345, "") is True
+
+    def test_same_process_dead_pid_is_false(self):
+        with patch("claude_statusline.cli.cache_warm._is_process_alive", return_value=False):
+            assert _is_same_process(12345, "42") is False
+
+    def test_same_process_token_mismatch_is_false(self):
+        with (
+            patch("claude_statusline.cli.cache_warm._is_process_alive", return_value=True),
+            patch(
+                "claude_statusline.cli.cache_warm._process_start_token",
+                return_value="777",
+            ),
+        ):
+            assert _is_same_process(12345, "42") is False
+
+    def test_same_process_matching_token_is_true(self):
+        with (
+            patch("claude_statusline.cli.cache_warm._is_process_alive", return_value=True),
+            patch(
+                "claude_statusline.cli.cache_warm._process_start_token",
+                return_value="42",
+            ),
+        ):
+            assert _is_same_process(12345, "42") is True
+
+    def test_active_state_cleared_when_pid_reused(self, tmp_dir):
+        """A recycled PID must not keep cache-warm 'active' (F-BUG-009)."""
+        future = int(time.time()) + 600
+        own_pid = os.getpid()
+        _save_warm_state(
+            "reused",
+            {"pid": own_pid, "expiry_time": future, "interval": 240, "proc_start": "12345"},
+        )
+        # Current process start time differs from the recorded generation.
+        with patch(
+            "claude_statusline.cli.cache_warm._process_start_token",
+            return_value="67890",
+        ):
+            active, remaining = is_cache_warm_active("reused")
+        assert active is False
+        assert remaining == 0
+        assert not (tmp_dir / "cache-warm.reused.json").exists()
+
+    def test_active_state_kept_when_generation_matches(self, tmp_dir):
+        future = int(time.time()) + 600
+        own_pid = os.getpid()
+        _save_warm_state(
+            "same-gen",
+            {
+                "pid": own_pid,
+                "expiry_time": future,
+                "interval": 240,
+                "proc_start": _process_start_token(own_pid) or "",
+            },
+        )
+        active, remaining = is_cache_warm_active("same-gen")
+        # Matching generation (or legacy empty token) stays active.
+        assert active is True
+        assert remaining > 0
+
+    @unix_only
+    def test_on_records_proc_start(self, tmp_dir):
+        colors = _mock_colors()
+        with patch("os.fork", return_value=424242, create=True):
+            cmd_cache_warm_on("recorder", "10m", colors)
+        state = load_warm_state("recorder")
+        assert state is not None
+        assert "proc_start" in state
+        assert isinstance(state["proc_start"], str)
+
+    @unix_only
+    def test_off_skips_sigterm_on_reused_pid(self, tmp_dir, capsys):
+        """cache-warm off must never signal a recycled PID (F-BUG-009)."""
+        colors = _mock_colors()
+        future = int(time.time()) + 600
+        _save_warm_state(
+            "victim",
+            {
+                "pid": os.getpid(),
+                "expiry_time": future,
+                "interval": 240,
+                "proc_start": "does-not-match",
+            },
+        )
+        kills = []
+        with (
+            patch(
+                "claude_statusline.cli.cache_warm._is_process_alive",
+                return_value=True,
+            ),
+            patch(
+                "claude_statusline.cli.cache_warm.os.kill",
+                side_effect=lambda pid, sig: kills.append((pid, sig)),
+            ),
+            patch("claude_statusline.cli.cache_warm._process_start_token", return_value="other"),
+        ):
+            cmd_cache_warm_off("victim", colors)
+        assert kills == []  # recycled PID left alone
+        assert load_warm_state("victim") is None  # but state still cleared
+        assert "stopped" in capsys.readouterr().out.lower()
+
+    @unix_only
+    def test_refresh_kills_old_only_when_generation_matches(self, tmp_dir):
+        colors = _mock_colors()
+        future = int(time.time()) + 600
+        _save_warm_state(
+            "refresh",
+            {
+                "pid": 555000,
+                "expiry_time": future,
+                "interval": 240,
+                "proc_start": "match-me",
+            },
+        )
+        kills = []
+
+        def fake_kill(pid, sig):
+            kills.append(pid)
+
+        with (
+            patch("os.fork", return_value=99, create=True),
+            patch(
+                "claude_statusline.cli.cache_warm._is_process_alive",
+                return_value=True,
+            ),
+            patch("claude_statusline.cli.cache_warm.os.kill", side_effect=fake_kill),
+            patch(
+                "claude_statusline.cli.cache_warm._process_start_token",
+                side_effect=lambda pid: "match-me" if pid == 555000 else None,
+            ),
+        ):
+            cmd_cache_warm_on("refresh", "5m", colors)
+        # Same generation → old heartbeat signalled; the new child never is.
+        assert kills == [555000]
