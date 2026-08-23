@@ -51,19 +51,62 @@ detect_install_method() {
     echo "${methods[@]}"
 }
 
-# Test that a command can process statusline JSON from stdin
+# Test that a command can process statusline JSON from stdin.
+#
+# F-BUG-011: the smoke JSON previously used an obsolete schema (token_usage.*,
+# session.id) that no current build reads, so even a broken statusline passed
+# vacuously — any input produces output via the render catch-all. The payload
+# below exercises the CURRENT stdin schema, runs against a sandboxed HOME (so
+# no user state is touched), and only passes when the rendered line actually
+# contains the project directory name — which the crash fallback
+# ("[Claude] ~") never includes. A deliberately broken statusline fails this.
 test_statusline_command() {
     local cmd="$1"
-    local test_json='{"model":{"display_name":"Claude","model_id":"claude-sonnet-4-20250514"},"session":{"id":"test-session"},"token_usage":{"total_input":1000,"total_output":500,"cache_creation_input":0,"cache_read_input":0,"percentage_used":5},"workspace":{"project_dir":"/tmp/test"}}'
+    local smoke_home proj_dir test_json output exit_code
+    smoke_home=$(mktemp -d)
+    proj_dir="$smoke_home/smoke-project"
+    mkdir -p "$proj_dir"
+    test_json=$(printf '{
+  "session_id": "check-install-smoke",
+  "model": {"display_name": "Claude", "id": "claude-sonnet-4-20250514"},
+  "workspace": {"current_dir": "%s", "project_dir": "%s"},
+  "context_window": {
+    "context_window_size": 200000,
+    "total_input_tokens": 1000,
+    "total_output_tokens": 500,
+    "current_usage": {
+      "input_tokens": 10000,
+      "cache_creation_input_tokens": 500,
+      "cache_read_input_tokens": 200,
+      "output_tokens": 900
+    }
+  },
+  "cost": {
+    "total_cost_usd": 0.01,
+    "total_api_duration_ms": 1200,
+    "total_lines_added": 10,
+    "total_lines_removed": 2
+  }
+}' "$proj_dir" "$proj_dir")
 
-    local output
-    output=$(echo "$test_json" | eval "$cmd" 2>/dev/null)
-    local exit_code=$?
+    output=$(
+        cd / && {
+            printf '%s\n' "$test_json" | HOME="$smoke_home" USERPROFILE="$smoke_home" \
+                eval "$cmd" 2>/dev/null
+        }
+    )
+    exit_code=$?
+    rm -rf "$smoke_home"
 
-    if [ $exit_code -eq 0 ] && [ -n "$output" ]; then
-        return 0
+    if [ $exit_code -ne 0 ] || [ -z "$output" ]; then
+        return 1
     fi
-    return 1
+    # A working statusline renders the project directory name; a broken one
+    # emits the catch-all fallback or exits without meaningful output.
+    case "$output" in
+        *smoke-project*) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 echo -e "${BLUE}cc-context-stats Installation Check${RESET}"

@@ -2,6 +2,8 @@
 
 from datetime import datetime, timedelta
 
+import pytest
+
 from claude_statusline.analytics import (
     ProjectStats,
     SessionStats,
@@ -185,3 +187,65 @@ def test_since_days_does_not_filter_by_end_time():
 
     assert "included" in session_ids
     assert "excluded" not in session_ids
+
+
+# ---------------------------------------------------------------------------
+# Issue #130 / F-BUG-012 — corrupt timestamps must not crash the report
+# ---------------------------------------------------------------------------
+
+# Values that make datetime.fromtimestamp raise (OverflowError/ValueError/
+# OSError depending on platform).
+CORRUPT_TIMESTAMPS = [10**20, -(10**12)]
+
+
+def _project_with(session):
+    return ProjectStats(
+        project_dir=session.project_dir,
+        total_input_tokens=session.total_input_tokens,
+        total_output_tokens=session.total_output_tokens,
+        cost_usd=session.cost_usd,
+        session_count=1,
+        sessions=[session],
+    )
+
+
+def test_iso_week_valid_timestamp():
+    from claude_statusline.cli.report import _iso_week
+
+    dt = datetime(2026, 1, 15)  # a Thursday
+    label = _iso_week(int(dt.timestamp()))
+    assert label.startswith("2026-W")
+    assert len(label) == 8
+
+
+@pytest.mark.parametrize("bad_ts", CORRUPT_TIMESTAMPS)
+def test_iso_week_corrupt_timestamp_falls_back(bad_ts):
+    """_iso_week returns 'unknown' instead of raising on absurd values."""
+    from claude_statusline.cli.report import _iso_week
+
+    assert _iso_week(bad_ts) == "unknown"
+
+
+@pytest.mark.parametrize("bad_ts", CORRUPT_TIMESTAMPS)
+def test_report_survives_corrupt_start_time(bad_ts):
+    """One corrupt timestamp must not crash report generation (F-BUG-012)."""
+    good = _make_session("good-session", start_offset_days=2, end_offset_days=1)
+    corrupt = SessionStats(
+        session_id="corrupt-session",
+        project_dir="/proj",
+        model_id="claude-opus",
+        total_input_tokens=100,
+        start_time=bad_ts,
+        end_time=0,
+        cost_usd=0.01,
+        entry_count=1,
+    )
+    project = ProjectStats(
+        project_dir="/proj",
+        sessions=[good, corrupt],
+        session_count=2,
+    )
+    report = generate_report([project])
+    assert "Token Usage Analytics Report" in report
+    # The weekly trend excludes the unknown bucket rather than crashing.
+    assert "unknown" not in report.split("## Weekly Activity Trend")[1].split("```mermaid")[1]

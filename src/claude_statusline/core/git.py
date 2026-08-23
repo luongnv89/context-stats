@@ -175,7 +175,11 @@ def get_git_info(
     project_dir = Path(project_dir)
     git_dir = project_dir / ".git"
 
-    if not git_dir.is_dir():
+    # ``.git`` is a directory in normal checkouts but a *file* containing a
+    # ``gitdir:`` pointer in worktrees and submodules (F-BUG-007). Accept
+    # either; a bogus ``.git`` entry is still safe because the git commands
+    # below fail cleanly and yield "".
+    if not git_dir.exists():
         return ""
 
     try:

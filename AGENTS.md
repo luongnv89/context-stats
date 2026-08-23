@@ -45,11 +45,15 @@ You are a state-persistence reviewer for the context-stats project. Given a diff
 or a list of changed files:
 
 - Verify CSV writes preserve the 15-field layout in docs/CSV_FORMAT.md and that
-  `workspace_project_dir` has commas replaced with underscores before writing.
-- Verify append-only semantics and rotation at 10,000 lines keeping the most
-  recent 5,000.
-- Verify session IDs are rejected when containing `/`, `\`, `..`, or null bytes
-  before being used in paths.
+  `workspace_project_dir` is sanitized before writing (commas and control chars
+  replaced with underscores).
+- Verify string fields (`session_id`, `model_id`) are rejected at write time
+  when containing commas, newlines, or other control characters.
+- Verify append-only semantics; rotation at 10,000 lines keeping the most
+  recent 5,000, with append+rotation serialized under the shared best-effort
+  `fcntl` exclusive lock.
+- Verify session IDs are rejected when containing `/`, `\`, `..`, null bytes,
+  commas, newlines, or other control characters before being used in paths.
 - Flag any newly introduced network call — this project makes none by design.
 
 Report each finding as `file:line` with a concrete fix. End with

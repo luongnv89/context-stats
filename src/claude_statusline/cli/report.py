@@ -50,6 +50,19 @@ def _format_timestamp(ts: int) -> str:
         return str(ts)
 
 
+def _safe_datetime(ts: float) -> datetime | None:
+    """Convert ``ts`` to a local datetime, or None when it is out of range.
+
+    One corrupt timestamp in a state file must not crash the whole report
+    (F-BUG-012): ``datetime.fromtimestamp`` raises ValueError/OSError/
+    OverflowError for absurd values.
+    """
+    try:
+        return datetime.fromtimestamp(ts)
+    except (ValueError, OSError, OverflowError):
+        return None
+
+
 def _format_duration(seconds: int) -> str:
     seconds = max(0, seconds)
     hours = seconds // 3600
@@ -76,7 +89,14 @@ def _bar(value: float, max_value: float, width: int = 20) -> str:
 
 
 def _iso_week(ts: int) -> str:
-    dt = datetime.fromtimestamp(ts)
+    """ISO week label ``YYYY-Wnn`` for ``ts``, or "unknown" when corrupt.
+
+    Falls back gracefully on out-of-range timestamps (F-BUG-012) instead of
+    crashing the weekly-trend aggregation; callers skip "unknown" buckets.
+    """
+    dt = _safe_datetime(ts)
+    if dt is None:
+        return "unknown"
     iso = dt.isocalendar()
     return f"{iso[0]}-W{iso[1]:02d}"
 
@@ -110,23 +130,23 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     most_expensive_session = max(all_sessions, key=lambda s: s.cost_usd, default=None)
     most_expensive_project = max(projects_stats, key=lambda p: p.cost_usd, default=None)
 
-    # Compute report time scope from session data
-    all_end_times = [s.end_time for s in all_sessions if s.end_time > 0]
+    # Compute report time scope from session data. Timestamps are converted
+    # defensively so one corrupt value degrades to "unknown" instead of
+    # crashing the report (F-BUG-012).
+    all_end_dts = [
+        dt for dt in (_safe_datetime(s.end_time) for s in all_sessions if s.end_time > 0) if dt
+    ]
     if since_days is not None:
         cutoff = datetime.now() - timedelta(days=since_days)
         scope_from = cutoff.strftime("%Y-%m-%d")
     else:
-        all_start_times = [s.start_time for s in all_sessions if s.start_time > 0]
-        scope_from = (
-            datetime.fromtimestamp(min(all_start_times)).strftime("%Y-%m-%d")
-            if all_start_times
-            else "unknown"
-        )
-    scope_to = (
-        datetime.fromtimestamp(max(all_end_times)).strftime("%Y-%m-%d")
-        if all_end_times
-        else "unknown"
-    )
+        all_start_dts = [
+            dt
+            for dt in (_safe_datetime(s.start_time) for s in all_sessions if s.start_time > 0)
+            if dt
+        ]
+        scope_from = min(all_start_dts).strftime("%Y-%m-%d") if all_start_dts else "unknown"
+    scope_to = max(all_end_dts).strftime("%Y-%m-%d") if all_end_dts else "unknown"
     time_scope = f"{scope_from} → {scope_to}"
 
     # Header
@@ -359,7 +379,9 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     hour_counts: dict[int, int] = defaultdict(int)
     for s in all_sessions:
         if s.start_time:
-            dt = datetime.fromtimestamp(s.start_time)
+            dt = _safe_datetime(s.start_time)
+            if dt is None:
+                continue  # corrupt timestamp: skip rather than crash (F-BUG-012)
             dow_counts[dt.weekday()] += 1
             hour_counts[dt.hour] += 1
 
@@ -412,6 +434,8 @@ def generate_report(projects_stats: list[ProjectStats], since_days: int | None =
     for s in all_sessions:
         if s.start_time:
             week = _iso_week(s.start_time)
+            if week == "unknown":
+                continue  # corrupt timestamp: excluded from the weekly trend
             week_data[week]["sessions"] += 1
             week_data[week]["cost"] += s.cost_usd
             week_data[week]["tokens"] += s.total_tokens()

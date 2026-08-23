@@ -40,8 +40,38 @@ import tempfile
 import time
 import traceback
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows has no fcntl
+    fcntl = None  # type: ignore[assignment]
+
 ROTATION_THRESHOLD = 10_000
 ROTATION_KEEP = 5_000
+
+
+def _lock_state_file(fh):
+    """Take an exclusive advisory lock on ``fh`` (best-effort, POSIX only).
+
+    Parity: mirrors ``claude_statusline.core.state._lock_state_file``.
+    Serializes append + rotation between concurrent processes (F-BUG-008).
+    """
+    if fcntl is None:
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+    except OSError:
+        pass
+
+
+def _unlock_state_file(fh):
+    """Release the lock taken by :func:`_lock_state_file`."""
+    if fcntl is None:
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        pass
+
 
 # Model Intelligence color thresholds
 MI_GREEN_THRESHOLD = 0.90
@@ -319,30 +349,63 @@ def _zone_ansi_color(color_name):
     return RESET
 
 
+def _rotate_state_file_locked(state_file, fh):
+    """Rotation core — caller must hold the exclusive lock on ``fh``.
+
+    Keeps the most recent ROTATION_KEEP lines via atomic temp-file + rename.
+    Parity: mirrors ``claude_statusline.core.state.StateFile._rotate_locked``.
+    """
+    try:
+        fh.seek(0)
+        lines = fh.readlines()
+        if len(lines) <= ROTATION_THRESHOLD:
+            return
+        _rotate_lines(state_file, lines)
+    except OSError as e:
+        sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
+
+
+def _rotate_lines(state_file, lines):
+    """Atomically keep the most recent ROTATION_KEEP of ``lines``.
+
+    Parity: mirrors ``claude_statusline.core.state.StateFile._rotate_lines``.
+    """
+    keep = lines[-ROTATION_KEEP:]
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(state_file) or ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as tmp_f:
+            tmp_f.writelines(keep)
+        os.replace(tmp_path, state_file)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def maybe_rotate_state_file(state_file):
     """Rotate a state file if it exceeds ROTATION_THRESHOLD lines.
 
-    Keeps the most recent ROTATION_KEEP lines via atomic temp-file + rename.
+    Standalone entry point: reads the line count under a best-effort lock,
+    then closes the handle BEFORE the atomic rename. Windows cannot
+    ``os.replace`` a path another handle holds open, so keeping the
+    descriptor across the rename would silently skip rotation there.
+    Parity: mirrors ``claude_statusline.core.state.StateFile._maybe_rotate``.
     """
     try:
         if not os.path.exists(state_file):
             return
         with open(state_file) as f:
-            lines = f.readlines()
+            _lock_state_file(f)
+            try:
+                f.seek(0)
+                lines = f.readlines()
+            finally:
+                _unlock_state_file(f)
         if len(lines) <= ROTATION_THRESHOLD:
             return
-        keep = lines[-ROTATION_KEEP:]
-        fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(state_file), suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as tmp_f:
-                tmp_f.writelines(keep)
-            os.replace(tmp_path, state_file)
-        except BaseException:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
+        _rotate_lines(state_file, lines)
     except OSError as e:
         sys.stderr.write(f"[statusline] warning: failed to rotate state file: {e}\n")
 
@@ -661,7 +724,11 @@ def get_git_info(project_dir, magenta=None, cyan=None):
     if cyan is None:
         cyan = CYAN
     git_dir = os.path.join(project_dir, ".git")
-    if not os.path.isdir(git_dir):
+    # ``.git`` is a directory in normal checkouts but a *file* containing a
+    # ``gitdir:`` pointer in worktrees and submodules (F-BUG-007). Accept
+    # either; a bogus ``.git`` entry is still safe because the git commands
+    # below fail cleanly and yield "".
+    if not os.path.exists(git_dir):
         return ""
 
     try:
@@ -693,6 +760,30 @@ def get_git_info(project_dir, magenta=None, cyan=None):
         return f" | {magenta}{branch}{RESET}"
     except (subprocess.TimeoutExpired, OSError):
         return ""
+
+
+def _migrate_legacy_state_files(state_dir, old_state_dir):
+    """Migrate legacy state files from ``old_state_dir`` into ``state_dir``.
+
+    Migration must never break the refresh that triggered it (F-BUG-005):
+    every move/remove is guarded, warning on failure and leaving the file
+    for a later pass. Parity: mirrors
+    ``claude_statusline.core.state.StateFile._migrate_old_files``.
+    """
+    import glob
+
+    for old_file in glob.glob(os.path.join(old_state_dir, "statusline*.state")):
+        if os.path.isfile(old_file):
+            new_file = os.path.join(state_dir, os.path.basename(old_file))
+            try:
+                if not os.path.exists(new_file):
+                    shutil.move(old_file, new_file)
+                else:
+                    os.remove(old_file)
+            except OSError as e:
+                sys.stderr.write(
+                    f"[statusline] warning: failed to migrate legacy state file {old_file}: {e}\n"
+                )
 
 
 def read_config():
@@ -1193,11 +1284,16 @@ def _ensure_utf8_stdout():
 def _validate_session_id(session_id):
     """Validate that a session ID does not contain dangerous path characters.
 
+    Path-traversal defense plus CSV-safety defense (F-BUG-006): a session_id
+    carrying a comma, newline, or other control character would corrupt the
+    unquoted 15-field CSV rows (shifting column indexes for index-based
+    readers like ``csv_parts[14]``), so those are rejected too.
+
     Parity: identical logic to ``claude_statusline.core.state._validate_session_id``.
 
     Raises:
-        ValueError: If session_id is not a str, or contains '/', '\\', '..', or
-            null bytes
+        ValueError: If session_id is not a str, contains '/', '\\', '..', or
+            null bytes, or is not CSV-safe (comma/newline/control chars).
     """
     if not isinstance(session_id, str):
         raise ValueError(f"Invalid session_id: expected str, got {type(session_id).__name__}.")
@@ -1205,8 +1301,57 @@ def _validate_session_id(session_id):
         if bad in session_id:
             raise ValueError(
                 f"Invalid session_id: contains '{bad}'. "
-                "Session IDs must not contain '/', '\\', '..', or null bytes."
+                "Session IDs must not contain '/', '\\', '..', null bytes, "
+                "commas, newlines, or control characters."
             )
+    _validate_csv_field("session_id", session_id)
+
+
+def _csv_unsafe_reason(value):
+    """Describe why ``value`` cannot be written into an unquoted CSV field.
+
+    Returns ``None`` when the value is safe. Parity: mirrors
+    ``claude_statusline.core.state._csv_unsafe_reason``.
+    """
+    for i, ch in enumerate(value):
+        if ch == ",":
+            return f"comma at position {i}"
+        code = ord(ch)
+        if code < 0x20 or code == 0x7F:
+            return f"control character U+{code:04X} at position {i}"
+    return None
+
+
+def _validate_csv_field(field, value):
+    """Validate that a string field is safe to write into a CSV state row.
+
+    Parity: mirrors ``claude_statusline.core.state._validate_csv_field``.
+
+    Raises:
+        ValueError: If value is not a str, or contains commas, newlines, or
+            other control characters (F-BUG-006).
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"Invalid {field}: expected str, got {type(value).__name__}.")
+    reason = _csv_unsafe_reason(value)
+    if reason is not None:
+        raise ValueError(
+            f"Invalid {field}: contains {reason}. "
+            "String fields must not contain commas, newlines, or control "
+            "characters (the state CSV has no quoting/escaping)."
+        )
+
+
+def _sanitize_workspace_dir(value):
+    """Sanitize ``workspace_project_dir`` before writing (CSV_FORMAT contract).
+
+    Commas — and, defensively, newlines/other control characters — are
+    replaced with underscores. Parity: mirrors
+    ``claude_statusline.core.state._sanitize_workspace_dir``.
+    """
+    if not isinstance(value, str):
+        return ""
+    return "".join("_" if (ch == "," or ord(ch) < 0x20 or ord(ch) == 0x7F) else ch for ch in value)
 
 
 def _extract(data, key, default=None):
@@ -1427,21 +1572,12 @@ def _render(data):
         # tok/s needs the previous row (for the API-time delta) and persists
         # the current api_duration for the next refresh, so it widens this gate.
         if show_delta or show_mi or show_tps:
-            import glob
-            import shutil
             import time
 
             state_dir = os.path.expanduser("~/.claude/statusline")
             os.makedirs(state_dir, exist_ok=True)
 
-            old_state_dir = os.path.expanduser("~/.claude")
-            for old_file in glob.glob(os.path.join(old_state_dir, "statusline*.state")):
-                if os.path.isfile(old_file):
-                    new_file = os.path.join(state_dir, os.path.basename(old_file))
-                    if not os.path.exists(new_file):
-                        shutil.move(old_file, new_file)
-                    else:
-                        os.remove(old_file)
+            _migrate_legacy_state_files(state_dir, os.path.expanduser("~/.claude"))
 
             if session_id:
                 state_file = os.path.join(state_dir, f"statusline.{session_id}.state")
@@ -1538,6 +1674,11 @@ def _render(data):
                 try:
                     cur_input_tokens = current_usage.get("input_tokens", 0)
                     cur_output_tokens = current_usage.get("output_tokens", 0)
+                    # CSV-safety defense (F-BUG-006): string fields are
+                    # validated before joining so a comma/newline/control
+                    # character can never shift the 15-field column indexes.
+                    _validate_csv_field("session_id", session_id or "")
+                    _validate_csv_field("model_id", model_id)
                     state_data = ",".join(
                         str(x)
                         for x in [
@@ -1553,20 +1694,39 @@ def _render(data):
                             lines_removed,
                             session_id or "",
                             model_id,
-                            workspace_project_dir.replace(",", "_"),
+                            _sanitize_workspace_dir(workspace_project_dir),
                             total_size,
                             api_duration_ms,
                         ]
                     )
-                    # Create with owner-only permissions (F-SEC-003): state
-                    # rows carry session ids and costs, matching the
-                    # pr-number-cache precedent (mkstemp is 0600).
-                    fd = os.open(state_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-                    with os.fdopen(fd, "w") as f:
-                        f.write(f"{state_data}\n")
-                    maybe_rotate_state_file(state_file)
-                except OSError as e:
-                    sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
+                except ValueError as e:
+                    sys.stderr.write(f"[statusline] warning: refusing to write state file: {e}\n")
+                else:
+                    try:
+                        # Create with owner-only permissions (F-SEC-003): state
+                        # rows carry session ids and costs. The append and the
+                        # subsequent rotation share one exclusive advisory lock
+                        # (F-BUG-008) so rotation cannot drop a concurrently
+                        # appended line.
+                        fd = os.open(state_file, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
+                        with os.fdopen(fd, "a+") as f:
+                            _lock_state_file(f)
+                            try:
+                                f.write(f"{state_data}\n")
+                                f.flush()
+                                if fcntl is not None:
+                                    # POSIX only: the rename may run while this
+                                    # descriptor still holds the file open.
+                                    # Windows cannot replace an open file, so
+                                    # it falls back after the close below.
+                                    _rotate_state_file_locked(state_file, f)
+                            finally:
+                                _unlock_state_file(f)
+                    except OSError as e:
+                        sys.stderr.write(f"[statusline] warning: failed to write state file: {e}\n")
+                    else:
+                        if fcntl is None:
+                            maybe_rotate_state_file(state_file)
 
     # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
     # segment doesn't flicker in and out across the first few turns.

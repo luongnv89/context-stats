@@ -15,6 +15,7 @@ import os
 import re
 import signal
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -55,7 +56,10 @@ def load_warm_state(session_id: str) -> dict | None:
     """Load persisted cache-warm state for a session.
 
     Returns:
-        Dict with keys: pid, start_time, expiry_time, interval — or None if not found.
+        Dict with keys: pid, start_time, expiry_time, interval, proc_start —
+        or None if not found. ``proc_start`` is a best-effort process-start
+        token used for PID-reuse detection (may be empty on legacy states or
+        platforms without /proc).
     """
     path = _warm_state_path(session_id)
     if not path.exists():
@@ -67,8 +71,26 @@ def load_warm_state(session_id: str) -> dict | None:
 
 
 def _save_warm_state(session_id: str, state: dict) -> None:
+    """Persist warm state atomically via mkstemp + os.replace (F-BUG-009).
+
+    A torn write here could leave an unparsable state file that pins the
+    cache-warm display; the temp+rename keeps the visible file always valid.
+    The temp file inherits mkstemp's owner-only 0600 permissions.
+    """
     _STATE_DIR.mkdir(parents=True, exist_ok=True)
-    _warm_state_path(session_id).write_text(json.dumps(state))
+    fd, tmp = tempfile.mkstemp(
+        dir=str(_STATE_DIR), prefix=f"cache-warm.{session_id}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(state, fh)
+        os.replace(tmp, _warm_state_path(session_id))
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def _clear_warm_state(session_id: str) -> None:
@@ -86,6 +108,48 @@ def _is_process_alive(pid: int) -> bool:
         return True
     except (ProcessLookupError, PermissionError):
         return False
+
+
+def _process_start_token(pid: int) -> str | None:
+    """Return a best-effort generation token for ``pid`` (PID-reuse defense).
+
+    On Linux the token is the kernel's process start time (field 22 of
+    ``/proc/<pid>/stat``, clock ticks since boot), which uniquely identifies
+    one process even after PIDs are recycled. Returns None when it cannot be
+    determined (non-Linux platform, vanished process).
+    """
+    if not pid or pid <= 0:
+        return None
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8", errors="replace") as fh:
+            stat_tail = fh.read().rsplit(")", 1)[1].split()
+        # Fields after "comm)": index 0 is state (field 3), so field 22
+        # (starttime) is index 19.
+        return str(stat_tail[19])
+    except (OSError, IndexError):
+        return None
+
+
+def _is_same_process(pid: object, recorded_token: object) -> bool:
+    """True when ``pid`` is alive and still the recorded process generation.
+
+    PID-reuse defense (F-BUG-009): a recorded heartbeat PID may have been
+    recycled by an unrelated process; killing it would signal an innocent
+    victim. When warm state carries a ``proc_start`` token, the current
+    start time must match. Legacy states without a token fall back to the
+    plain liveness check.
+    """
+    if not isinstance(pid, int) or isinstance(pid, bool):
+        return False
+    if pid <= 0 or not _is_process_alive(pid):
+        return False
+    token = str(recorded_token) if recorded_token else ""
+    if not token:
+        return True  # legacy state without reuse detection
+    current = _process_start_token(pid)
+    if current is None:
+        return False  # cannot confirm the generation: treat as different
+    return current == token
 
 
 def is_cache_warm_active(session_id: str) -> tuple[bool, int]:
@@ -106,7 +170,9 @@ def is_cache_warm_active(session_id: str) -> tuple[bool, int]:
         _clear_warm_state(session_id)
         return False, 0
 
-    if pid and not _is_process_alive(pid):
+    # PID-reuse aware liveness (F-BUG-009): a recycled PID belonging to an
+    # unrelated process must not keep cache-warm "active" forever.
+    if pid and not _is_same_process(pid, state.get("proc_start")):
         _clear_warm_state(session_id)
         return False, 0
 
@@ -211,7 +277,9 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
         # Parent process — restore SIGCHLD handler, persist state, stop old process
         if _has_sigchld:
             signal.signal(signal.SIGCHLD, old_sigchld)
-        # Persist state first (avoids race window when refreshing)
+        # Persist state first (avoids race window when refreshing). The
+        # heartbeat process start time is recorded so later kills and
+        # liveness checks can detect PID reuse (F-BUG-009).
         _save_warm_state(
             session_id,
             {
@@ -219,12 +287,14 @@ def cmd_cache_warm_on(session_id: str, duration_str: str | None, colors: object)
                 "start_time": now,
                 "expiry_time": expiry,
                 "interval": DEFAULT_INTERVAL,
+                "proc_start": _process_start_token(pid) or "",
             },
         )
-        # Terminate old process only after new state is persisted
+        # Terminate old process only after new state is persisted — and only
+        # when it is verifiably still the old heartbeat generation.
         if old_state:
             old_pid = old_state.get("pid", 0)
-            if old_pid and _is_process_alive(old_pid):
+            if _is_same_process(old_pid, old_state.get("proc_start")):
                 try:
                     os.kill(old_pid, signal.SIGTERM)
                 except OSError:
@@ -260,7 +330,9 @@ def cmd_cache_warm_off(session_id: str, colors: object, silent: bool = False) ->
         return
 
     pid = state.get("pid", 0)
-    if pid and _is_process_alive(pid):
+    # Only signal when the PID still belongs to the recorded heartbeat
+    # generation (F-BUG-009): a recycled PID must not be killed.
+    if _is_same_process(pid, state.get("proc_start")):
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError:
