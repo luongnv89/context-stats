@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **UTF-8 stdout guard drift (F-BUG-010)** — `context-stats` CLI now reuses the guarded `_ensure_utf8_stdout` implementation from `cli/statusline.py` instead of its own unguarded copy, so streams without `reconfigure()` (pytest capture, StringIO stand-ins) can no longer crash the CLI. Covered by the new parity suite (#136)
+- **Windows project-name display drift** — `claude-statusline` derived the status-line project name with an ASCII-only `rsplit("/")`, so on Windows a native backslash path rendered in full instead of its final segment; it now uses the same platform-aware `os.path.basename(cwd) or "~"` as the standalone script. Caught by the new parity suite's Windows CI leg (#136)
 
 ### Added
 

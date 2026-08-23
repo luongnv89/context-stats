@@ -24,6 +24,7 @@ When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -194,7 +195,7 @@ def _render(data: dict) -> None:
     # the whole statusline (mirrors the `thinking` extraction above).
     effort_data = data.get("effort")
     effort_level = effort_data.get("level") if isinstance(effort_data, dict) else None
-    dir_name = cwd.rsplit("/", 1)[-1] if "/" in cwd else cwd or "~"
+    dir_name = os.path.basename(cwd) or "~"
 
     # Read settings from config file
     config = Config.load()
