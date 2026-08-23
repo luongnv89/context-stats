@@ -14,7 +14,7 @@ from pathlib import Path
 # F-DEAD-001); the standalone script loads the same body from
 # claude_statusline._shared / its vendored copy. The PR-number cache helpers
 # stay defined in this namespace so tests can redirect them here.
-from claude_statusline._shared import CYAN, MAGENTA, RESET
+from claude_statusline._shared import CYAN, MAGENTA, RESET, git_branch
 from claude_statusline._shared import git_info as _git_info_ansi
 from claude_statusline.core.colors import ColorManager
 
@@ -93,22 +93,18 @@ def _get_pr_number(project_dir: Path) -> str:
 
     Returns a formatted string like ``#42`` when an open PR exists,
     or an empty string when no PR is associated or gh CLI is unavailable.
+
+    F-PERF-003: the branch comes from the shared dir-keyed TTL cache
+    (:func:`claude_statusline._shared.git_branch`) — the same lookup the
+    git-info segment uses — so a render runs at most one rev-parse per TTL
+    window instead of one here plus one in git_info.
     """
     if shutil.which("gh") is None:
         return ""
 
     cache_key: str | None = None
     try:
-        branch = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if branch.returncode != 0:
-            return ""
-        branch_name = branch.stdout.strip()
+        branch_name = git_branch(project_dir)
         if not branch_name:
             return ""
 

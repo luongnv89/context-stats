@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 if sys.platform == "win32":
@@ -35,6 +36,21 @@ else:
 # State rotation (append-only CSV contract, docs/CSV_FORMAT.md)
 ROTATION_THRESHOLD = 10_000
 ROTATION_KEEP = 5_000
+# Rotation scan floor (F-PERF-002): a state file smaller than this many bytes
+# can NEVER exceed ROTATION_THRESHOLD lines, so the O(filesize) line count may
+# be skipped outright. Proof: N lines occupy at least 2N-1 bytes (every line
+# carries >= 1 content byte and its newline; only the final line may lack the
+# newline), so N > T implies size > 2T - 1. Contrapositive: size < 2T implies
+# N <= T — no rotation possible. The threshold MEANING (rotate iff
+# > ROTATION_THRESHOLD lines, keep the most recent ROTATION_KEEP) is unchanged;
+# the gate only decides whether the exact line count must be computed.
+_ROTATION_SCAN_FLOOR_BYTES = ROTATION_THRESHOLD * 2
+# Bounded tail-read window (F-PERF-001): tail readers seek at most this many
+# bytes back from EOF instead of reading whole (up to 10k-line) state files on
+# every refresh. Typical rows are well under 300 bytes, so the window spans
+# hundreds of rows; callers fall back to an exact full read whenever the
+# windowed slice cannot satisfy the request (parity is preserved exactly).
+STATE_TAIL_WINDOW_BYTES = 65_536
 
 # Model Intelligence color thresholds — based on MI value and context utilization
 MI_GREEN_THRESHOLD = 0.90
@@ -686,6 +702,90 @@ def parse_state_row(row: str) -> dict[str, int] | None:
 
 
 # ---------------------------------------------------------------------------
+# Bounded tail reads (F-PERF-001)
+# ---------------------------------------------------------------------------
+
+
+def tail_window_text(path, window: int = STATE_TAIL_WINDOW_BYTES) -> tuple[str, bool]:
+    """Read at most the last ``window`` bytes of ``path``, seeking from EOF.
+
+    Returns ``(text, complete)``. ``complete`` is True when the whole file fit
+    inside the window (nothing was dropped). Otherwise a leading partial line
+    — the fragment cut by the seek — is discarded so every remaining line is
+    complete; ``text.splitlines()`` then yields exactly the file's trailing
+    complete lines, and the caller may fall back to a full read when those
+    cannot satisfy it.
+
+    Raises OSError on IO failure; callers own their degradation paths.
+    """
+    with open(path, "rb") as fh:
+        # Anchor the size to THIS descriptor: stat()-then-open races a
+        # concurrent rotation shrinking the file, which would make the
+        # relative seek below go negative and raise.
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        if size <= window:
+            fh.seek(0)
+            data = fh.read()
+            return data.decode("utf-8", errors="replace"), True
+        fh.seek(-window, os.SEEK_END)
+        data = fh.read()
+    nl = data.find(b"\n")
+    if nl < 0:
+        # Degenerate: not even one newline inside the window (one gigantic
+        # line). Report an empty slice so callers fall back to the full read.
+        return "", False
+    return data[nl + 1 :].decode("utf-8", errors="replace"), False
+
+
+def walk_tail_rows(rows, want: int, parse_row) -> list:
+    """Collect up to ``want`` parsed rows walking ``rows`` newest-first.
+
+    Blank lines are skipped and rows whose ``parse_row`` returns ``None`` are
+    dropped — exactly the semantics of the full-history readers — so the
+    result equals ``history[-want:]`` whenever ``rows`` spans enough of the
+    file's tail.
+    """
+    collected = []
+    for line in rows:
+        if not line.strip():
+            continue
+        parsed = parse_row(line)
+        if parsed is not None:
+            collected.append(parsed)
+            if len(collected) >= want:
+                break
+    return collected
+
+
+# ---------------------------------------------------------------------------
+# Legacy-migration sentinel (F-PERF-005): skip the per-construction glob/stat
+# sweep once a migration pass has completed cleanly on this machine.
+# ---------------------------------------------------------------------------
+
+LEGACY_MIGRATION_MARKER = ".legacy_migration_done"
+
+
+def legacy_migration_done(state_dir) -> bool:
+    """True when the one-time legacy-state migration already ran cleanly."""
+    return os.path.exists(os.path.join(os.fspath(state_dir), LEGACY_MIGRATION_MARKER))
+
+
+def mark_legacy_migration_done(state_dir) -> None:
+    """Write the migration sentinel (best-effort; failures are ignored).
+
+    Only called after a pass that hit no OSError, so the F-BUG-005 recovery
+    guarantee is preserved: a failed move leaves no marker and is retried on
+    the next refresh.
+    """
+    try:
+        with open(os.path.join(os.fspath(state_dir), LEGACY_MIGRATION_MARKER), "w") as fh:
+            fh.write("")
+    except OSError:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # State locking / rotation core
 # ---------------------------------------------------------------------------
 
@@ -804,6 +904,135 @@ def _pr_cache_set(key, pr, ttl=None, cache_file: str | None = None) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Branch cache (F-PERF-003): one rev-parse per dir per TTL window
+# ---------------------------------------------------------------------------
+
+
+# Both the git-info segment and the PR-number lookup need the current branch;
+# each used to run its own `git rev-parse` every render. The result is cached
+# per project directory with a short TTL (mirroring the PR-number cache file
+# format) so a render fan-out costs at most one rev-parse per TTL window.
+_BRANCH_CACHE_TTL_SECONDS = 10
+# Failed lookups (not a repo, detached failure, timeout) are negatively cached
+# briefly so a broken environment does not re-run git on every refresh.
+_BRANCH_CACHE_NEGATIVE_TTL_SECONDS = 5
+
+
+def _branch_cache_file() -> str:
+    """Location of the shared branch cache file."""
+    return os.path.join(os.path.expanduser("~/.claude/statusline"), "branch_cache.json")
+
+
+def _branch_cache_get(project_dir) -> str | None:
+    """Return the cached branch for ``project_dir`` if present and unexpired.
+
+    ``None`` means cache miss; an empty string is a valid *negative* entry
+    ("rev-parse fails here"). Never raises.
+    """
+    return _pr_cache_get(os.fspath(project_dir), cache_file=_branch_cache_file())
+
+
+def _branch_cache_set(project_dir, branch, ttl=None) -> None:
+    """Store ``branch`` for ``project_dir`` with a TTL (best-effort, atomic)."""
+    _pr_cache_set(os.fspath(project_dir), branch, ttl=ttl, cache_file=_branch_cache_file())
+
+
+def git_branch(project_dir) -> str:
+    """Current branch name for ``project_dir`` via the dir-keyed TTL cache.
+
+    Runs ``git --no-optional-locks rev-parse --abbrev-ref HEAD`` at most once
+    per ``_BRANCH_CACHE_TTL_SECONDS`` per directory (F-PERF-003); failures are
+    negatively cached for ``_BRANCH_CACHE_NEGATIVE_TTL_SECONDS``. Returns ""
+    when the branch cannot be determined; never raises.
+    """
+    key = os.fspath(project_dir)
+    cached = _branch_cache_get(key)
+    if cached is not None:
+        return cached
+    try:
+        result = subprocess.run(
+            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=key,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        _branch_cache_set(key, "", ttl=_BRANCH_CACHE_NEGATIVE_TTL_SECONDS)
+        return ""
+    branch = result.stdout.strip() if result.returncode == 0 else ""
+    if not branch:
+        _branch_cache_set(key, "", ttl=_BRANCH_CACHE_NEGATIVE_TTL_SECONDS)
+        return ""
+    _branch_cache_set(key, branch)
+    return branch
+
+
+# Cap on `status --porcelain` entries counted per render (F-PERF-003): huge
+# dirty trees stop paying per-line costs past this point and display "[N+]".
+_STATUS_CHANGES_CAP = 1_000
+
+
+def _count_changes_capped(project_dir, cap: int | None = None) -> tuple[int, bool]:
+    """Count `git status --porcelain` entries, reading at most ``cap`` lines.
+
+    ``cap`` defaults to ``_STATUS_CHANGES_CAP`` (resolved at call time).
+    Returns ``(count, saturated)``. ``saturated`` means the cap was reached
+    (or git was killed at the deadline mid-count), so ``count`` is a lower
+    bound and callers show "``<cap>+``". The subprocess's stdout is consumed
+    incrementally so output size is bounded by the cap, not the tree; the
+    5-second git timeout is preserved via a kill timer. Any failure yields
+    ``(0, False)`` — mirroring the previous behavior of showing no count.
+    """
+    if cap is None:
+        cap = _STATUS_CHANGES_CAP
+    try:
+        proc = subprocess.Popen(
+            ["git", "--no-optional-locks", "status", "--porcelain"],
+            cwd=os.fspath(project_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except OSError:
+        return 0, False
+    killed = False
+
+    def _kill() -> None:
+        nonlocal killed
+        killed = True
+        proc.kill()
+
+    timer = threading.Timer(5, _kill)
+    timer.start()
+    count = 0
+    try:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            if line.strip():
+                count += 1
+                if count >= cap:
+                    proc.kill()
+                    break
+        proc.stdout.close()
+        proc.wait(timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        proc.kill()
+        proc.wait(timeout=5)
+        return 0, False
+    finally:
+        timer.cancel()
+    if proc.returncode != 0 and not (killed or count >= cap):
+        # Real git failure (not our cap/deadline kill): no count, as before.
+        return 0, False
+    if killed and count < cap:
+        # Deadline kill mid-count: a partial number would read as exact;
+        # degrade like the old timeout path (no segment) instead.
+        return 0, False
+    return count, count >= cap
+
+
+# ---------------------------------------------------------------------------
 # Git info
 # ---------------------------------------------------------------------------
 
@@ -814,6 +1043,11 @@ def git_info(project_dir, magenta=None, cyan=None, reset: str = RESET) -> str:
     Accepts a `.git` directory OR worktree/submodule pointer file (F-BUG-007);
     a bogus `.git` entry fails cleanly because the git commands below fail
     and yield "".
+
+    The branch comes from :func:`git_branch` (dir-keyed TTL cache, F-PERF-003)
+    and the change count from :func:`_count_changes_capped`, which stops
+    reading `status --porcelain` output at a fixed cap so huge dirty trees
+    cannot balloon a render.
     """
     if magenta is None:
         magenta = MAGENTA
@@ -823,35 +1057,13 @@ def git_info(project_dir, magenta=None, cyan=None, reset: str = RESET) -> str:
     if not os.path.exists(git_dir):
         return ""
 
-    try:
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            return ""
-        branch = result.stdout.strip()
-
-        if not branch:
-            return ""
-
-        result = subprocess.run(
-            ["git", "--no-optional-locks", "status", "--porcelain"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            changes = 0
-        else:
-            changes = len([line for line in result.stdout.split("\n") if line.strip()])
-
-        if changes > 0:
-            return f" | {magenta}{branch}{reset} {cyan}[{changes}]{reset}"
-        return f" | {magenta}{branch}{reset}"
-    except (subprocess.TimeoutExpired, OSError):
+    branch = git_branch(project_dir)
+    if not branch:
         return ""
+
+    changes, saturated = _count_changes_capped(project_dir)
+
+    if changes > 0:
+        shown = f"{_STATUS_CHANGES_CAP}+" if saturated else str(changes)
+        return f" | {magenta}{branch}{reset} {cyan}[{shown}]{reset}"
+    return f" | {magenta}{branch}{reset}"

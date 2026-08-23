@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat as stat_module
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,14 +20,20 @@ else:
 # claude_statusline._shared / its vendored copy. The module-level names below
 # keep their historical homes in this namespace for package consumers.
 from claude_statusline._shared import (
+    _ROTATION_SCAN_FLOOR_BYTES,
     ROTATION_KEEP,
     ROTATION_THRESHOLD,
+    STATE_TAIL_WINDOW_BYTES,
     _lock_state_file,
     _sanitize_workspace_dir,
     _unlock_state_file,
     _validate_csv_field,
     _validate_session_id,
+    legacy_migration_done,
+    mark_legacy_migration_done,
     rotate_lines,
+    tail_window_text,
+    walk_tail_rows,
 )
 from claude_statusline._shared import _csv_unsafe_reason as _csv_unsafe_reason
 from claude_statusline._shared import parse_state_row as parse_state_row
@@ -196,7 +203,16 @@ class StateFile:
         self.STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     def _migrate_old_files(self) -> None:
-        """Migrate old state files from ~/.claude/ to ~/.claude/statusline/."""
+        """Migrate old state files from ~/.claude/ to ~/.claude/statusline/.
+
+        One-time-per-machine (F-PERF-005): a sentinel marker in the state dir
+        short-circuits the glob/stat sweep on every later construction. The
+        marker is only written after a pass that hit no OSError, preserving
+        F-BUG-005 recovery — a failed move leaves no marker and is retried.
+        """
+        if legacy_migration_done(self.STATE_DIR):
+            return
+        failed = False
         for old_file in self.OLD_STATE_DIR.glob("statusline*.state"):
             if old_file.is_file():
                 new_file = self.STATE_DIR / old_file.name
@@ -208,10 +224,13 @@ class StateFile:
                 except OSError as e:
                     # Migration must never break the refresh that triggered it
                     # (F-BUG-005): warn and leave the file for a later pass.
+                    failed = True
                     sys.stderr.write(
                         f"[statusline] warning: failed to migrate legacy state "
                         f"file {old_file}: {e}\n"
                     )
+        if not failed:
+            mark_legacy_migration_done(self.STATE_DIR)
 
     @property
     def file_path(self) -> Path:
@@ -283,6 +302,13 @@ class StateFile:
         parses at most ``n`` rows instead of the whole file. State files are
         append-only and chronological, so the tail is the most recent history.
 
+        I/O is bounded twice (F-PERF-001): first by ``n`` (at most ``n``
+        entries are built) and then by a fixed byte window seeked from EOF
+        (:func:`claude_statusline._shared.tail_window_text`), so a refresh
+        touches O(window) bytes instead of O(filesize). Whenever the windowed
+        slice cannot yield ``n`` parseable entries, the read falls back to an
+        exact full pass.
+
         Parity: the result is byte-for-byte identical to ``read_history()[-n:]``
         — blank lines are skipped and unparseable lines are dropped exactly as
         in :meth:`read_history`, the kept entries are in the same chronological
@@ -305,30 +331,38 @@ class StateFile:
             return []
 
         try:
-            content = file_path.read_text()
+            text, complete = tail_window_text(file_path, STATE_TAIL_WINDOW_BYTES)
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to read state tail {file_path}: {e}\n")
             return []
 
-        # Walk the file from the end, parsing lines until ``n`` parseable
-        # entries are collected. Bounding the parse (one StateEntry build per
-        # kept line) is the win here: the full read built an entry for every
-        # line in the file. Skipping/dropping mirrors read_history exactly, so
-        # the tail equals read_history()[-n:].
-        entries: list[StateEntry] = []
-        for line in reversed(content.splitlines()):
-            if not line.strip():
-                continue
-            entry = StateEntry.from_csv_line(line)
-            if entry:
-                entries.append(entry)
-                if len(entries) >= n:
-                    break
-        entries.reverse()  # restore chronological (oldest-first) order
+        # Walk the window from the end, parsing lines until ``n`` parseable
+        # entries are collected. Skipping/dropping mirrors read_history
+        # exactly (shared walk_tail_rows), so a satisfied window equals
+        # read_history()[-n:]: the window ends at EOF and only whole lines
+        # are considered.
+        entries = walk_tail_rows(reversed(text.splitlines()), n, StateEntry.from_csv_line)
+        if len(entries) >= n or complete:
+            entries.reverse()  # restore chronological (oldest-first) order
+            return entries
+
+        # Window lacked enough rows: exact full-read fallback (same warning
+        # and drop semantics as before).
+        try:
+            content = file_path.read_text()
+        except OSError as e:
+            sys.stderr.write(f"[statusline] warning: failed to read state tail {file_path}: {e}\n")
+            return []
+        entries = walk_tail_rows(reversed(content.splitlines()), n, StateEntry.from_csv_line)
+        entries.reverse()
         return entries
 
     def read_last_entry(self) -> StateEntry | None:
         """Read only the last entry from the state file.
+
+        Reads a bounded window from EOF (F-PERF-001) with an exact full-read
+        fallback when the window contains no non-blank line but the file
+        continues beyond it.
 
         Returns:
             The last StateEntry or None if file is empty/missing
@@ -339,14 +373,25 @@ class StateFile:
             return None
 
         try:
-            content = file_path.read_text()
-            lines = content.splitlines()
-            for line in reversed(lines):
-                if line.strip():
-                    return StateEntry.from_csv_line(line)
+            text, complete = tail_window_text(file_path, STATE_TAIL_WINDOW_BYTES)
         except OSError as e:
             sys.stderr.write(f"[statusline] warning: failed to read last entry {file_path}: {e}\n")
+            return None
 
+        for line in reversed(text.splitlines()):
+            if line.strip():
+                return StateEntry.from_csv_line(line)
+        if complete:
+            return None
+
+        try:
+            content = file_path.read_text()
+        except OSError as e:
+            sys.stderr.write(f"[statusline] warning: failed to read last entry {file_path}: {e}\n")
+            return None
+        for line in reversed(content.splitlines()):
+            if line.strip():
+                return StateEntry.from_csv_line(line)
         return None
 
     def append_entry(self, entry: StateEntry) -> None:
@@ -398,9 +443,16 @@ class StateFile:
 
         If the file has more than ROTATION_THRESHOLD lines, truncate to
         the most recent ROTATION_KEEP lines via atomic temp-file + rename.
+
+        F-PERF-002: the O(filesize) line count only runs when the file's
+        size proves rotation is even possible (``_ROTATION_SCAN_FLOOR_BYTES``
+        bound — see _shared); smaller files return without any read.
         """
         file_path = self.file_path
         try:
+            size = os.fstat(fh.fileno()).st_size
+            if size < _ROTATION_SCAN_FLOOR_BYTES:
+                return
             fh.seek(0)
             lines = fh.readlines()
             if len(lines) <= self.ROTATION_THRESHOLD:
@@ -423,10 +475,18 @@ class StateFile:
         rename. Windows cannot ``os.replace`` a path another handle holds
         open, so keeping the descriptor across the rename here would
         silently skip rotation on that platform.
+
+        F-PERF-002: a byte-size gate on ``stat().st_size`` skips the
+        O(filesize) line count for files below
+        ``_ROTATION_SCAN_FLOOR_BYTES`` — such files provably cannot exceed
+        ROTATION_THRESHOLD lines, so the rotation decision is unchanged.
         """
         file_path = self.file_path
         try:
             if not file_path.exists():
+                return
+            st = file_path.stat()
+            if stat_module.S_ISREG(st.st_mode) and st.st_size < _ROTATION_SCAN_FLOOR_BYTES:
                 return
             with open(file_path) as f:
                 _lock_state_file(f)

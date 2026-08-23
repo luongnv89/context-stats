@@ -28,6 +28,7 @@ from leaking between cases).
 from __future__ import annotations
 
 import ast as ast_mod
+import builtins
 import io
 import json
 import os
@@ -40,6 +41,7 @@ from pathlib import Path
 import pytest
 from scripts import statusline as sl
 
+import claude_statusline._shared as shared_module
 from claude_statusline.cli import context_stats as cs
 from claude_statusline.cli import statusline as pkg
 from claude_statusline.core.colors import COLOR_NAMES, ColorManager, parse_color
@@ -116,18 +118,29 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "Color parser": ("test_parse_color_grid",),
     "Git info (accepts `.git` as directory OR worktree/submodule pointer file)": (
         "test_git_info_parity",
+        "test_subprocess_count_render_budget",
+        "test_status_changes_cap_display",
     ),
-    "PR number lookup": ("test_pr_number_lookup_unavailable_gh",),
+    "PR number lookup": (
+        "test_pr_number_lookup_unavailable_gh",
+        "test_pr_number_shares_branch_cache",
+    ),
     "PR number cache (60s TTL, 10s negative TTL for gh failures, per-branch, "
     "`~/.claude/statusline/pr_number_cache.json`)": (
         "test_pr_cache_constants_equal",
         "test_pr_cache_roundtrip_and_cross_read",
     ),
+    "Branch cache (10s TTL, 5s negative TTL, dir-keyed, `~/.claude/statusline/branch_cache.json`; hoists the per-render rev-parse)": (
+        "test_branch_cache_constants_equal",
+        "test_branch_cache_roundtrip_and_cross_read",
+    ),
     "State rotation (append+rotate serialized under best-effort `fcntl` exclusive lock; "
-    "rotation core atomic temp+rename)": (
+    "rotation core atomic temp+rename; `_ROTATION_SCAN_FLOOR_BYTES` byte gate skips the line count below a provable size floor, F-PERF-002)": (
         "test_rotation_constants_equal",
         "test_maybe_rotate_keeps_recent_tail",
         "test_rotate_locked_via_append_cross_format",
+        "test_rotate_byte_gate_skips_scan_below_floor",
+        "test_rotate_byte_gate_boundary_tiny_rows",
     ),
     "MI profiles": ("test_model_profiles_equal", "test_get_model_profile_grid"),
     "MI formula": ("test_mi_formula_grid",),
@@ -157,7 +170,12 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     ),
     "tok/s config": ("test_config_parsing_parity",),
     "tok/s state field": ("test_api_duration_state_field_index14",),
-    "tok/s rolling read (bounded tail)": ("test_render_byte_parity_tps_rolling_read",),
+    "tok/s rolling read (bounded tail)": (
+        "test_render_byte_parity_tps_rolling_read",
+        "test_read_tail_window_bounded_bytes",
+        "test_load_state_history_window_bounded_bytes",
+        "test_windowed_reads_agree_across_implementations",
+    ),
     "tok/s tail size helper": ("test_tps_tail_size_grid",),
     "State-row parsing (`parse_state_row`: last-entry + bounded-tail reads replace index-magic CSV access)": (
         "test_parse_state_row_grid",
@@ -198,8 +216,9 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
         "test_resolve_project_dir_grid",
     ),
     "State file creation mode (0600, owner-only)": ("test_state_file_creation_mode_parity",),
-    "Legacy-state migration (guarded move/remove, warns on OSError, never breaks the refresh)": (
+    "Legacy-state migration (guarded move/remove, warns on OSError, never breaks the refresh; sentinel marker skips the sweep after a clean pass, F-PERF-005)": (
         "test_legacy_migration_parity",
+        "test_migrate_sentinel_prevents_repeat_sweep",
     ),
     "Named render constants (autocompact ratio, thinking tiers, zone RGB ANSI)": (
         "test_shared_render_constants_equal",
@@ -299,6 +318,25 @@ def build_payload(project_dir, **overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def _make_git_repo(path: Path, dirty_files: int = 0) -> Path:
+    """Create a real minimal git repo (mirrors the git-info parity setup)."""
+    import subprocess as sp
+
+    path.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    sp.run(["git", "init", "-q", str(path)], check=True, env=env)
+    cfg = ["-c", "user.email=t@t", "-c", "user.name=t"]
+    sp.run(
+        ["git", *cfg, "commit", "--allow-empty", "-q", "-m", "init"],
+        cwd=path,
+        check=True,
+        env=env,
+    )
+    for i in range(dirty_files):
+        (path / f"f{i}.txt").write_text("x", encoding="utf-8")
+    return path
 
 
 def render_standalone(payload, home, columns="200"):
@@ -850,6 +888,69 @@ class TestPrCachePair:
         assert sl._pr_cache_get("branch-a") is None
 
 
+class TestBranchCachePair:
+    """F-PERF-003: dir-keyed TTL branch cache shared by both implementations."""
+
+    def test_branch_cache_constants_equal(self):
+        import claude_statusline._shared as shared
+
+        assert sl._BRANCH_CACHE_TTL_SECONDS == shared._BRANCH_CACHE_TTL_SECONDS == 10
+        assert (
+            sl._BRANCH_CACHE_NEGATIVE_TTL_SECONDS == shared._BRANCH_CACHE_NEGATIVE_TTL_SECONDS == 5
+        )
+
+    def test_branch_cache_roundtrip_and_cross_read(self, tmp_path):
+        """Both copies read/write the same (autouse-redirected) cache file."""
+        # The autouse conftest fixture points both implementations at ONE
+        # temp file whose name carries the production name.
+        assert Path(sl._branch_cache_file()) == Path(shared_module._branch_cache_file())
+        assert Path(sl._branch_cache_file()).name == "branch_cache.json"
+
+        sl._branch_cache_set("/repo-a", "main")
+        assert sl._branch_cache_get("/repo-a") == "main"
+        assert shared_module._branch_cache_get("/repo-a") == "main"
+
+        shared_module._branch_cache_set("/repo-b", "feature")
+        assert shared_module._branch_cache_get("/repo-b") == "feature"
+        assert sl._branch_cache_get("/repo-b") == "feature"
+
+        # Expired negative entry is a miss on both sides.
+        sl._branch_cache_set("/repo-c", "", ttl=-1)
+        assert sl._branch_cache_get("/repo-c") is None
+        assert shared_module._branch_cache_get("/repo-c") is None
+
+    def test_pr_number_shares_branch_cache(self, tmp_path, isolated_home, monkeypatch):
+        """The PR lookup must consume the cached branch, not re-run rev-parse.
+
+        With the branch cache warm, neither implementation issues any
+        rev-parse; with it cold, exactly one runs even though both the
+        git-info segment and the PR lookup need the branch (down from two).
+        """
+        repo = _make_git_repo(tmp_path / "shared-branch-repo")
+
+        calls = {"rev_parse": 0}
+
+        def counting_run(cmd, **kwargs):
+            if "rev-parse" in cmd:
+                calls["rev_parse"] += 1
+                return subprocess.CompletedProcess(cmd, 0, stdout="main\n", stderr="")
+            return subprocess.CompletedProcess(cmd, 0, stdout="[]", stderr="")
+
+        monkeypatch.setattr("subprocess.run", counting_run)
+        monkeypatch.setattr(sl.shutil, "which", lambda _: None)
+        monkeypatch.setattr("claude_statusline.core.git.shutil.which", lambda _: None)
+
+        # Warm the cache through the script side; package side must then hit
+        # the same file-backed entry without spawning anything.
+        sl.get_git_info(str(repo))
+        sl.get_pr_number(str(repo))
+        first_count = calls["rev_parse"]
+        get_git_info(repo)
+        _get_pr_number(repo)
+        assert first_count == 1, f"expected one cold rev-parse, saw {first_count}"
+        assert calls["rev_parse"] == 1, "warm-cache git/PR lookups must not rev-parse"
+
+
 # ---------------------------------------------------------------------------
 # Row: Config parsing (incl. tok/s config keys)
 # ---------------------------------------------------------------------------
@@ -1240,6 +1341,413 @@ class TestLegacyMigrationPair:
         assert (tmp_path / "old-sl" / "unrelated.txt").exists()
         assert not (tmp_path / "old-sl" / "statusline.old1.state").exists()
         assert not (tmp_path / "old-sl" / "statusline.dup.state").exists()
+
+    def test_migrate_sentinel_prevents_repeat_sweep(self, tmp_path, monkeypatch):
+        """F-PERF-005: after one clean pass the sentinel skips the glob/stat
+        sweep entirely — on both implementations."""
+
+        # Package side: StateFile.__init__ runs the migration once.
+        class _OldDir:
+            def __init__(self):
+                self.calls = 0
+
+            def glob(self, pattern):
+                self.calls += 1
+                return []
+
+        old_pkg = _OldDir()
+        state_pkg = tmp_path / "state-pkg"
+        state_pkg.mkdir(parents=True)
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_pkg)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", old_pkg)
+
+        StateFile("sentinel-a")
+        assert old_pkg.calls == 1
+        assert (state_pkg / shared_module.LEGACY_MIGRATION_MARKER).exists()
+
+        StateFile("sentinel-b")
+        assert old_pkg.calls == 1, "sentinel must prevent the repeat sweep"
+
+        # Standalone side: direct double invocation.
+        state_sl = tmp_path / "state-sl"
+        old_sl = tmp_path / "old-sl"
+        state_sl.mkdir(parents=True)
+        old_sl.mkdir(parents=True)
+
+        import glob as glob_module
+
+        real_glob = glob_module.glob
+        calls = {"n": 0}
+
+        def counting_glob(pattern):
+            calls["n"] += 1
+            return real_glob(pattern)
+
+        monkeypatch.setattr(glob_module, "glob", counting_glob)
+
+        sl._migrate_legacy_state_files(state_sl, old_sl)
+        assert calls["n"] == 1
+        assert (state_sl / shared_module.LEGACY_MIGRATION_MARKER).exists()
+
+        sl._migrate_legacy_state_files(state_sl, old_sl)
+        assert calls["n"] == 1, "sentinel must prevent the repeat sweep"
+
+
+# ---------------------------------------------------------------------------
+# Row: Render hot-path performance (#149 / #150 — F-PERF-001/002/003/005)
+# ---------------------------------------------------------------------------
+
+
+class _CountingOpen:
+    """builtins.open stand-in recording every opened path and how many bytes
+    each binary read returned — proves O(window) tail-read behavior."""
+
+    def __init__(self):
+        self.total_binary_bytes = 0
+        self.opened_paths = []
+
+    def __call__(self, file, mode="r", *args, **kwargs):
+        self.opened_paths.append(os.fspath(file))
+        fh = builtins_open(file, mode, *args, **kwargs)
+        if "b" in mode and "r" in mode:
+            return _CountingBinaryReader(fh, self)
+        return fh
+
+
+class _CountingBinaryReader:
+    def __init__(self, fh, counter):
+        self._fh = fh
+        self._counter = counter
+
+    def read(self, n=-1):
+        data = self._fh.read(n)
+        self._counter.total_binary_bytes += len(data)
+        return data
+
+    def seek(self, *args):
+        return self._fh.seek(*args)
+
+    def tell(self):
+        return self._fh.tell()
+
+    def close(self):
+        return self._fh.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return self._fh.close()
+
+
+builtins_open = builtins.open
+
+
+def _state_rows(n_lines):
+    return [f"{1700000000 + i},1,2,3,4,5,6,0.01,7,8,s,m,w,9,{i}\n" for i in range(n_lines)]
+
+
+class TestRotationByteGate:
+    """F-PERF-002: stat().st_size gates the O(filesize) rotation scan."""
+
+    @staticmethod
+    def _write(path, rows):
+        # Byte-exact write (no platform newline translation): the byte-gate
+        # boundary cases assert raw sizes/contents, so a CRLF-translation
+        # text-mode write would shift every row by one byte on Windows.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes("".join(rows).encode("utf-8"))
+
+    def test_rotate_byte_gate_skips_scan_below_floor(self, tmp_path, monkeypatch):
+        floor = shared_module._ROTATION_SCAN_FLOOR_BYTES
+        rows = [f"{1700000000 + i},1\n" for i in range(900)]  # ~13 KB < floor
+        state = tmp_path / "statusline.gate.state"
+        self._write(state, rows)
+        before = state.stat().st_size
+        assert before < floor
+
+        # Standalone side.
+        sl.maybe_rotate_state_file(str(state))
+
+        # Package side (fresh copy, same shape). Construct first so the
+        # one-time migration/marker write is not attributed to the gate.
+        state_dir = tmp_path / "pkg"
+        self._write(state_dir / "statusline.gate.state", rows)
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("gate")
+
+        counter = _CountingOpen()
+        monkeypatch.setattr(builtins, "open", counter)
+        sf._maybe_rotate()
+
+        assert counter.opened_paths == [], "byte gate must skip ALL reads below the floor"
+        assert state.read_bytes() == ("".join(rows)).encode()
+        assert (state_dir / "statusline.gate.state").read_bytes() == state.read_bytes(), (
+            "both sides byte-identical"
+        )
+
+    @pytest.mark.parametrize(
+        ("rows_spec", "expect_rotation"),
+        [
+            ("under_floor_max_lines", False),  # 9,999 "x\n" + "x" = 19,999 B
+            ("at_threshold", False),  # 10,000 "x\n" = 20,000 B, exactly THRESHOLD
+            ("over_threshold", True),  # 10,001 "x\n" = 20,002 B -> rotate
+        ],
+    )
+    def test_rotate_byte_gate_boundary_tiny_rows(
+        self, tmp_path, monkeypatch, rows_spec, expect_rotation
+    ):
+        """The provable floor never suppresses genuine rotation: even the
+        worst case (1-byte rows) rotates iff lines exceed the threshold,
+        and outputs stay byte-identical between the implementations."""
+        if rows_spec == "under_floor_max_lines":
+            rows = ["x\n"] * (PKG_ROTATION_THRESHOLD - 1) + ["x"]
+        elif rows_spec == "at_threshold":
+            rows = ["x\n"] * PKG_ROTATION_THRESHOLD
+        else:
+            rows = ["x\n"] * (PKG_ROTATION_THRESHOLD + 1)
+
+        # Standalone side.
+        sl_state = tmp_path / "sl.state"
+        self._write(sl_state, rows)
+        sl.maybe_rotate_state_file(str(sl_state))
+        sl_after = sl_state.read_text().splitlines(keepends=True)
+
+        # Package side.
+        pkg_dir = tmp_path / "pkg"
+        self._write(pkg_dir / "statusline.pkg.state", rows)
+        monkeypatch.setattr(StateFile, "STATE_DIR", pkg_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        StateFile("pkg")._maybe_rotate()
+        pkg_after = (pkg_dir / "statusline.pkg.state").read_text().splitlines(keepends=True)
+
+        expected_keep = PKG_ROTATION_KEEP if expect_rotation else len(rows)
+        assert len(sl_after) == expected_keep
+        assert sl_after == pkg_after, "rotation output must be byte-identical"
+        if expect_rotation:
+            assert sl_after == rows[-PKG_ROTATION_KEEP:]
+
+    def test_rotate_scan_floor_constant_shared(self):
+        assert sl._ROTATION_SCAN_FLOOR_BYTES == shared_module._ROTATION_SCAN_FLOOR_BYTES
+        assert shared_module._ROTATION_SCAN_FLOOR_BYTES == 2 * PKG_ROTATION_THRESHOLD
+
+
+class TestWindowedTailReads:
+    """F-PERF-001: tail reads touch O(window) bytes, not O(filesize)."""
+
+    def test_read_tail_window_bounded_bytes(self, tmp_path, monkeypatch):
+
+        state_dir = tmp_path / "statedir"
+        state_path = state_dir / "statusline.tail.state"
+        seed_state_file(state_path, 4000)
+        assert state_path.stat().st_size > shared_module.STATE_TAIL_WINDOW_BYTES
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("tail")
+
+        n = 12
+        counter = _CountingOpen()
+        monkeypatch.setattr(builtins, "open", counter)
+
+        entries = sf.read_tail(n)
+        baseline = sf.read_history()[-n:]
+
+        assert entries == baseline, "windowed tail must equal read_history()[-n:]"
+        assert counter.total_binary_bytes <= shared_module.STATE_TAIL_WINDOW_BYTES + 16, (
+            f"read {counter.total_binary_bytes} bytes — not O(window)"
+        )
+        assert counter.total_binary_bytes * 2 < state_path.stat().st_size
+
+    def test_read_last_entry_window_bounded_bytes(self, tmp_path, monkeypatch):
+        state_dir = tmp_path / "statedir"
+        seed_state_file(state_dir / "statusline.last.state", 4000)
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("last")
+
+        counter = _CountingOpen()
+        monkeypatch.setattr(builtins, "open", counter)
+
+        entry = sf.read_last_entry()
+        assert entry is not None
+        assert entry.timestamp == 1700000000 + 3999
+        assert counter.total_binary_bytes <= shared_module.STATE_TAIL_WINDOW_BYTES + 16
+
+    def test_read_tail_fallback_matches_full_read(self, tmp_path, monkeypatch):
+        """A window too small to satisfy the request falls back to an exact
+        full read (junk head forces the miss)."""
+        from claude_statusline.core import state as state_mod
+
+        state_dir = tmp_path / "statedir"
+        state_dir.mkdir(parents=True)
+        junk = ["not a csv row\n"] * 200
+        good = seed_state_file(state_dir / "statusline.fb.state", 60)
+        (state_dir / "statusline.fb.state").write_text(
+            "".join(junk) + "".join(good), encoding="utf-8"
+        )
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("fb")
+
+        monkeypatch.setattr(state_mod, "STATE_TAIL_WINDOW_BYTES", 256)
+        entries = sf.read_tail(20)
+        assert entries == sf.read_history()[-20:]
+        last = sf.read_last_entry()
+        assert last == sf.read_history()[-1]
+
+    def test_read_last_entry_fallback_past_blank_tail(self, tmp_path, monkeypatch):
+        """A window consisting only of trailing blank lines falls back."""
+        from claude_statusline.core import state as state_mod
+
+        state_dir = tmp_path / "statedir"
+        state_dir.mkdir(parents=True)
+        path = state_dir / "statusline.blank.state"
+        good = seed_state_file(path, 50)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write("\n\n\n")
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("blank")
+
+        monkeypatch.setattr(state_mod, "STATE_TAIL_WINDOW_BYTES", 64)
+        entry = sf.read_last_entry()
+        assert entry is not None
+        assert entry.timestamp == int(good[-1].split(",")[0])
+
+    def test_load_state_history_window_bounded_bytes(self, tmp_path, monkeypatch):
+        """Standalone twin: bounded window read for delta + tok/s tail."""
+        state_path = tmp_path / "history.state"
+        seed_state_file(state_path, 4000)
+        assert state_path.stat().st_size > sl.STATE_TAIL_WINDOW_BYTES
+
+        counter = _CountingOpen()
+        monkeypatch.setattr(builtins, "open", counter)
+
+        has_prev, prev_tokens, samples = sl._load_state_history(str(state_path), True, 5)
+
+        assert has_prev is True
+        assert len(samples) == sl._tps_tail_size(5)
+        # Delta source is the literal last row: cur_in[3]+cache_create[5]+cache_read[6].
+        assert prev_tokens == 3 + 5 + 6
+        last_row = _state_rows(4000)[-1].split(",")
+        assert samples[-1] == (int(last_row[4]), int(last_row[14]))
+        assert counter.total_binary_bytes <= sl.STATE_TAIL_WINDOW_BYTES + 16
+        assert counter.total_binary_bytes * 2 < state_path.stat().st_size
+
+    def test_load_state_history_fallback_matches_full_pass(self, tmp_path, monkeypatch):
+        """Shrunk window cannot cover the tok/s tail -> exact full-read redo."""
+        state_path = tmp_path / "fb.state"
+        seed_state_file(state_path, 400)
+        _, big_prev_tokens, big_samples = sl._load_state_history(str(state_path), True, 5)
+
+        monkeypatch.setattr(sl, "STATE_TAIL_WINDOW_BYTES", 128)
+        has_prev, prev_tokens, samples = sl._load_state_history(str(state_path), True, 5)
+
+        assert has_prev is True
+        assert (prev_tokens, samples) == (big_prev_tokens, big_samples)
+        assert len(samples) == sl._tps_tail_size(5)
+
+    def test_windowed_reads_agree_across_implementations(self, tmp_path, monkeypatch):
+        """Both implementations produce identical results on fixture states
+        regardless of window size (parity of the windowing itself)."""
+        from claude_statusline.core import state as state_mod
+
+        rows = _state_rows(150)
+        state_dir = tmp_path / "statedir"
+        state_dir.mkdir(parents=True)
+        path = state_dir / "statusline.agree.state"
+        path.write_text("".join(rows), encoding="utf-8")
+
+        monkeypatch.setattr(StateFile, "STATE_DIR", state_dir)
+        monkeypatch.setattr(StateFile, "OLD_STATE_DIR", tmp_path / "old")
+        (tmp_path / "old").mkdir()
+        sf = StateFile("agree")
+
+        pkg_entries_big = sf.read_tail(10)
+        pkg_last_big = sf.read_last_entry()
+        sl_big = sl._load_state_history(str(path), True, 5)
+
+        monkeypatch.setattr(state_mod, "STATE_TAIL_WINDOW_BYTES", 512)
+        monkeypatch.setattr(sl, "STATE_TAIL_WINDOW_BYTES", 512)
+
+        pkg_entries_small = sf.read_tail(10)
+        pkg_last_small = sf.read_last_entry()
+        sl_small = sl._load_state_history(str(path), True, 5)
+
+        assert pkg_entries_small == pkg_entries_big
+        assert pkg_last_small == pkg_last_big
+        assert sl_small == sl_big
+
+
+class TestSubprocessBudget:
+    """F-PERF-003: per-render subprocess fan-out assertions."""
+
+    @staticmethod
+    def _install_counters(monkeypatch):
+        """Count spawned processes via Popen only — subprocess.run delegates
+        to Popen internally, so patching both would double-count."""
+        counters = {"rev_parse": 0, "git": 0}
+        real_popen = subprocess.Popen
+
+        def counting_popen(cmd, *args, **kwargs):
+            if cmd and cmd[0] == "git":
+                counters["git"] += 1
+                if "rev-parse" in cmd:
+                    counters["rev_parse"] += 1
+            return real_popen(cmd, *args, **kwargs)
+
+        monkeypatch.setattr(subprocess, "Popen", counting_popen)
+        # Keep the PR lookup offline regardless of the local gh install.
+        monkeypatch.setattr(sl.shutil, "which", lambda name: None if name == "gh" else name)
+        return counters
+
+    def test_subprocess_count_render_budget(self, tmp_path, isolated_home, monkeypatch, capsys):
+        """Explicit N: cold render runs exactly one rev-parse (down from two);
+        second render within TTL runs zero; the capped porcelain count stays
+        live on both renders."""
+        repo = _make_git_repo(tmp_path / "budget-repo", dirty_files=2)
+        payload = build_payload(repo)
+
+        counters = self._install_counters(monkeypatch)
+
+        render_package(payload, monkeypatch, capsys, isolated_home)
+        first_rev = counters["rev_parse"]
+        first_git_total = counters["git"]
+
+        render_package(payload, monkeypatch, capsys, isolated_home)
+        second_rev = counters["rev_parse"] - first_rev
+        second_git_total = counters["git"] - first_git_total
+
+        assert first_rev == 1, f"cold render must run exactly one rev-parse, ran {first_rev}"
+        assert first_git_total == 2, "cold render: 1 rev-parse + 1 capped status count"
+        assert second_rev == 0, "second render within TTL must not rev-parse"
+        assert second_git_total == 1, "only the live capped status count remains"
+
+    def test_status_changes_cap_display(self, tmp_path, isolated_home, monkeypatch):
+        """Porcelain output is capped: beyond the cap both implementations
+        display "[N+]" instead of an unbounded count."""
+        from claude_statusline.core.git import get_git_info as pkg_git_info
+
+        repo = _make_git_repo(tmp_path / "cap-repo", dirty_files=4)
+        monkeypatch.setattr(shared_module, "_STATUS_CHANGES_CAP", 3)
+
+        out = sl.get_git_info(str(repo))
+        visible = ANSI_RE.sub("", out)
+        assert "[3+]" in visible
+
+        pkg_out = pkg_git_info(repo)
+        assert pkg_out == out
+
+        count, saturated = shared_module._count_changes_capped(repo, cap=2)
+        assert (count, saturated) == (2, True)
 
 
 # ---------------------------------------------------------------------------

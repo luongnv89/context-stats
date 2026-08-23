@@ -33,6 +33,7 @@ State file format (CSV):
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -168,6 +169,11 @@ _PART_SEPARATOR = _shared._PART_SEPARATOR
 
 _PR_CACHE_TTL_SECONDS = _shared._PR_CACHE_TTL_SECONDS
 _PR_CACHE_NEGATIVE_TTL_SECONDS = _shared._PR_CACHE_NEGATIVE_TTL_SECONDS
+_BRANCH_CACHE_TTL_SECONDS = _shared._BRANCH_CACHE_TTL_SECONDS
+_BRANCH_CACHE_NEGATIVE_TTL_SECONDS = _shared._BRANCH_CACHE_NEGATIVE_TTL_SECONDS
+_ROTATION_SCAN_FLOOR_BYTES = _shared._ROTATION_SCAN_FLOOR_BYTES
+STATE_TAIL_WINDOW_BYTES = _shared.STATE_TAIL_WINDOW_BYTES
+LEGACY_MIGRATION_MARKER = _shared.LEGACY_MIGRATION_MARKER
 
 # ---------------------------------------------------------------------------
 # Single-sourced functions (bodies live only in _shared / the vendored copy)
@@ -198,6 +204,14 @@ _unlock_state_file = _shared._unlock_state_file
 _rotate_lines = _shared.rotate_lines
 get_pacman_icon = _shared.get_pacman_icon
 get_git_info = _shared.git_info
+git_branch = _shared.git_branch
+_branch_cache_file = _shared._branch_cache_file
+_branch_cache_get = _shared._branch_cache_get
+_branch_cache_set = _shared._branch_cache_set
+legacy_migration_done = _shared.legacy_migration_done
+mark_legacy_migration_done = _shared.mark_legacy_migration_done
+tail_window_text = _shared.tail_window_text
+walk_tail_rows = _shared.walk_tail_rows
 _pr_cache_file = _shared._pr_cache_file
 _pr_cache_get = _shared._pr_cache_get
 _pr_cache_set = _shared._pr_cache_set
@@ -285,8 +299,14 @@ def _rotate_state_file_locked(state_file, fh):
 
     Keeps the most recent ROTATION_KEEP lines via atomic temp-file + rename.
     Parity: mirrors ``claude_statusline.core.state.StateFile._rotate_locked``.
+    F-PERF-002: a byte-size gate on the open descriptor skips the
+    O(filesize) line count for files below ``_ROTATION_SCAN_FLOOR_BYTES``
+    (such files provably cannot exceed ROTATION_THRESHOLD lines).
     """
     try:
+        size = os.fstat(fh.fileno()).st_size
+        if size < _ROTATION_SCAN_FLOOR_BYTES:
+            return
         fh.seek(0)
         lines = fh.readlines()
         if len(lines) <= ROTATION_THRESHOLD:
@@ -304,9 +324,15 @@ def maybe_rotate_state_file(state_file):
     ``os.replace`` a path another handle holds open, so keeping the
     descriptor across the rename would silently skip rotation there.
     Parity: mirrors ``claude_statusline.core.state.StateFile._maybe_rotate``.
+    F-PERF-002: a byte-size gate on ``os.stat().st_size`` skips the line
+    count below ``_ROTATION_SCAN_FLOOR_BYTES`` without changing the
+    rotation decision.
     """
     try:
         if not os.path.exists(state_file):
+            return
+        st = os.stat(state_file)
+        if stat.S_ISREG(st.st_mode) and st.st_size < _ROTATION_SCAN_FLOOR_BYTES:
             return
         with open(state_file) as f:
             _lock_state_file(f)
@@ -329,9 +355,15 @@ def _migrate_legacy_state_files(state_dir, old_state_dir):
     every move/remove is guarded, warning on failure and leaving the file
     for a later pass. Parity: mirrors
     ``claude_statusline.core.state.StateFile._migrate_old_files``.
+    F-PERF-005: one-time-per-machine — a sentinel marker short-circuits the
+    glob/stat sweep on later renders; it is only written after a pass that
+    hit no OSError, so failed moves are still retried.
     """
     import glob
 
+    if legacy_migration_done(state_dir):
+        return
+    failed = False
     for old_file in glob.glob(os.path.join(old_state_dir, "statusline*.state")):
         if os.path.isfile(old_file):
             new_file = os.path.join(state_dir, os.path.basename(old_file))
@@ -341,9 +373,12 @@ def _migrate_legacy_state_files(state_dir, old_state_dir):
                 else:
                     os.remove(old_file)
             except OSError as e:
+                failed = True
                 sys.stderr.write(
                     f"[statusline] warning: failed to migrate legacy state file {old_file}: {e}\n"
                 )
+    if not failed:
+        mark_legacy_migration_done(state_dir)
 
 
 # Config keys parsed as booleans ("false" — case-insensitive — means off).
@@ -781,22 +816,17 @@ def get_pr_number(project_dir: str) -> str:
 
     Returns a formatted string like ``#42`` when an open PR exists,
     or an empty string when no PR is associated or gh CLI is unavailable.
+
+    F-PERF-003: the branch comes from the shared dir-keyed TTL cache
+    (``git_branch``) — the same lookup the git-info segment uses — so a
+    render runs at most one rev-parse per TTL window.
     """
     if shutil.which("gh") is None:
         return ""
 
     cache_key = None
     try:
-        branch = subprocess.run(
-            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if branch.returncode != 0:
-            return ""
-        branch_name = branch.stdout.strip()
+        branch_name = git_branch(project_dir)
         if not branch_name:
             return ""
 
@@ -1088,61 +1118,72 @@ def _load_state_history(state_file, show_tps, tps_window):
     """Read the previous row (+ bounded tok/s tail) from ``state_file``.
 
     Read failures degrade to "no previous usage" with a stderr warning
-    instead of killing the refresh.
+    instead of killing the refresh. F-PERF-001: the read is bounded to a
+    fixed byte window seeked from EOF (``tail_window_text``); only when that
+    slice cannot satisfy the request does it fall back to an exact full
+    read, preserving parity with a whole-file pass.
     """
     has_prev = False
     prev_tokens = 0
     # Rolling tok/s samples: (output_tokens, api_duration_ms) per row,
     # in chronological order. Only collected when show_tps is on.
     tps_samples = []
+
+    def parse_history(text):
+        """Parse (last-line delta, reversed tps samples) out of state text.
+
+        The literal last line drives delta/dedup via parse_state_row
+        (F-CLEAN-007). A trailing comma-bearing row that fails to parse
+        degrades to "no previous usage" (prev_tokens stays 0) instead of
+        killing the whole tok/s sample collection like the old index-magic
+        path did on a ValueError.
+        """
+        last_prev = 0
+        samples = []
+        lines = text.splitlines()
+        if lines:
+            last_line = lines[-1].strip()
+            parsed_last = parse_state_row(last_line)
+            if parsed_last is not None:
+                # Previous context usage: cur_input[3] + cache_creation[5]
+                # + cache_read[6].
+                last_prev = (
+                    parsed_last["current_input_tokens"]
+                    + parsed_last["cache_creation"]
+                    + parsed_last["cache_read"]
+                )
+            elif "," not in last_line:
+                # Old format - single value
+                last_prev = int(last_line or 0)
+            if show_tps:
+                # Reconstruct (output[4], api_duration[14]) for each tail
+                # row. Legacy rows lack index 14 -> 0, which compute_tps
+                # treats as "no prior reading". Walk backward collecting up
+                # to tail_n parseable rows (mirrors StateFile.read_tail's
+                # by-entry bound), then restore chronological order.
+                tail_n = _tps_tail_size(tps_window)
+                for line in reversed(lines):
+                    parsed = parse_state_row(line)
+                    if parsed is None:
+                        continue
+                    samples.append((parsed["output_tokens"], parsed["api_duration_ms"]))
+                    if len(samples) >= tail_n:
+                        break
+                samples.reverse()
+        return last_prev, samples
+
     try:
         if os.path.exists(state_file):
             has_prev = True
-            # Read all lines: last line drives delta/dedup; a bounded
-            # *tail* (when show_tps) feeds the rolling-average
-            # reconstruction. compute_tps only needs the last
-            # ``tps_window`` valid turns, so we parse at most the last
-            # ``_tps_tail_size(tps_window)`` rows instead of the whole
-            # file — matching the full-read value while bounding work.
-            with open(state_file) as f:
-                file_lines = f.readlines()
-                if file_lines:
-                    # Last line drives delta/dedup via parse_state_row
-                    # (F-CLEAN-007): one parser serves the last-entry read
-                    # and the bounded tail below. A trailing comma-bearing
-                    # row that fails to parse degrades to "no previous
-                    # usage" (prev_tokens stays 0) instead of killing the
-                    # whole tok/s sample collection like the old
-                    # index-magic path did on a ValueError.
-                    last_line = file_lines[-1].strip()
-                    parsed_last = parse_state_row(last_line)
-                    if parsed_last is not None:
-                        # Previous context usage: cur_input[3] +
-                        # cache_creation[5] + cache_read[6].
-                        prev_tokens = (
-                            parsed_last["current_input_tokens"]
-                            + parsed_last["cache_creation"]
-                            + parsed_last["cache_read"]
-                        )
-                    elif "," not in last_line:
-                        # Old format - single value
-                        prev_tokens = int(last_line or 0)
-                    if show_tps:
-                        # Reconstruct (output[4], api_duration[14]) for
-                        # each tail row. Legacy rows lack index 14 -> 0,
-                        # which compute_tps treats as "no prior reading".
-                        # Walk backward collecting up to tail_n parseable
-                        # rows (mirrors StateFile.read_tail's by-entry
-                        # bound), then restore chronological order.
-                        tail_n = _tps_tail_size(tps_window)
-                        for line in reversed(file_lines):
-                            parsed = parse_state_row(line)
-                            if parsed is None:
-                                continue
-                            tps_samples.append((parsed["output_tokens"], parsed["api_duration_ms"]))
-                            if len(tps_samples) >= tail_n:
-                                break
-                        tps_samples.reverse()
+            text, complete = tail_window_text(state_file, STATE_TAIL_WINDOW_BYTES)
+            prev_tokens, tps_samples = parse_history(text)
+            # The window always satisfies the delta read (it ends at EOF);
+            # only an unsatisfied tok/s tail needs the exact full-read pass.
+            need_full = show_tps and len(tps_samples) < _tps_tail_size(tps_window)
+            if not complete and need_full:
+                with open(state_file) as f:
+                    file_lines = f.readlines()
+                prev_tokens, tps_samples = parse_history("".join(file_lines))
     except (OSError, ValueError) as e:
         sys.stderr.write(f"[statusline] warning: failed to read state file: {e}\n")
         prev_tokens = 0
