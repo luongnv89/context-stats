@@ -97,13 +97,10 @@ jobs:
           fi
           exit $PYTEST_EXIT
 
-      - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage.xml
-          flags: python
-          fail_ci_if_error: false
+      # No Codecov upload (#125, F-DEP-004 / F-CI-008): the action was two
+      # majors behind and uploaded best-effort with no token, so it never gave
+      # a reliable signal. Coverage enforcement happens locally instead via
+      # --cov-fail-under=73 in pyproject.toml addopts on every matrix leg.
 
   # ============================================
   # INTEGRATION TESTS
