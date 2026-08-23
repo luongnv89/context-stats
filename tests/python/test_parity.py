@@ -96,9 +96,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = PROJECT_ROOT / "scripts" / "statusline.py"
 SHARED_MODULE_PATH = PROJECT_ROOT / "src" / "claude_statusline" / "_shared.py"
 VENDORED_SHARED_PATH = PROJECT_ROOT / "scripts" / "_statusline_shared.py"
-GOLDEN_FIXTURES_PATH = (
-    PROJECT_ROOT / "tests" / "python" / "fixtures" / "render_goldens.json"
-)
+GOLDEN_FIXTURES_PATH = PROJECT_ROOT / "tests" / "python" / "fixtures" / "render_goldens.json"
 
 PKG_ROTATION_THRESHOLD = StateFile.ROTATION_THRESHOLD
 PKG_ROTATION_KEEP = StateFile.ROTATION_KEEP
@@ -1728,9 +1726,7 @@ class TestScriptRenderArrangement:
         for name, lines_count in sizes.items():
             assert lines_count <= 100, f"{name} spans {lines_count} lines"
 
-    def test_palette_overrides_do_not_mutate_module_constants(
-        self, tmp_path, monkeypatch, capsys
-    ):
+    def test_palette_overrides_do_not_mutate_module_constants(self, tmp_path, monkeypatch, capsys):
         """F-CLEAN-009: rendering with color overrides leaves the script's
         module-level palette constants untouched, so consecutive renders
         cannot leak palette state into each other (safe to render
@@ -1815,4 +1811,3 @@ class TestRenderGoldenFixtures:
         assert pkg_out == result.stdout.rstrip("\n"), case["name"]
         for marker in case["stderr_markers"]:
             assert marker in pkg_err, case["name"]
-

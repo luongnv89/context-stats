@@ -875,7 +875,6 @@ def main():
         sys.stdout.write("[Claude] ~\n")
 
 
-
 # ---------------------------------------------------------------------------
 # Render pipeline phases (Task 5.4, F-CLEAN-001)
 #
@@ -983,9 +982,7 @@ def _resolve_render_colors(config):
         # Per-property color defaults (highlighted key info). Falls back to
         # old color keys for backward compatibility, then to new defaults.
         "project_name": c.get("project_name", c_blue if "blue" in c else CYAN),
-        "branch_name": c.get(
-            "branch_name", c_magenta if "magenta" in c else palette.green
-        ),
+        "branch_name": c.get("branch_name", c_magenta if "magenta" in c else palette.green),
         "separator": separator,
         # Structural elements default to the separator color, but each can be
         # overridden independently (color_tps / color_delta / color_model / ...).
@@ -1142,9 +1139,7 @@ def _load_state_history(state_file, show_tps, tps_window):
                             parsed = parse_state_row(line)
                             if parsed is None:
                                 continue
-                            tps_samples.append(
-                                (parsed["output_tokens"], parsed["api_duration_ms"])
-                            )
+                            tps_samples.append((parsed["output_tokens"], parsed["api_duration_ms"]))
                             if len(tps_samples) >= tail_n:
                                 break
                         tps_samples.reverse()
@@ -1166,9 +1161,7 @@ def _open_state_context(session_id, show_tps, tps_window):
         state_file = os.path.join(state_dir, f"statusline.{session_id}.state")
     else:
         state_file = os.path.join(state_dir, "statusline.state")
-    has_prev, prev_tokens, tps_samples = _load_state_history(
-        state_file, show_tps, tps_window
-    )
+    has_prev, prev_tokens, tps_samples = _load_state_history(state_file, show_tps, tps_window)
     return _StateContext(state_file, has_prev, prev_tokens, tps_samples)
 
 
@@ -1339,8 +1332,8 @@ def _render(data):
     cache_creation = 0
 
     if inputs.total_size > 0 and inputs.current_usage:
-        used_tokens, cache_creation, context_info, zone_info, pacman_info = (
-            _context_segments(inputs, config, palette)
+        used_tokens, cache_creation, context_info, zone_info, pacman_info = _context_segments(
+            inputs, config, palette
         )
 
         # Previous-refresh state feeds delta/MI/tok/s; tok/s also needs the
@@ -1378,9 +1371,7 @@ def _render(data):
 
     # Session cost (cumulative USD) if enabled — shown even at $0.00 so the
     # segment doesn't flicker in and out across the first few turns.
-    cost_info = (
-        f" | {prop['cost']}${inputs.cost_usd:.2f}{RESET}" if config["show_cost"] else ""
-    )
+    cost_info = f" | {prop['cost']}${inputs.cost_usd:.2f}{RESET}" if config["show_cost"] else ""
 
     # Display session_id if enabled
     session_info = (
