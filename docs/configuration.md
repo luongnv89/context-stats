@@ -230,10 +230,10 @@ Override the default zone indicator thresholds to customize when zone transition
 
 ```bash
 # Token counts for 1M models
-zone_1m_plan_max=70000     # (default) Plan → Code boundary
-zone_1m_code_max=100000    # (default) Code → Dump boundary
-zone_1m_dump_max=250000    # (default) Dump → ExDump boundary
-zone_1m_xdump_max=275000   # (default) ExDump → Dead boundary
+zone_1m_plan_max=150000    # (default) Plan → Code boundary
+zone_1m_code_max=250000    # (default) Code → Dump boundary
+zone_1m_dump_max=400000    # (default) Dump → ExDump boundary
+zone_1m_xdump_max=450000   # (default) ExDump → Dead boundary
 ```
 
 ### Standard Models (< 500k context)
