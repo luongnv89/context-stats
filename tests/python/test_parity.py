@@ -1452,8 +1452,11 @@ class TestRotationByteGate:
 
     @staticmethod
     def _write(path, rows):
+        # Byte-exact write (no platform newline translation): the byte-gate
+        # boundary cases assert raw sizes/contents, so a CRLF-translation
+        # text-mode write would shift every row by one byte on Windows.
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("".join(rows), encoding="utf-8")
+        path.write_bytes("".join(rows).encode("utf-8"))
 
     def test_rotate_byte_gate_skips_scan_below_floor(self, tmp_path, monkeypatch):
         floor = shared_module._ROTATION_SCAN_FLOOR_BYTES
