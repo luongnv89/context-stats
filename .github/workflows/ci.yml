@@ -77,12 +77,12 @@ jobs:
           # C extension tracer and Windows process shutdown. We capture the result,
           # and on Windows only, treat exit code 1 as success when no tests failed.
           set +e
-          # Coverage floor (--cov-fail-under=73) is inherited from
-          # pyproject.toml [tool.pytest.ini_options] addopts (issue #117), so
-          # the measured scope here must match the pinned scope:
-          # src/claude_statusline (73.78% precise on main). The previous
-          # scripts+src scope measures 66% and would trip that floor on every
-          # matrix leg.
+          # Coverage floor (--cov-fail-under=84) is inherited from
+          # pyproject.toml [tool.pytest.ini_options] addopts (issue #117,
+          # raised to 84 by issue #141), so the measured scope here must
+          # match the pinned scope: src/claude_statusline (87.59% precise
+          # when the floor was raised). The previous scripts+src scope
+          # measures lower and would trip that floor on every matrix leg.
           pytest tests/python/ -v --cov=src/claude_statusline --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
           PYTEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -100,7 +100,7 @@ jobs:
       # No Codecov upload (#125, F-DEP-004 / F-CI-008): the action was two
       # majors behind and uploaded best-effort with no token, so it never gave
       # a reliable signal. Coverage enforcement happens locally instead via
-      # --cov-fail-under=73 in pyproject.toml addopts on every matrix leg.
+      # --cov-fail-under=84 in pyproject.toml addopts on every matrix leg.
 
   # ============================================
   # INTEGRATION TESTS

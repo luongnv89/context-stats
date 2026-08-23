@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Publish toolchain floor: twine 7** — The `dev` extra now requires `twine>=7.0.0` (was `>=4.0.0`). The documented publish procedure (`twine check` / `twine upload`) is unchanged, but twine 7 no longer accepts metadata version 2.0 artifacts on upload; this project's hatchling-built dists emit metadata 2.5 and pass `twine check` unchanged (#135)
+- **Coverage gate raised to 84%** — `pytest --cov` invocations now enforce a `--cov-fail-under=84` floor (was 73), guarding the Sprint 4 test suites as an intermediate step toward the 94% modernization target; measured coverage is 87.59% over `src/claude_statusline` (#141)
 
 ### Fixed
 

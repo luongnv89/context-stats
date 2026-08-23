@@ -18,7 +18,7 @@ State files are append-only CSV at `~/.claude/statusline/statusline.<session_id>
 # Python tests (canonical — matches docs/DEVELOPMENT.md agent setup notes)
 source venv/bin/activate && pytest tests/python/ -q -p no:cacheprovider
 
-# Coverage (enforces the --cov-fail-under=73 floor from pyproject.toml addopts)
+# Coverage (enforces the --cov-fail-under=84 floor from pyproject.toml addopts)
 pytest tests/python/ -q -p no:cacheprovider --cov=src/claude_statusline --cov-report=term
 ```
 
