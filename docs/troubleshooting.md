@@ -92,6 +92,39 @@ echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline
    uv pip install context-stats
    ```
 
+### `error: unrecognized arguments: <session_id>` on export
+
+Running `context-stats <session_id> export` fails with:
+
+```
+python3 -m claude_statusline.cli.context_stats: error: unrecognized arguments: <session_id>
+```
+
+The installed Python package is missing or too old to know the `export`
+subcommand — typically a stale global install left behind by an installer
+from before the package was auto-installed.
+
+1. Check the installed version and upgrade it:
+
+   ```bash
+   pip show context-stats
+   pip install --upgrade context-stats
+   ```
+
+2. If pip is unavailable in your environment, reinstall with the shell
+   installer, which auto-installs/upgrades the matching package version:
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/luongnv89/context-stats/main/install.sh | bash
+   ```
+
+3. Verify the fix from any directory:
+
+   ```bash
+   context-stats --version
+   context-stats <session_id> export --output report.md
+   ```
+
 ### No token graph data
 
 Token history requires:

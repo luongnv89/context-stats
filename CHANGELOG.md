@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Dead-code cleanup sweep (Task 5.1)** — Dropped the JS-only ESLint/prettier pre-commit hooks (and the orphaned `.prettierrc`), so `pre-commit run` no longer needs a Node toolchain; removed the unwired `format_percentage()`/`_format_timestamp()` helpers; untracked `.gitissue/` snapshots and `.gitissue.yml` (IDD state is now fully local, matching the existing `.gitignore`); deleted the tracked generated reports (`context-stats-cache-misses.md`, `context-stats-export-output.md`), `README.backup.md`, and `INSTALLATION_FIX.md` — its still-useful version-mismatch diagnosis moved to [docs/troubleshooting.md](docs/troubleshooting.md). Closes F-DEAD-002/-004/-005/-006/-007 (#142)
+
 ### Changed
 
 - **Publish toolchain floor: twine 7** — The `dev` extra now requires `twine>=7.0.0` (was `>=4.0.0`). The documented publish procedure (`twine check` / `twine upload`) is unchanged, but twine 7 no longer accepts metadata version 2.0 artifacts on upload; this project's hatchling-built dists emit metadata 2.5 and pass `twine check` unchanged (#135)

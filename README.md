@@ -185,8 +185,6 @@ Example output:
 | Final zone   | Dump zone         | Whether the session stayed in a safe range |
 ```
 
-See the full example in [`context-stats-export-output.md`](context-stats-export-output.md).
-
 ### Cache Keep-Warm
 
 Claude's prompt cache has a ~5 minute TTL. Keep it alive during pauses to avoid expensive cache misses:
@@ -316,7 +314,7 @@ Python 3.10+. Install via `pip install context-stats`.
 pip install context-stats
 ```
 
-[Read the docs](docs/installation.md) · [View export example](context-stats-export-output.md) · MIT Licensed
+[Read the docs](docs/installation.md) · MIT Licensed
 
 ---
 
