@@ -25,12 +25,13 @@ State files are stored at `~/.claude/statusline/statusline.<session_id>.state`. 
 ## Constraints
 
 - Fields are separated by commas with no quoting or escaping.
-- The `workspace_project_dir` field (index 12) is sanitized before writing: all comma characters (`,`) are replaced with underscores (`_`) to prevent CSV corruption.
+- String fields are validated before writing (`session_id`, `model_id`): values containing a comma, newline, or other control character (U+0000–U+001F, U+007F) are rejected with an error instead of being written, so column indexes can never shift for index-based readers such as `csv_parts[14]`.
+- The `workspace_project_dir` field (index 12) is sanitized before writing: all comma characters (`,`) — and, defensively, newlines/other control characters — are replaced with underscores (`_`) to prevent CSV corruption.
 - Numeric fields default to `0` when absent. String fields default to empty string.
 - Lines are newline-terminated (`\n`).
 - Files are append-only.
 - Newly created files get owner-only `0600` permissions (rows carry session ids and costs).
-- Files are automatically rotated at 10,000 lines (keeps most recent 5,000) by the Python statusline script.
+- Files are automatically rotated at 10,000 lines (keeps most recent 5,000) by the Python statusline script. The append and rotation run under one exclusive advisory lock (`fcntl`, best-effort) so a concurrent process cannot append between rotation's read and rename.
 - Duplicate entries (same token count as previous line) are skipped to prevent file bloat.
 
 ## Legacy Format
