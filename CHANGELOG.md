@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.2] - 2026-08-24
+
+### Added
+
+- **`context-stats doctor`** — New diagnostic command that checks the full install chain without needing a live Claude Code payload: console scripts on `PATH`, a sandboxed smoke render, `settings.json` validity and `statusLine` wiring (including whether the configured command resolves), and the runtime state directory. Exits non-zero on failure. `doctor --fix` repairs wiring idempotently with a timestamped backup, temp+rename writes, and refuses to displace a foreign `statusLine` without `--force` (#187)
+
+### Fixed
+
+- **Install checkers** — `install.sh` and `scripts/check-install.sh` referenced the stale PyPI alias `cc-context-stats` (frozen at 1.17.0), so the curl installer silently installed an old package and `check-install.sh` reported false negatives. Smoke tests now pin the real user base via `PYTHONUSERBASE` so imports survive the `HOME` sandbox (#187)
+- **doctor UTF-8 handling** — Non-UTF-8 `settings.json` is reported as a failed check instead of crashing with a traceback (#187)
+- **doctor settings repair** — Merges `statusLine` keys instead of replacing them, preserves symlinks and file modes on write, and probes project-level settings files (`./.claude/settings.json`, `./.claude/settings.local.json`) for precedence-aware diagnostics (#187)
+- **Package metadata URLs** — Finished the `cc-context-stats` → `context-stats` rename across package data and metadata (#187)
+
 ## [1.24.1] - 2026-08-24
 
 ### Changed
@@ -48,7 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logo path in changelog** — Fixed the logo path references in the changelog navigation and footer (#93)
 - **Changelog nav layout** — Removed the search box and fixed the changelog navigation layout for better usability (#101)
 
-[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.1...HEAD
+[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.2...HEAD
+[1.24.2]: https://github.com/luongnv89/context-stats/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/luongnv89/context-stats/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/luongnv89/context-stats/compare/v1.23.0...v1.24.0
 
