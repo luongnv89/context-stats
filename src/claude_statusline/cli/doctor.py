@@ -274,6 +274,10 @@ def _read_settings(path: Path) -> tuple[dict | None, str | None]:
         raw = path.read_text(encoding="utf-8")
     except OSError as e:
         return None, f"cannot read {path}: {e}"
+    except UnicodeDecodeError as e:
+        # UnicodeDecodeError is a ValueError, not an OSError: without this the
+        # doctor would traceback on the very file it exists to diagnose.
+        return None, f"{path} is not valid UTF-8 text: {e}"
     if not raw.strip():
         return {}, None
     try:

@@ -172,6 +172,15 @@ class TestCheckSettings:
         check_settings(report)
         assert "cannot read" in _messages(report, "Claude Code settings")
 
+    def test_non_utf8_file_is_reported_not_crashed(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b'{"a": "\xff\xfe"}')
+        report = DoctorReport()
+        check_settings(report)
+        assert _statuses(report, "Claude Code settings") == ["fail"]
+        assert "not valid UTF-8" in _messages(report, "Claude Code settings")
+
 
 class TestApplyFix:
     def test_creates_settings_when_absent(self, fake_home):
@@ -246,6 +255,21 @@ class TestApplyFix:
 
         assert "refusing to write" in _messages(report, "Repair")
         assert path.read_text(encoding="utf-8") == "{broken"
+
+    def test_refuses_to_write_over_non_utf8_settings(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        raw = b'{"a": "\xff\xfe"}'
+        path.write_bytes(raw)
+
+        report = DoctorReport()
+        apply_fix(report, force=True)
+
+        assert "fail" in _statuses(report, "Repair")
+        assert "refusing to write" in _messages(report, "Repair")
+        assert "not valid UTF-8" in _messages(report, "Repair")
+        assert path.read_bytes() == raw
+        assert list(path.parent.glob("settings.json.bak.*")) == []
 
     def test_backup_collision_picks_a_fresh_name(self, fake_home, monkeypatch):
         path = settings_path()
