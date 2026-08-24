@@ -10,7 +10,9 @@ report a false negative on a ``pip install --user`` layout.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -31,6 +33,17 @@ from claude_statusline.cli.doctor import (
     settings_path,
 )
 from claude_statusline.core.colors import ColorManager
+
+# Mode-preservation assertions are POSIX-only. Windows `os.chmod` honors just
+# the read-only bit, and `stat()` reports 0o666 for any writable file, so a
+# Windows run can neither set nor observe 0o644/0o600 — the assertion cannot
+# hold, and the weakened form (`mode & 0o600`) would pass vacuously for every
+# writable file and prove nothing about preservation.
+posix_modes_only = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows cannot express POSIX permission bits: os.chmod honors only the "
+    "read-only bit and stat() reports 0o666 for any writable file",
+)
 
 
 @pytest.fixture
@@ -542,11 +555,16 @@ class TestWriteSettingsPreservation:
         apply_fix(DoctorReport(), force=False)
 
         assert path.is_symlink()
-        assert path.readlink() == real
+        # Compare resolved identity rather than the literal link text: Windows
+        # `readlink()` returns the extended-length `\\?\C:\...` spelling of the
+        # same target, and `resolve()` preserves that prefix once present.
+        # `samefile` pins the link to exactly this target on every platform.
+        assert os.path.samefile(path, real)
         written = json.loads(real.read_text(encoding="utf-8"))
         assert written["theme"] == "dark"
         assert written["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
 
+    @posix_modes_only
     def test_group_readable_mode_is_preserved(self, fake_home):
         path = settings_path()
         _write_json(path, {"theme": "dark"})
@@ -556,6 +574,7 @@ class TestWriteSettingsPreservation:
 
         assert path.stat().st_mode & 0o777 == 0o644
 
+    @posix_modes_only
     def test_owner_only_mode_stays_owner_only(self, fake_home):
         path = settings_path()
         _write_json(path, {"theme": "dark"})
@@ -565,10 +584,12 @@ class TestWriteSettingsPreservation:
 
         assert path.stat().st_mode & 0o777 == 0o600
 
+    @posix_modes_only
     def test_new_file_defaults_to_owner_only(self, fake_home):
         apply_fix(DoctorReport(), force=False)
         assert settings_path().stat().st_mode & 0o777 == 0o600
 
+    @posix_modes_only
     def test_symlinked_settings_keeps_the_target_mode(self, fake_home, tmp_path):
         dotfiles = tmp_path / "dotfiles"
         dotfiles.mkdir()
