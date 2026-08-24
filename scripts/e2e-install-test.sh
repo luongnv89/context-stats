@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# E2E Clean Install Smoke Tests for cc-context-stats
+# E2E Clean Install Smoke Tests for context-stats
 #
 # Validates the Python runtime installation from a fresh install and confirms
 # all expected CLI commands are available and functional.
@@ -232,7 +232,7 @@ run_python_e2e() {
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 main() {
-    echo -e "${BLUE}${BOLD}cc-context-stats E2E Install Tests${RESET}"
+    echo -e "${BLUE}${BOLD}context-stats E2E Install Tests${RESET}"
     echo "======================================"
 
     # Parse flags

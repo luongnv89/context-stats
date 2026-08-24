@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# cc-context-stats Installation Checker
+# context-stats Installation Checker
 # Verifies that both the statusline and context-stats CLI are properly installed
 # regardless of installation method (shell installer or pip).
 #
 # Usage:
 #   ./scripts/check-install.sh
-#   curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/scripts/check-install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/luongnv89/context-stats/main/scripts/check-install.sh | bash
 #
 
 # Colors
@@ -44,7 +44,7 @@ info() {
 detect_install_method() {
     local methods=()
 
-    if pip show cc-context-stats &>/dev/null 2>&1 || pip3 show cc-context-stats &>/dev/null 2>&1; then
+    if pip show context-stats &>/dev/null 2>&1 || pip3 show context-stats &>/dev/null 2>&1; then
         methods+=("pip")
     fi
 
@@ -89,9 +89,18 @@ test_statusline_command() {
   }
 }' "$proj_dir" "$proj_dir")
 
+    # HOME is redirected so the smoke render cannot touch real state. But a
+    # `pip install --user` layout resolves site-packages *from* HOME, so a bare
+    # override makes the console script fail to import claude_statusline and
+    # this check reports a false negative on a perfectly healthy install
+    # (issue #186). Pin the real user base so imports survive the sandbox.
+    local user_base
+    user_base=$(python3 -m site --user-base 2>/dev/null || python -m site --user-base 2>/dev/null)
+
     output=$(
         cd / && {
             printf '%s\n' "$test_json" | HOME="$smoke_home" USERPROFILE="$smoke_home" \
+                PYTHONUSERBASE="${user_base:-$PYTHONUSERBASE}" \
                 eval "$cmd" 2>/dev/null
         }
     )
@@ -109,7 +118,7 @@ test_statusline_command() {
     esac
 }
 
-echo -e "${BLUE}cc-context-stats Installation Check${RESET}"
+echo -e "${BLUE}context-stats Installation Check${RESET}"
 echo "====================================="
 echo
 
@@ -120,8 +129,8 @@ METHODS=$(detect_install_method)
 if [ -z "$METHODS" ]; then
     fail "No installation detected"
     info "Install via one of:"
-    info "  curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash"
-    info "  pip install cc-context-stats"
+    info "  curl -fsSL https://raw.githubusercontent.com/luongnv89/context-stats/main/install.sh | bash"
+    info "  pip install context-stats"
     echo
     echo -e "${RED}Check failed: nothing is installed.${RESET}"
     exit 1
@@ -148,7 +157,7 @@ if [ -n "$STATUSLINE_CMD" ]; then
     pass "Statusline command found: $STATUSLINE_SOURCE"
 else
     fail "No statusline command found"
-    info "Install with: pip install cc-context-stats"
+    info "Install with: pip install context-stats"
     info "Then ensure 'claude-statusline' is in PATH"
 fi
 
@@ -175,7 +184,7 @@ if command -v context-stats &>/dev/null; then
     pass "context-stats in PATH: $CONTEXT_STATS_SOURCE"
 else
     fail "context-stats CLI not found"
-    info "Install with: pip install cc-context-stats"
+    info "Install with: pip install context-stats"
 fi
 
 # Test context-stats --help
@@ -278,19 +287,22 @@ else
 
     # Provide targeted fix guidance
     if [ -z "$STATUSLINE_CMD" ] && [ -z "$CONTEXT_STATS_CMD" ]; then
-        echo "cc-context-stats is not installed. Install it with:"
-        echo -e "  ${BLUE}pip install cc-context-stats${RESET}"
+        echo "context-stats is not installed. Install it with:"
+        echo -e "  ${BLUE}pip install context-stats${RESET}"
     elif [ -z "$STATUSLINE_CMD" ]; then
         echo "claude-statusline not found in PATH. Verify:"
-        echo "  pip show cc-context-stats"
+        echo "  pip show context-stats"
         echo "  Ensure pip's bin directory is in your PATH"
     elif [ -z "$CONTEXT_STATS_CMD" ]; then
         echo "context-stats not found in PATH. Verify:"
-        echo "  pip show cc-context-stats"
+        echo "  pip show context-stats"
         echo "  Ensure pip's bin directory is in your PATH"
     else
         echo "Components found but settings may need updating."
         echo "Check the failed items above for specific fix instructions."
+        echo
+        echo -e "Repair the statusLine wiring automatically with:"
+        echo -e "  ${BLUE}context-stats doctor --fix${RESET}"
     fi
 fi
 

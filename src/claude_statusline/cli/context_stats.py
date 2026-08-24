@@ -15,6 +15,7 @@ Actions:
     sessions    List recent sessions
     explain     Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
     cache-warm  Keep session prompt cache alive via a background heartbeat
+    doctor      Diagnose (and optionally repair) the installation
 
 Options:
     --type <cumulative|delta|io|cache|mi|tps|both|all>  Graph type (default: delta)
@@ -79,6 +80,11 @@ ACTIONS:
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
     cache-warm    Keep session prompt cache alive via a background heartbeat
     report        Generate comprehensive token usage analytics across all projects
+    doctor        Diagnose the install and repair the Claude Code statusLine wiring
+
+DOCTOR OPTIONS:
+    --fix          Write the statusLine block into ~/.claude/settings.json
+    --force        With --fix, replace a statusLine already set to something else
 
 SESSIONS OPTIONS:
     --minutes N    Show sessions from the last N minutes (default: 5)
@@ -178,7 +184,7 @@ DATA SOURCE:
 
 
 # Known action names — used to distinguish actions from session IDs in argv
-_KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm", "report", "sessions"}
+_KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm", "report", "sessions", "doctor"}
 
 
 def _normalize_argv(argv: list[str]) -> tuple[str, str | None, list[str]]:
@@ -984,6 +990,17 @@ def main() -> None:
 
         run_report(args.remaining)
         return
+
+    if args.action == "doctor":
+        from claude_statusline.cli.doctor import run_doctor
+
+        if args.session_id is not None:
+            sys.stderr.write(
+                f"Error: 'doctor' does not accept a session_id (got '{args.session_id}')\n"
+            )
+            sys.exit(1)
+        color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
+        sys.exit(run_doctor(args.remaining, ColorManager(enabled=color_enabled)))
 
     # Default action: graph
     # Load config for token_detail setting

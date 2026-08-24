@@ -1,0 +1,457 @@
+"""Tests for ``context-stats doctor`` (issue #186).
+
+Covers the diagnosis path (missing/invalid/foreign statusLine wiring), the
+``--fix`` repair path (idempotency, key preservation, backups, --force), and
+the sandboxed smoke render that must not report a false negative on a
+``pip install --user`` layout.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from claude_statusline.cli import doctor
+from claude_statusline.cli.context_stats import _KNOWN_ACTIONS, _normalize_argv
+from claude_statusline.cli.doctor import (
+    DEFAULT_STATUSLINE_COMMAND,
+    CheckResult,
+    DoctorReport,
+    apply_fix,
+    check_entry_points,
+    check_runtime_state,
+    check_settings,
+    check_smoke_render,
+    render_report,
+    run_doctor,
+    settings_path,
+)
+from claude_statusline.core.colors import ColorManager
+
+
+@pytest.fixture
+def fake_home(tmp_path, monkeypatch):
+    """Redirect HOME so settings/state paths resolve inside tmp_path."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    return tmp_path
+
+
+def _statuses(report: DoctorReport, section: str) -> list[str]:
+    for name, results in report.sections:
+        if name == section:
+            return [r.status for r in results]
+    return []
+
+
+def _messages(report: DoctorReport, section: str) -> str:
+    for name, results in report.sections:
+        if name == section:
+            return "\n".join(r.message for r in results)
+    return ""
+
+
+class TestDoctorReport:
+    def test_add_groups_by_section(self):
+        report = DoctorReport()
+        report.add("A", CheckResult("pass", "one"))
+        report.add("B", CheckResult("fail", "two"))
+        report.add("A", CheckResult("warn", "three"))
+        assert [name for name, _ in report.sections] == ["A", "B"]
+        assert _statuses(report, "A") == ["pass", "warn"]
+
+    def test_counts(self):
+        report = DoctorReport()
+        report.add("A", CheckResult("pass", "p"))
+        report.add("A", CheckResult("warn", "w"))
+        report.add("A", CheckResult("fail", "f"))
+        assert report.counts() == (1, 1, 1)
+
+
+class TestCheckSettings:
+    def test_missing_file_is_the_headline_failure(self, fake_home):
+        report = DoctorReport()
+        check_settings(report)
+        assert "fail" in _statuses(report, "Claude Code settings")
+        assert "statusLine is not configured" in _messages(report, "Claude Code settings")
+
+    def test_absent_file_warns_but_still_reports_the_wiring_gap(self, fake_home):
+        report = DoctorReport()
+        check_settings(report)
+        statuses = _statuses(report, "Claude Code settings")
+        assert statuses == ["warn", "fail"]
+
+    def test_invalid_json_fails_without_claiming_statusline_state(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("{not json", encoding="utf-8")
+        report = DoctorReport()
+        check_settings(report)
+        assert _statuses(report, "Claude Code settings") == ["fail"]
+        assert "not valid JSON" in _messages(report, "Claude Code settings")
+
+    def test_non_object_json_fails(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("[1, 2]", encoding="utf-8")
+        report = DoctorReport()
+        check_settings(report)
+        assert "must contain a JSON object" in _messages(report, "Claude Code settings")
+
+    def test_empty_file_is_treated_as_no_settings(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("   \n", encoding="utf-8")
+        report = DoctorReport()
+        check_settings(report)
+        assert "statusLine is not configured" in _messages(report, "Claude Code settings")
+
+    def test_wrong_type_fails(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps({"statusLine": {"type": "static", "command": "x"}}), encoding="utf-8"
+        )
+        report = DoctorReport()
+        check_settings(report)
+        assert 'expected "command"' in _messages(report, "Claude Code settings")
+
+    def test_unresolvable_command_fails(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {"statusLine": {"type": "command", "command": "/nope/definitely-not-here"}}
+            ),
+            encoding="utf-8",
+        )
+        report = DoctorReport()
+        check_settings(report)
+        assert "does not resolve" in _messages(report, "Claude Code settings")
+
+    def test_resolvable_absolute_path_passes(self, fake_home, tmp_path):
+        script = tmp_path / DEFAULT_STATUSLINE_COMMAND
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        script.chmod(0o755)
+        path = settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"statusLine": {"type": "command", "command": str(script)}}),
+            encoding="utf-8",
+        )
+        report = DoctorReport()
+        check_settings(report)
+        assert "fail" not in _statuses(report, "Claude Code settings")
+
+    def test_foreign_statusline_warns(self, fake_home, tmp_path, monkeypatch):
+        other = tmp_path / "some-other-statusline"
+        other.write_text("#!/bin/sh\n", encoding="utf-8")
+        other.chmod(0o755)
+        path = settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"statusLine": {"type": "command", "command": str(other)}}),
+            encoding="utf-8",
+        )
+        report = DoctorReport()
+        check_settings(report)
+        assert "warn" in _statuses(report, "Claude Code settings")
+        assert "different status line" in _messages(report, "Claude Code settings")
+
+    def test_unreadable_file_is_reported_not_crashed(self, fake_home, monkeypatch):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("{}", encoding="utf-8")
+
+        def boom(*_a, **_k):
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(Path, "read_text", boom)
+        report = DoctorReport()
+        check_settings(report)
+        assert "cannot read" in _messages(report, "Claude Code settings")
+
+
+class TestApplyFix:
+    def test_creates_settings_when_absent(self, fake_home):
+        apply_fix(DoctorReport(), force=False)
+        data = json.loads(settings_path().read_text(encoding="utf-8"))
+        assert data["statusLine"] == {
+            "type": "command",
+            "command": DEFAULT_STATUSLINE_COMMAND,
+        }
+
+    def test_preserves_unrelated_keys_and_backs_up(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"theme": "dark", "hooks": {"a": 1}}), encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["theme"] == "dark"
+        assert data["hooks"] == {"a": 1}
+        assert data["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
+
+        backups = list(path.parent.glob("settings.json.bak.*"))
+        assert len(backups) == 1
+        assert json.loads(backups[0].read_text(encoding="utf-8")) == {
+            "theme": "dark",
+            "hooks": {"a": 1},
+        }
+
+    def test_is_idempotent_and_skips_backup(self, fake_home):
+        apply_fix(DoctorReport(), force=False)
+        first = settings_path().read_text(encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+        assert "nothing to do" in _messages(report, "Repair")
+        assert settings_path().read_text(encoding="utf-8") == first
+        assert list(settings_path().parent.glob("settings.json.bak.*")) == []
+
+    def test_refuses_to_clobber_foreign_statusline(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        original = {"statusLine": {"type": "command", "command": "other-tool"}}
+        path.write_text(json.dumps(original), encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        assert "fail" in _statuses(report, "Repair")
+        assert "left untouched" in _messages(report, "Repair")
+        assert json.loads(path.read_text(encoding="utf-8")) == original
+
+    def test_force_replaces_foreign_statusline(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps({"statusLine": {"type": "command", "command": "other-tool"}}),
+            encoding="utf-8",
+        )
+        apply_fix(DoctorReport(), force=True)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
+
+    def test_refuses_to_write_over_invalid_json(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("{broken", encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=True)
+
+        assert "refusing to write" in _messages(report, "Repair")
+        assert path.read_text(encoding="utf-8") == "{broken"
+
+    def test_backup_collision_picks_a_fresh_name(self, fake_home, monkeypatch):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+        monkeypatch.setattr(doctor.time, "strftime", lambda _fmt: "FIXED")
+        (path.parent / "settings.json.bak.FIXED").write_text("older", encoding="utf-8")
+
+        apply_fix(DoctorReport(), force=False)
+        assert (path.parent / "settings.json.bak.FIXED.1").exists()
+
+    def test_backup_failure_is_reported(self, fake_home, monkeypatch):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+        monkeypatch.setattr(
+            doctor.shutil, "copy2", lambda *_a, **_k: (_ for _ in ()).throw(OSError("nope"))
+        )
+        report = DoctorReport()
+        apply_fix(report, force=False)
+        assert "could not back up" in _messages(report, "Repair")
+
+    def test_write_failure_is_reported(self, fake_home, monkeypatch):
+        monkeypatch.setattr(
+            doctor, "_write_settings", lambda *_a, **_k: (_ for _ in ()).throw(OSError("full"))
+        )
+        report = DoctorReport()
+        apply_fix(report, force=False)
+        assert "could not write" in _messages(report, "Repair")
+
+    def test_write_settings_cleans_up_temp_on_failure(self, fake_home, monkeypatch):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        monkeypatch.setattr(
+            doctor.json, "dump", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
+        with pytest.raises(RuntimeError):
+            doctor._write_settings(path, {"a": 1})
+        assert list(path.parent.glob("settings.json*.tmp")) == []
+
+
+class TestEntryPointsAndState:
+    def test_entry_points_fail_when_absent(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda _n: None)
+        report = DoctorReport()
+        check_entry_points(report)
+        assert _statuses(report, "Entry points") == ["fail", "fail"]
+
+    def test_entry_points_pass_when_present(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda n: f"/usr/bin/{n}")
+        report = DoctorReport()
+        check_entry_points(report)
+        assert _statuses(report, "Entry points") == ["pass", "pass"]
+
+    def test_runtime_state_warns_on_fresh_install(self, fake_home):
+        report = DoctorReport()
+        check_runtime_state(report)
+        assert _statuses(report, "Runtime state") == ["warn", "warn"]
+
+    def test_runtime_state_counts_sessions(self, fake_home):
+        state = fake_home / ".claude" / "statusline"
+        state.mkdir(parents=True)
+        (state / "statusline.abc.state").write_text("", encoding="utf-8")
+        (fake_home / ".claude" / "statusline.conf").write_text("", encoding="utf-8")
+        report = DoctorReport()
+        check_runtime_state(report)
+        assert _statuses(report, "Runtime state") == ["pass", "pass"]
+        assert "1 session file(s)" in _messages(report, "Runtime state")
+
+
+class TestSmokeRender:
+    def test_pass_when_project_dir_is_echoed(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+
+        def fake_run(argv, **kwargs):
+            return subprocess.CompletedProcess(argv, 0, "proj doctor-smoke-project ok", "")
+
+        monkeypatch.setattr(doctor.subprocess, "run", fake_run)
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert _statuses(report, "Statusline render") == ["pass"]
+
+    def test_fail_on_crash_fallback_output(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+        monkeypatch.setattr(
+            doctor.subprocess,
+            "run",
+            lambda argv, **kw: subprocess.CompletedProcess(argv, 0, "[Claude] ~", ""),
+        )
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert _statuses(report, "Statusline render") == ["fail"]
+        assert "crash fallback" in _messages(report, "Statusline render")
+
+    def test_fail_on_nonzero_exit(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+        monkeypatch.setattr(
+            doctor.subprocess,
+            "run",
+            lambda argv, **kw: subprocess.CompletedProcess(argv, 3, "", "Traceback\nboom"),
+        )
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert "exited 3" in _messages(report, "Statusline render")
+
+    def test_timeout_is_reported(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+
+        def boom(*_a, **_k):
+            raise subprocess.TimeoutExpired("cmd", 20)
+
+        monkeypatch.setattr(doctor.subprocess, "run", boom)
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert "timed out" in _messages(report, "Statusline render")
+
+    def test_oserror_is_reported(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+
+        def boom(*_a, **_k):
+            raise OSError("exec format error")
+
+        monkeypatch.setattr(doctor.subprocess, "run", boom)
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert "could not run" in _messages(report, "Statusline render")
+
+    def test_no_runnable_command(self, monkeypatch):
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: None)
+        report = DoctorReport()
+        check_smoke_render(report)
+        assert _statuses(report, "Statusline render") == ["fail"]
+
+    def test_sandbox_preserves_python_user_base(self, monkeypatch):
+        """Regression: overriding HOME alone breaks `pip install --user` imports."""
+        monkeypatch.setattr(doctor, "_resolve_statusline_command", lambda: ["/bin/echo"])
+        monkeypatch.setattr(doctor, "_user_base", lambda: "/real/user/base")
+        captured = {}
+
+        def fake_run(argv, **kwargs):
+            captured.update(kwargs.get("env", {}))
+            return subprocess.CompletedProcess(argv, 0, "doctor-smoke-project", "")
+
+        monkeypatch.setattr(doctor.subprocess, "run", fake_run)
+        check_smoke_render(DoctorReport())
+        assert captured["PYTHONUSERBASE"] == "/real/user/base"
+        assert captured["HOME"] != "/real/user/base"
+
+    def test_resolve_prefers_console_script(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda _n: "/usr/bin/claude-statusline")
+        assert doctor._resolve_statusline_command() == ["/usr/bin/claude-statusline"]
+
+    def test_resolve_falls_back_to_module(self, monkeypatch):
+        monkeypatch.setattr(doctor.shutil, "which", lambda _n: None)
+        argv = doctor._resolve_statusline_command()
+        assert argv is not None
+        assert argv[1:] == ["-m", "claude_statusline"]
+
+    def test_user_base_is_a_string(self):
+        assert isinstance(doctor._user_base(), str)
+
+
+class TestRunDoctor:
+    def test_unknown_flag_exits_one(self, capsys):
+        assert run_doctor(["--bogus"], ColorManager(enabled=False)) == 1
+        assert "Unknown flag" in capsys.readouterr().err
+
+    def test_help_exits_zero(self, capsys):
+        assert run_doctor(["--help"], ColorManager(enabled=False)) == 0
+        assert "context-stats doctor" in capsys.readouterr().out
+
+    def test_force_without_fix_is_rejected(self, capsys):
+        assert run_doctor(["--force"], ColorManager(enabled=False)) == 1
+        assert "--force requires --fix" in capsys.readouterr().err
+
+    def test_no_color_flag_is_accepted(self, fake_home, monkeypatch, capsys):
+        monkeypatch.setattr(doctor.shutil, "which", lambda n: f"/usr/bin/{n}")
+        monkeypatch.setattr(doctor, "check_smoke_render", lambda r: None)
+        rc = run_doctor(["--no-color"], ColorManager(enabled=False))
+        assert rc == 1  # statusLine still unconfigured
+        assert "statusLine is not configured" in capsys.readouterr().out
+
+    def test_fix_makes_a_failing_install_pass(self, fake_home, monkeypatch, capsys):
+        monkeypatch.setattr(doctor.shutil, "which", lambda n: f"/usr/bin/{n}")
+        monkeypatch.setattr(doctor, "check_smoke_render", lambda r: None)
+
+        assert run_doctor([], ColorManager(enabled=False)) == 1
+        assert run_doctor(["--fix"], ColorManager(enabled=False)) == 0
+        out = capsys.readouterr().out
+        assert "Restart Claude Code" in out
+
+    def test_render_report_summarizes_success(self, capsys):
+        report = DoctorReport()
+        report.add("A", CheckResult("pass", "fine"))
+        render_report(report, ColorManager(enabled=False))
+        assert "All checks passed" in capsys.readouterr().out
+
+
+class TestCliWiring:
+    def test_doctor_is_a_known_action(self):
+        assert "doctor" in _KNOWN_ACTIONS
+
+    def test_normalize_argv_routes_doctor(self):
+        action, session_id, remaining = _normalize_argv(["doctor", "--fix"])
+        assert action == "doctor"
+        assert session_id is None
+        assert remaining == ["--fix"]
