@@ -123,9 +123,7 @@ class TestCheckSettings:
         path = settings_path()
         path.parent.mkdir(parents=True)
         path.write_text(
-            json.dumps(
-                {"statusLine": {"type": "command", "command": "/nope/definitely-not-here"}}
-            ),
+            json.dumps({"statusLine": {"type": "command", "command": "/nope/definitely-not-here"}}),
             encoding="utf-8",
         )
         report = DoctorReport()

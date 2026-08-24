@@ -65,12 +65,12 @@ context-stats doctor --fix --force  # replace a foreign statusLine
 
 Checks performed:
 
-| Section              | What it verifies                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| Entry points         | `claude-statusline` and `context-stats` resolve on `PATH`                            |
-| Statusline render    | A synthetic payload renders in a sandboxed `HOME` (catches the crash-fallback line) |
+| Section              | What it verifies                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| Entry points         | `claude-statusline` and `context-stats` resolve on `PATH`                               |
+| Statusline render    | A synthetic payload renders in a sandboxed `HOME` (catches the crash-fallback line)     |
 | Claude Code settings | `~/.claude/settings.json` is valid JSON and `statusLine` points at a resolvable command |
-| Runtime state        | `~/.claude/statusline/` and the optional `statusline.conf`                           |
+| Runtime state        | `~/.claude/statusline/` and the optional `statusline.conf`                              |
 
 `--fix` preserves every other settings key, backs the file up first, and is
 idempotent. Exit status is 0 when all checks pass, 1 otherwise.

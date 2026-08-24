@@ -305,7 +305,9 @@ def check_settings(report: DoctorReport) -> None:
     if error is not None:
         report.add(
             "Claude Code settings",
-            CheckResult(_FAIL, error, ("Repair the file by hand; doctor --fix will not touch it.",)),
+            CheckResult(
+                _FAIL, error, ("Repair the file by hand; doctor --fix will not touch it.",)
+            ),
         )
         return
 
@@ -509,8 +511,7 @@ def render_report(report: DoctorReport, colors: ColorManager) -> None:
         )
     else:
         print(
-            f"{colors.green}All checks passed{colors.reset} — "
-            f"{passed} passed, {warned} warning(s)"
+            f"{colors.green}All checks passed{colors.reset} — {passed} passed, {warned} warning(s)"
         )
 
 
