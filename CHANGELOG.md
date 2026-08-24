@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.1] - 2026-08-24
+
 ### Changed
 
 - **Quality-gate milestone: zero mypy ignores + 94% coverage floor (Task 5.7)** — All inline `# type: ignore` baselines were eliminated by fixing the underlying typings rather than silencing them: platform-split `fcntl` imports in `_shared.py` (and its byte-identical vendored copy), `core/state.py`, and `scripts/statusline.py`; an explicit `float()` coercion for the MI pressure formula; proper annotations (`IntelligenceScore`, `TextIO`, `ColorManager`, `StateEntry`) at the attr-defined sites in `renderer.py`, `core/state.py`, `cli/cache_warm.py`, and `cli/export.py`; per-branch variable renames in config parsing; and a dict guard for cache-warm state JSON so malformed files degrade to "no state". `pytest --cov` now enforces the M3 target of `--cov-fail-under=94` (was 84), with real tests closing the gap (in-process explain rendering, export/report command e2e paths, heartbeat-loop internals, PR-cache/lock-guard branches, renderer grid branches) — 1367 → 1430 tests, measured coverage 96.84% (#148)
@@ -46,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logo path in changelog** — Fixed the logo path references in the changelog navigation and footer (#93)
 - **Changelog nav layout** — Removed the search box and fixed the changelog navigation layout for better usability (#101)
 
-[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.0...HEAD
+[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.1...HEAD
+[1.24.1]: https://github.com/luongnv89/context-stats/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/luongnv89/context-stats/compare/v1.23.0...v1.24.0
 
 ## [1.23.0] - 2026-06-16
