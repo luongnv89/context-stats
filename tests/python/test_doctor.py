@@ -272,6 +272,57 @@ class TestApplyFix:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
 
+    @pytest.mark.parametrize(
+        "broken",
+        [
+            "claude-statusline.sh",  # bare string: not an object at all
+            {},  # empty dict
+            {"type": "command"},  # dict without a command
+            {"type": "command", "command": ""},  # blank command
+        ],
+        ids=["string", "empty-dict", "no-command", "blank-command"],
+    )
+    def test_plain_fix_repairs_what_check_settings_calls_unconfigured(self, fake_home, broken):
+        """Shapes ``check_settings`` reports as 'not configured' must be repairable.
+
+        The diagnosis tells users to run plain ``doctor --fix`` for these, so
+        the repair gate refusing without ``--force`` would dead-end the tool's
+        own remediation (issue #186 review feedback).
+        """
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        original = {"theme": "dark", "statusLine": broken}
+        path.write_text(json.dumps(original), encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        assert _statuses(report, "Repair") == ["pass", "pass", "warn"]
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["theme"] == "dark"
+        assert data["statusLine"] == {
+            "type": "command",
+            "command": DEFAULT_STATUSLINE_COMMAND,
+        }
+
+    def test_dict_with_truthy_command_but_wrong_type_still_needs_force(self, fake_home):
+        """A truthy command is a working foreign block even with a bad type.
+
+        ``check_settings`` fails on the wrong type and hints ``--fix --force``
+        for the user file, so the refusal gate must agree that this shape is
+        configured and require ``--force`` to displace it.
+        """
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        original = {"statusLine": {"type": "widget", "command": "other-tool"}}
+        path.write_text(json.dumps(original), encoding="utf-8")
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        assert "left untouched" in _messages(report, "Repair")
+        assert json.loads(path.read_text(encoding="utf-8")) == original
+
     def test_refuses_to_write_over_invalid_json(self, fake_home):
         path = settings_path()
         path.parent.mkdir(parents=True)

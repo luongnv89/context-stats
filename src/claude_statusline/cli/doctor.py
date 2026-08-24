@@ -597,7 +597,13 @@ def apply_fix(report: DoctorReport, force: bool, command: str = DEFAULT_STATUSLI
         report.add("Repair", CheckResult(_PASS, "statusLine already configured — nothing to do"))
         return
 
-    if existing is not None and not force:
+    # ``check_settings`` classifies any statusLine without a usable command —
+    # a bare string, an empty object, or a dict missing/blanking "command" —
+    # as *not configured* and tells the user to run plain ``--fix``; mirror
+    # that notion here so the tool's own remediation never dead-ends. Only a
+    # dict carrying a truthy "command" is a working (possibly foreign) status
+    # line, which needs ``--force`` to displace.
+    if isinstance(existing, dict) and existing.get("command") and not force:
         report.add(
             "Repair",
             CheckResult(
