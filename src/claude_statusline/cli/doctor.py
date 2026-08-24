@@ -12,8 +12,9 @@ stdin from an already-working status line):
 
 1. entry points resolvable on ``PATH``
 2. a sandboxed smoke render of the statusline command
-3. ``~/.claude/settings.json`` — present, valid JSON, ``statusLine`` wired to a
-   command that actually resolves
+3. ``statusLine`` wiring — present, valid JSON, wired to a command that
+   actually resolves, in ``~/.claude/settings.json`` or in either of the
+   higher-precedence project files Claude Code merges over it
 4. state directory and optional ``~/.claude/statusline.conf``
 
 ``--fix`` repairs step 3 in place: idempotent, key-preserving, backed up, and
@@ -92,8 +93,26 @@ class DoctorReport:
 
 
 def settings_path() -> Path:
-    """Path to Claude Code's user settings file."""
+    """Path to Claude Code's user settings file (the lowest-precedence one)."""
     return Path.home() / ".claude" / "settings.json"
+
+
+def project_settings_paths() -> tuple[Path, ...]:
+    """Project-level settings files, lowest precedence first.
+
+    Claude Code merges ``<project>/.claude/settings.json`` and then
+    ``<project>/.claude/settings.local.json`` over the user file, so a
+    ``statusLine`` defined in either is what actually runs. The project is
+    taken to be the current working directory: parent directories are
+    deliberately *not* walked, since guessing a project root would make the
+    diagnosis depend on how deep in the tree the user happened to stand.
+    """
+    try:
+        project = Path.cwd()
+    except OSError:  # pragma: no cover - cwd deleted underneath us
+        return ()
+    claude = project / ".claude"
+    return (claude / "settings.json", claude / "settings.local.json")
 
 
 def state_dir() -> Path:
@@ -302,8 +321,96 @@ def _command_resolves(command: str) -> bool:
     return candidate.is_file() and os.access(candidate, os.X_OK)
 
 
+def _same_file(a: Path, b: Path) -> bool:
+    """True when two paths name the same file, resolving links where possible."""
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:  # pragma: no cover - defensive; resolve() is non-strict
+        return a == b
+
+
+def _status_line_overrides() -> tuple[list[tuple[Path, dict]], list[str]]:
+    """Return ``(overrides, warnings)`` for files outranking the user settings.
+
+    ``overrides`` holds ``(path, statusLine block)`` for every project-level
+    file that supplies a usable ``statusLine``, lowest precedence first. A
+    malformed project file never aborts the run and never becomes a hard
+    failure of the user file's own check: it is surfaced as a warning naming
+    that file, and otherwise skipped.
+    """
+    user = settings_path()
+    overrides: list[tuple[Path, dict]] = []
+    warnings: list[str] = []
+    for candidate in project_settings_paths():
+        # A cwd of HOME makes the "project" file the user file; do not let it
+        # override itself.
+        if not candidate.exists() or _same_file(candidate, user):
+            continue
+        data, error = _read_settings(candidate)
+        if error is not None:
+            warnings.append(f"ignoring higher-precedence file — {error}")
+            continue
+        assert data is not None  # narrowed by the error branch above
+        block = data.get("statusLine")
+        if isinstance(block, dict) and block.get("command"):
+            overrides.append((candidate, block))
+    return overrides, warnings
+
+
+def _check_status_line_block(report: DoctorReport, block: dict, source: Path) -> None:
+    """Validate the ``statusLine`` that actually runs, naming its source file."""
+    is_user = _same_file(source, settings_path())
+    origin = "" if is_user else f" (from {source})"
+    fix_hint = (
+        "Fix automatically: context-stats doctor --fix --force"
+        if is_user
+        else f"Edit {source} by hand — doctor --fix only writes {settings_path()}."
+    )
+    command = str(block.get("command"))
+    kind = block.get("type")
+    if kind != "command":
+        report.add(
+            "Claude Code settings",
+            CheckResult(
+                _FAIL, f'statusLine.type is {kind!r}, expected "command"{origin}', (fix_hint,)
+            ),
+        )
+        return
+
+    if not _command_resolves(command):
+        report.add(
+            "Claude Code settings",
+            CheckResult(
+                _FAIL, f"statusLine.command does not resolve: {command}{origin}", (fix_hint,)
+            ),
+        )
+        return
+
+    report.add(
+        "Claude Code settings", CheckResult(_PASS, f"statusLine.command = {command}{origin}")
+    )
+    if DEFAULT_STATUSLINE_COMMAND not in command:
+        report.add(
+            "Claude Code settings",
+            CheckResult(
+                _WARN,
+                "statusLine points at a different status line, not context-stats",
+                (
+                    ("Point it at context-stats with: context-stats doctor --fix --force",)
+                    if is_user
+                    else (fix_hint,)
+                ),
+            ),
+        )
+
+
 def check_settings(report: DoctorReport) -> None:
-    """The check that catches issue #186: statusLine missing from settings.json."""
+    """The check that catches issue #186: statusLine missing from settings.json.
+
+    Claude Code merges several settings files, so the user file alone cannot
+    answer the question: a ``statusLine`` wired into a project-level file is
+    both usable *and* higher precedence than anything ``--fix`` writes.
+    """
     path = settings_path()
     settings, error = _read_settings(path)
     if error is not None:
@@ -321,8 +428,34 @@ def check_settings(report: DoctorReport) -> None:
     else:
         report.add("Claude Code settings", CheckResult(_PASS, f"{path} is valid JSON"))
 
+    overrides, warnings = _status_line_overrides()
+    for warning in warnings:
+        report.add(
+            "Claude Code settings",
+            CheckResult(
+                _WARN,
+                warning,
+                ("Repair that file by hand; doctor --fix only writes the user settings file.",),
+            ),
+        )
+    for source, _ in overrides:
+        report.add(
+            "Claude Code settings",
+            CheckResult(
+                _WARN,
+                f"{source} also defines statusLine and takes precedence over {path}",
+                ("Edit that file to change the status line that actually runs.",),
+            ),
+        )
+
     block = settings.get("statusLine")
-    if not isinstance(block, dict) or not block.get("command"):
+    effective: tuple[Path, dict] | None = None
+    if isinstance(block, dict) and block.get("command"):
+        effective = (path, block)
+    if overrides:
+        effective = overrides[-1]  # highest precedence wins
+
+    if effective is None:
         report.add(
             "Claude Code settings",
             CheckResult(
@@ -338,40 +471,7 @@ def check_settings(report: DoctorReport) -> None:
         )
         return
 
-    command = str(block.get("command"))
-    kind = block.get("type")
-    if kind != "command":
-        report.add(
-            "Claude Code settings",
-            CheckResult(
-                _FAIL,
-                f'statusLine.type is {kind!r}, expected "command"',
-                ("Fix automatically: context-stats doctor --fix --force",),
-            ),
-        )
-        return
-
-    if not _command_resolves(command):
-        report.add(
-            "Claude Code settings",
-            CheckResult(
-                _FAIL,
-                f"statusLine.command does not resolve: {command}",
-                ("Fix automatically: context-stats doctor --fix --force",),
-            ),
-        )
-        return
-
-    report.add("Claude Code settings", CheckResult(_PASS, f"statusLine.command = {command}"))
-    if DEFAULT_STATUSLINE_COMMAND not in command:
-        report.add(
-            "Claude Code settings",
-            CheckResult(
-                _WARN,
-                "statusLine points at a different status line, not context-stats",
-                ("Point it at context-stats with: context-stats doctor --fix --force",),
-            ),
-        )
+    _check_status_line_block(report, effective[1], effective[0])
 
 
 def check_runtime_state(report: DoctorReport) -> None:
@@ -407,7 +507,13 @@ def check_runtime_state(report: DoctorReport) -> None:
 
 
 def _backup_settings(path: Path) -> Path:
-    """Copy ``path`` beside itself with a timestamped suffix, returning the copy."""
+    """Copy ``path`` beside itself with a timestamped suffix, returning the copy.
+
+    ``copy2`` follows a symlinked settings file and preserves its mode, so the
+    backup is deliberately a *regular file* snapshot beside the user settings
+    path: a backup that was itself a link into a dotfiles repo would follow
+    future edits instead of freezing the pre-repair state.
+    """
     backup = path.with_name(f"{path.name}.bak.{time.strftime('%Y%m%d-%H%M%S')}")
     n = 1
     while backup.exists():
@@ -418,14 +524,34 @@ def _backup_settings(path: Path) -> Path:
 
 
 def _write_settings(path: Path, settings: dict) -> None:
-    """Write ``settings`` as pretty JSON via a temp file + atomic rename."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=path.name, suffix=".tmp")
+    """Write ``settings`` as pretty JSON via a temp file + atomic rename.
+
+    A symlinked ``settings.json`` — the normal shape under stow, chezmoi or
+    yadm — is followed to its target first: renaming over the link itself
+    would replace it with a regular file, silently stranding the dotfiles copy
+    and dropping the file out of the user's version control. The original
+    file's mode is carried across the rename (``mkstemp`` would otherwise
+    force every write to 0600); a file that does not exist yet keeps that
+    owner-only default, which is the right one for a file that may hold
+    tokens. The temp file is fsynced so the rename is durable, not merely
+    atomic.
+    """
+    target = path.resolve() if path.is_symlink() else path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        mode: int | None = target.stat().st_mode & 0o777
+    except OSError:
+        mode = None  # absent (or unstatable): keep mkstemp's 0600 default
+    fd, tmp_name = tempfile.mkstemp(dir=str(target.parent), prefix=target.name, suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(settings, fh, indent=2)
             fh.write("\n")
-        os.replace(tmp_name, path)
+            fh.flush()
+            os.fsync(fh.fileno())
+        if mode is not None:
+            os.chmod(tmp_name, mode)
+        os.replace(tmp_name, target)
     except BaseException:
         Path(tmp_name).unlink(missing_ok=True)
         raise
@@ -445,10 +571,29 @@ def apply_fix(report: DoctorReport, force: bool, command: str = DEFAULT_STATUSLI
         return
 
     assert settings is not None
+    overrides, _ = _status_line_overrides()
+    for source, _block in overrides:
+        report.add(
+            "Repair",
+            CheckResult(
+                _WARN,
+                f"{source} defines statusLine and overrides {path} — "
+                "this repair may not take effect",
+                ("Edit that file to change the status line that actually runs.",),
+            ),
+        )
+
     desired = {"type": "command", "command": command}
     existing = settings.get("statusLine")
 
-    if existing == desired:
+    # Already pointing at this command counts as configured even when the
+    # block carries extra documented keys (``padding``, …): equality against
+    # ``desired`` would report a false failure and then drop those keys.
+    if (
+        isinstance(existing, dict)
+        and existing.get("type") == "command"
+        and existing.get("command") == command
+    ):
         report.add("Repair", CheckResult(_PASS, "statusLine already configured — nothing to do"))
         return
 
@@ -471,7 +616,9 @@ def apply_fix(report: DoctorReport, force: bool, command: str = DEFAULT_STATUSLI
             return
         report.add("Repair", CheckResult(_PASS, f"backed up settings to {backup}"))
 
-    settings["statusLine"] = desired
+    # Merge, never replace: sibling keys of an existing block survive the fix,
+    # as this function's contract promises.
+    settings["statusLine"] = {**existing, **desired} if isinstance(existing, dict) else desired
     try:
         _write_settings(path, settings)
     except OSError as e:
@@ -522,7 +669,8 @@ def render_report(report: DoctorReport, colors: ColorManager) -> None:
 _DOCTOR_HELP = """Usage: context-stats doctor [--fix] [--force] [--no-color]
 
 Diagnose the context-stats installation end to end: entry points on PATH, a
-sandboxed statusline render, the statusLine wiring in ~/.claude/settings.json,
+sandboxed statusline render, the statusLine wiring in ~/.claude/settings.json
+(plus the higher-precedence ./.claude/settings.json and settings.local.json),
 and the runtime state directory.
 
 OPTIONS:

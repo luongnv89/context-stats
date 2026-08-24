@@ -1,9 +1,10 @@
 """Tests for ``context-stats doctor`` (issue #186).
 
-Covers the diagnosis path (missing/invalid/foreign statusLine wiring), the
-``--fix`` repair path (idempotency, key preservation, backups, --force), and
-the sandboxed smoke render that must not report a false negative on a
-``pip install --user`` layout.
+Covers the diagnosis path (missing/invalid/foreign statusLine wiring, and the
+higher-precedence project settings files Claude Code merges over the user
+one), the ``--fix`` repair path (idempotency, key merging, symlink/mode
+preservation, backups, --force), and the sandboxed smoke render that must not
+report a false negative on a ``pip install --user`` layout.
 """
 
 from __future__ import annotations
@@ -34,10 +35,23 @@ from claude_statusline.core.colors import ColorManager
 
 @pytest.fixture
 def fake_home(tmp_path, monkeypatch):
-    """Redirect HOME so settings/state paths resolve inside tmp_path."""
+    """Redirect HOME and cwd so settings/state paths resolve inside tmp_path.
+
+    The cwd move matters as much as HOME: doctor now also probes the
+    project-level ``./.claude/settings*.json`` files, so a test left standing
+    in the repository would read whatever the checkout happens to contain.
+    """
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    project = tmp_path / "project"
+    project.mkdir(exist_ok=True)
+    monkeypatch.chdir(project)
     return tmp_path
+
+
+def _write_json(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data), encoding="utf-8")
 
 
 def _statuses(report: DoctorReport, section: str) -> list[str]:
@@ -466,6 +480,224 @@ class TestRunDoctor:
         report.add("A", CheckResult("pass", "fine"))
         render_report(report, ColorManager(enabled=False))
         assert "All checks passed" in capsys.readouterr().out
+
+
+class TestStatusLineKeyMerging:
+    """N1: an already-correct block with sibling keys must not be clobbered."""
+
+    def test_extra_keys_count_as_already_configured(self, fake_home):
+        path = settings_path()
+        original = {
+            "statusLine": {
+                "type": "command",
+                "command": DEFAULT_STATUSLINE_COMMAND,
+                "padding": 0,
+            }
+        }
+        _write_json(path, original)
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        assert _statuses(report, "Repair") == ["pass"]
+        assert "nothing to do" in _messages(report, "Repair")
+        assert json.loads(path.read_text(encoding="utf-8")) == original
+        assert list(path.parent.glob("settings.json.bak.*")) == []
+
+    def test_force_merges_sibling_keys_of_a_foreign_block(self, fake_home):
+        path = settings_path()
+        _write_json(path, {"statusLine": {"type": "command", "command": "other", "padding": 0}})
+
+        apply_fix(DoctorReport(), force=True)
+
+        block = json.loads(path.read_text(encoding="utf-8"))["statusLine"]
+        assert block["command"] == DEFAULT_STATUSLINE_COMMAND
+        assert block["type"] == "command"
+        assert block["padding"] == 0  # sibling key survives the repair
+
+    def test_non_dict_statusline_is_replaced_wholesale(self, fake_home):
+        path = settings_path()
+        _write_json(path, {"statusLine": "claude-statusline"})
+
+        apply_fix(DoctorReport(), force=True)
+
+        assert json.loads(path.read_text(encoding="utf-8"))["statusLine"] == {
+            "type": "command",
+            "command": DEFAULT_STATUSLINE_COMMAND,
+        }
+
+
+class TestWriteSettingsPreservation:
+    """N2: --fix must not sever a dotfiles symlink or reset the file mode."""
+
+    def test_symlinked_settings_keeps_its_link(self, fake_home, tmp_path):
+        dotfiles = tmp_path / "dotfiles"
+        dotfiles.mkdir()
+        real = dotfiles / "settings.json"
+        real.write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+        path = settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(real)
+
+        apply_fix(DoctorReport(), force=False)
+
+        assert path.is_symlink()
+        assert path.readlink() == real
+        written = json.loads(real.read_text(encoding="utf-8"))
+        assert written["theme"] == "dark"
+        assert written["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
+
+    def test_group_readable_mode_is_preserved(self, fake_home):
+        path = settings_path()
+        _write_json(path, {"theme": "dark"})
+        path.chmod(0o644)
+
+        apply_fix(DoctorReport(), force=False)
+
+        assert path.stat().st_mode & 0o777 == 0o644
+
+    def test_owner_only_mode_stays_owner_only(self, fake_home):
+        path = settings_path()
+        _write_json(path, {"theme": "dark"})
+        path.chmod(0o600)
+
+        apply_fix(DoctorReport(), force=False)
+
+        assert path.stat().st_mode & 0o777 == 0o600
+
+    def test_new_file_defaults_to_owner_only(self, fake_home):
+        apply_fix(DoctorReport(), force=False)
+        assert settings_path().stat().st_mode & 0o777 == 0o600
+
+    def test_symlinked_settings_keeps_the_target_mode(self, fake_home, tmp_path):
+        dotfiles = tmp_path / "dotfiles"
+        dotfiles.mkdir()
+        real = dotfiles / "settings.json"
+        real.write_text("{}", encoding="utf-8")
+        real.chmod(0o644)
+        path = settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(real)
+
+        apply_fix(DoctorReport(), force=False)
+
+        assert real.stat().st_mode & 0o777 == 0o644
+
+
+class TestSettingsPrecedence:
+    """N3: project settings files outrank ~/.claude/settings.json."""
+
+    @staticmethod
+    def _statusline(command: str) -> dict:
+        return {"statusLine": {"type": "command", "command": command}}
+
+    def test_project_local_statusline_counts_as_configured(self, fake_home, tmp_path):
+        local = Path.cwd() / ".claude" / "settings.local.json"
+        _write_json(local, self._statusline(DEFAULT_STATUSLINE_COMMAND))
+        _write_json(settings_path(), {"theme": "dark"})
+
+        report = DoctorReport()
+        check_settings(report)
+
+        messages = _messages(report, "Claude Code settings")
+        assert "statusLine is not configured" not in messages
+        assert "pass" in _statuses(report, "Claude Code settings")
+        assert str(local) in messages  # the source file is named
+
+    def test_project_shared_statusline_counts_as_configured(self, fake_home):
+        shared = Path.cwd() / ".claude" / "settings.json"
+        _write_json(shared, self._statusline(DEFAULT_STATUSLINE_COMMAND))
+
+        report = DoctorReport()
+        check_settings(report)
+
+        messages = _messages(report, "Claude Code settings")
+        assert "statusLine is not configured" not in messages
+        assert str(shared) in messages
+
+    def test_higher_precedence_definition_warns_about_the_override(self, fake_home):
+        _write_json(settings_path(), self._statusline(DEFAULT_STATUSLINE_COMMAND))
+        local = Path.cwd() / ".claude" / "settings.local.json"
+        _write_json(local, self._statusline(DEFAULT_STATUSLINE_COMMAND))
+
+        report = DoctorReport()
+        check_settings(report)
+
+        messages = _messages(report, "Claude Code settings")
+        assert "warn" in _statuses(report, "Claude Code settings")
+        assert "takes precedence over" in messages
+        assert str(local) in messages
+
+    def test_local_file_wins_over_project_file(self, fake_home):
+        _write_json(Path.cwd() / ".claude" / "settings.json", self._statusline("shared-tool"))
+        _write_json(
+            Path.cwd() / ".claude" / "settings.local.json",
+            self._statusline(DEFAULT_STATUSLINE_COMMAND),
+        )
+
+        report = DoctorReport()
+        check_settings(report)
+
+        messages = _messages(report, "Claude Code settings")
+        assert f"statusLine.command = {DEFAULT_STATUSLINE_COMMAND}" in messages
+        assert "shared-tool" not in messages.split("statusLine.command =")[-1]
+
+    def test_malformed_project_file_warns_instead_of_crashing(self, fake_home):
+        broken = Path.cwd() / ".claude" / "settings.local.json"
+        broken.parent.mkdir(parents=True, exist_ok=True)
+        broken.write_text("{not json", encoding="utf-8")
+        _write_json(settings_path(), self._statusline(DEFAULT_STATUSLINE_COMMAND))
+
+        report = DoctorReport()
+        check_settings(report)
+
+        statuses = _statuses(report, "Claude Code settings")
+        messages = _messages(report, "Claude Code settings")
+        assert "warn" in statuses
+        assert "ignoring higher-precedence file" in messages
+        assert str(broken) in messages
+        # The user file's own check still succeeds.
+        assert f"statusLine.command = {DEFAULT_STATUSLINE_COMMAND}" in messages
+
+    def test_project_block_failure_points_at_the_project_file(self, fake_home):
+        local = Path.cwd() / ".claude" / "settings.local.json"
+        _write_json(local, self._statusline("/nope/definitely-not-here"))
+
+        report = DoctorReport()
+        check_settings(report)
+
+        messages = _messages(report, "Claude Code settings")
+        assert "does not resolve" in messages
+        assert f"(from {local})" in messages
+
+    def test_apply_fix_warns_that_the_repair_may_be_overridden(self, fake_home):
+        local = Path.cwd() / ".claude" / "settings.local.json"
+        _write_json(local, self._statusline("other-tool"))
+
+        report = DoctorReport()
+        apply_fix(report, force=False)
+
+        assert "warn" in _statuses(report, "Repair")
+        assert "may not take effect" in _messages(report, "Repair")
+        # The write target is unchanged: the user file still gets the block.
+        data = json.loads(settings_path().read_text(encoding="utf-8"))
+        assert data["statusLine"]["command"] == DEFAULT_STATUSLINE_COMMAND
+
+    def test_cwd_equal_to_home_does_not_self_override(self, fake_home, monkeypatch):
+        monkeypatch.chdir(fake_home)
+        _write_json(settings_path(), self._statusline(DEFAULT_STATUSLINE_COMMAND))
+
+        report = DoctorReport()
+        check_settings(report)
+
+        assert "takes precedence over" not in _messages(report, "Claude Code settings")
+
+    def test_project_settings_paths_are_cwd_relative(self, fake_home):
+        paths = doctor.project_settings_paths()
+        assert paths == (
+            Path.cwd() / ".claude" / "settings.json",
+            Path.cwd() / ".claude" / "settings.local.json",
+        )
 
 
 class TestCliWiring:
