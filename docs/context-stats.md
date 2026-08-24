@@ -51,6 +51,30 @@ echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
 
 Output includes model info, workspace, context window breakdown with derived values (free tokens, autocompact buffer), cost, session metadata, vim/agent extensions, active config, and raw JSON.
 
+### Install Diagnostics
+
+The `doctor` action checks the whole install without needing a live payload —
+useful precisely when the status line is missing, since `explain` requires
+stdin from a status line that already works.
+
+```bash
+context-stats doctor              # diagnose
+context-stats doctor --fix        # also repair the settings.json wiring
+context-stats doctor --fix --force  # replace a foreign statusLine
+```
+
+Checks performed:
+
+| Section              | What it verifies                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| Entry points         | `claude-statusline` and `context-stats` resolve on `PATH`                               |
+| Statusline render    | A synthetic payload renders in a sandboxed `HOME` (catches the crash-fallback line)     |
+| Claude Code settings | `~/.claude/settings.json` is valid JSON and `statusLine` points at a resolvable command |
+| Runtime state        | `~/.claude/statusline/` and the optional `statusline.conf`                              |
+
+`--fix` preserves every other settings key, backs the file up first, and is
+idempotent. Exit status is 0 when all checks pass, 1 otherwise.
+
 ## Output
 
 ```
@@ -142,7 +166,15 @@ ARGUMENTS:
 ACTIONS:
     graph         Show live ASCII graphs of context usage
     export        Export session stats as a markdown report
+    sessions      List recent sessions
     explain       Diagnostic dump of Claude Code's JSON context (reads from stdin)
+    cache-warm    Keep the session prompt cache alive via a background heartbeat
+    report        Cross-project token usage analytics
+    doctor        Diagnose the install; --fix repairs the statusLine wiring
+
+DOCTOR OPTIONS:
+    --fix          Write the statusLine block into ~/.claude/settings.json
+    --force        With --fix, replace a statusLine already set to something else
 
 GRAPH OPTIONS:
     --type <type>  Graph type to display:

@@ -500,6 +500,6 @@ class GraphRenderer:
         self._emit(
             f"{self.colors.dim}Powered by {self.colors.cyan}context-stats"
             f"{self.colors.dim} v{version}-{commit_hash} - "
-            f"https://github.com/luongnv89/cc-context-stats{self.colors.reset}"
+            f"https://github.com/luongnv89/context-stats{self.colors.reset}"
         )
         self._emit()

@@ -254,7 +254,13 @@ pip install context-stats
 uv pip install context-stats
 ```
 
-Add to Claude Code settings:
+Activate it in Claude Code — installing the package is not enough on its own, the status line only runs once `~/.claude/settings.json` points at it:
+
+```bash
+context-stats doctor --fix
+```
+
+That writes the `statusLine` block below, preserving every other key in the file and taking a timestamped backup first. To do it by hand instead:
 
 ```json
 {
@@ -266,6 +272,33 @@ Add to Claude Code settings:
 ```
 
 Restart Claude Code. The status line, graph dashboard, session export, and report all read the same local state files.
+
+### Verifying the install
+
+If the status line does not appear, `doctor` checks every link in the chain — entry points on `PATH`, a sandboxed render, the `statusLine` wiring, and the state directory — and prints the exact fix for whatever is broken:
+
+```bash
+context-stats doctor
+```
+
+```
+context-stats doctor
+────────────────────────────────────────────────────────────
+
+Entry points
+  ✓ claude-statusline → /home/user/.local/bin/claude-statusline
+  ✓ context-stats → /home/user/.local/bin/context-stats
+
+Statusline render
+  ✓ /home/user/.local/bin/claude-statusline renders a status line
+
+Claude Code settings
+  ✓ /home/user/.claude/settings.json is valid JSON
+  ✗ statusLine is not configured — the status line will never run
+      Fix automatically: context-stats doctor --fix
+```
+
+It exits non-zero when any check fails, so it drops straight into a setup script or CI job.
 
 ---
 

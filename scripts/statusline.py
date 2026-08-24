@@ -530,7 +530,7 @@ _DEFAULT_CONF_TEMPLATE = """\
 # Windows:             %USERPROFILE%\\.claude\\statusline.conf
 #
 # Full reference:
-#   https://github.com/luongnv89/cc-context-stats/blob/main/docs/configuration.md
+#   https://github.com/luongnv89/context-stats/blob/main/docs/configuration.md
 #
 # Format:
 #   - key=value (no spaces around '=')

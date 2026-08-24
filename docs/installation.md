@@ -14,7 +14,19 @@ Or with uv:
 uv pip install context-stats
 ```
 
-After installation, add to `~/.claude/settings.json`:
+Installing the package is only half the setup — the status line stays invisible
+until Claude Code is told to run it. Wire it up automatically:
+
+```bash
+context-stats doctor --fix
+```
+
+This writes the block below into `~/.claude/settings.json`, preserving every
+other key and taking a timestamped backup first. It is idempotent, and it will
+not overwrite a `statusLine` already pointing at a different tool unless you
+add `--force`.
+
+To do it by hand instead, add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -24,6 +36,19 @@ After installation, add to `~/.claude/settings.json`:
   }
 }
 ```
+
+Restart Claude Code afterwards.
+
+### Verify the installation
+
+```bash
+context-stats doctor
+```
+
+`doctor` checks the console scripts on `PATH`, renders a synthetic payload in a
+sandbox, validates the `statusLine` wiring (including whether the configured
+command actually resolves), and inspects the state directory. It exits non-zero
+if anything is broken, so it is safe to drop into a provisioning script.
 
 ### Install from Source
 

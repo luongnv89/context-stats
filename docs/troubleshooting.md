@@ -1,8 +1,31 @@
 # Troubleshooting
 
+## Start here: `context-stats doctor`
+
+Most "it doesn't work" reports come down to the status line never having been
+activated — `pip install context-stats` installs the commands but cannot wire
+`statusLine` into Claude Code's `~/.claude/settings.json` for you. `doctor`
+checks that and every other link in the chain, and prints the exact fix:
+
+```bash
+context-stats doctor
+```
+
+```bash
+# repair the settings.json wiring in place (backs up first, preserves other keys)
+context-stats doctor --fix
+
+# replace a statusLine that currently points at a different tool
+context-stats doctor --fix --force
+```
+
+It exits non-zero when any check fails. Restart Claude Code after a `--fix`.
+
 ## Common Issues
 
 ### Status line not appearing
+
+Run `context-stats doctor` first — it covers every step below automatically.
 
 **macOS/Linux (shell installer):**
 

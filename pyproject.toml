@@ -45,10 +45,10 @@ claude-statusline = "claude_statusline.cli.statusline:main"
 context-stats = "claude_statusline.cli.context_stats:main"
 
 [project.urls]
-Homepage = "https://github.com/luongnv89/cc-context-stats"
-Documentation = "https://github.com/luongnv89/cc-context-stats#readme"
-Repository = "https://github.com/luongnv89/cc-context-stats"
-Issues = "https://github.com/luongnv89/cc-context-stats/issues"
+Homepage = "https://github.com/luongnv89/context-stats"
+Documentation = "https://github.com/luongnv89/context-stats#readme"
+Repository = "https://github.com/luongnv89/context-stats"
+Issues = "https://github.com/luongnv89/context-stats/issues"
 
 [project.optional-dependencies]
 dev = [

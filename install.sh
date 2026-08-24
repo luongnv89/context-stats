@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 # Claude Code Context Stats Installer
-# Installs cc-context-stats via pip and configures Claude Code settings
+# Installs context-stats via pip and configures Claude Code settings
 #
 # Usage:
 #   Local:  ./install.sh
-#   Remote: curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
+#   Remote: curl -fsSL https://raw.githubusercontent.com/luongnv89/context-stats/main/install.sh | bash
 #
 # Requirements:
 #   - Python 3 with pip
@@ -77,9 +77,9 @@ check_jq() {
 
 install_package() {
     echo
-    echo "Installing cc-context-stats..."
-    if $PIP_CMD install --upgrade cc-context-stats; then
-        echo -e "${GREEN}✓${RESET} cc-context-stats installed"
+    echo "Installing context-stats..."
+    if $PIP_CMD install --upgrade context-stats; then
+        echo -e "${GREEN}✓${RESET} context-stats installed"
     else
         echo -e "${RED}Error: pip install failed.${RESET}"
         exit 1
@@ -105,8 +105,8 @@ create_config() {
     fi
 
     cat >"$CONFIG_FILE" <<'EOF'
-# cc-context-stats — statusline configuration
-# Full reference: https://github.com/luongnv89/cc-context-stats/blob/main/docs/configuration.md
+# context-stats — statusline configuration
+# Full reference: https://github.com/luongnv89/context-stats/blob/main/docs/configuration.md
 
 # ─── Display Settings ───────────────────────────────────────────────
 
@@ -198,7 +198,7 @@ main() {
     echo "  context-stats report"
     echo
     echo "To verify your installation:"
-    echo "  curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/scripts/check-install.sh | bash"
+    echo "  context-stats doctor"
 }
 
 main
