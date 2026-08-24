@@ -30,7 +30,7 @@ from claude_statusline.core.colors import parse_color
 
 _MINIMAL_CONFIG_FALLBACK = """\
 # context-stats — statusline configuration
-# Full reference: https://github.com/luongnv89/cc-context-stats/blob/main/docs/configuration.md
+# Full reference: https://github.com/luongnv89/context-stats/blob/main/docs/configuration.md
 autocompact=false
 token_detail=true
 show_delta=true
