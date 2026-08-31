@@ -19,7 +19,7 @@ cachecontrol==0.14.4
 certifi==2026.7.22
 cfgv==3.5.0
 charset-normalizer==3.5.1
-coverage==7.15.4
+coverage==7.16.0
 cyclonedx-python-lib==11.12.0
 defusedxml==0.7.1
 distlib==0.4.3
