@@ -23,7 +23,7 @@ coverage==7.15.4
 cyclonedx-python-lib==11.12.0
 defusedxml==0.7.1
 distlib==0.4.3
-filelock==3.32.3
+filelock==3.32.4
 identify==2.6.19
 idna==3.19
 iniconfig==2.3.0
