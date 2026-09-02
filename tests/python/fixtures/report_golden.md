@@ -2,7 +2,7 @@
 
 Generated: 2026-06-15 12:00:00
 Period: 2025-06-12 → 2025-06-15
-Source: context-stats v1.24.2
+Source: context-stats v1.25.0
 
 ## Executive Summary
 

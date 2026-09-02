@@ -409,14 +409,49 @@
         <div class="container">
             <div class="timeline" id="timeline">
 
-                <!-- 1.24.2 — Latest -->
-                <div class="release latest open" data-version="1.24.2">
+                <!-- 1.25.0 — Latest -->
+                <div class="release latest open" data-version="1.25.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v1.25.0</span>
+                                <span class="release-badge latest">Latest</span>
+                                <span class="release-date">2026-09-02</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong><code>150k pricing zone indicator</code></strong> — Adds a sixth "Pricing" context zone for 1M-class models: past 150k tokens the indicator shows an amber tier with a <code>$</code> icon and the guidance "Pricing tier increases — consider /compact". The boundary is configurable via <code>zone_pricing_max</code>; standard 200k-tier models are unchanged <span class="ref">#195 #196</span></li>
+                                        <li><strong><code>Unwired statusline stderr hint</code></strong> — <code>context-stats</code> now volunteers once per invocation when the status line is installed but unwired: a single stderr hint pointing at <code>context-stats doctor --fix</code>, never raising or changing the exit code, leaves <code>graph</code>/<code>export</code>/<code>report</code> stdout byte-identical, and is suppressed via the <code>suppress_setup_hint</code> key / <code>CONTEXT_STATS_SUPPRESS_SETUP_HINT</code> env var <span class="ref">#188 #197</span></li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section removed">
+                                    <div class="chg-section-title removed"><span class="dot"></span>Removed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Dependabot configuration</strong> — Removed <code>.github/dependabot.yml</code>; dependency updates are handled outside Dependabot</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/compare/v1.24.2...v1.25.0" target="_blank" rel="noopener">
+                                    Compare on GitHub →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.24.2 -->
+                <div class="release" data-version="1.24.2">
                     <div class="release-dot"></div>
                     <div class="release-card">
                         <div class="release-header" onclick="toggleRelease(this)">
                             <div class="release-meta">
                                 <span class="release-version">v1.24.2</span>
-                                <span class="release-badge latest">Latest</span>
+                                <span class="release-badge version">1.24.2</span>
                                 <span class="release-date">2026-08-24</span>
                             </div>
                             <span class="release-arrow">▾</span>

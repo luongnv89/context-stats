@@ -110,7 +110,7 @@ Session Summary
   Model:               claude-sonnet-4-6
   Session Duration:    2h 29m
 
-Powered by context-stats v1.24.2 - https://github.com/luongnv89/context-stats
+Powered by context-stats v1.25.0 - https://github.com/luongnv89/context-stats
 ```
 
 ## Features

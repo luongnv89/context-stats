@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-09-02
+
+### Added
+
+- **150k pricing zone indicator** — Adds a sixth "Pricing" context zone to the statusline's zone indicator for 1M-class models: when context usage passes 150k tokens (the start of the recommended 200k default banding), the indicator shows an amber "Pricing" tier with a `$` icon and the cost-aware guidance "Pricing tier increases — consider /compact", flagging that longer sessions are becoming more expensive even when cached. The boundary is configurable via the new `zone_pricing_max` override; standard 200k-tier (ratio) models are unchanged (#195 #196)
+- **Unwired statusline stderr hint** — The `context-stats` CLI now volunteers, once per invocation, that the Claude Code status line is installed but unwired: when `~/.claude/settings.json` carries no effective `statusLine` block, every command prints a single hint to stderr (`! statusLine is not wired into ~/.claude/settings.json — the status line will never run. Fix: context-stats doctor --fix`). The hint is stderr-only, never raises, never changes the exit code, and leaves `graph`/`export`/`report` stdout byte-identical; it is suppressed when wiring is healthy or via the new `suppress_setup_hint` config key / `CONTEXT_STATS_SUPPRESS_SETUP_HINT` env var, closing the upgraders' silent-install gap (#188 #197)
+
+### Removed
+
+- **Dependabot configuration** — Removed `.github/dependabot.yml` (25 lines); dependency updates are now handled outside Dependabot
+
 ## [1.24.2] - 2026-08-24
 
 ### Added
@@ -61,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logo path in changelog** — Fixed the logo path references in the changelog navigation and footer (#93)
 - **Changelog nav layout** — Removed the search box and fixed the changelog navigation layout for better usability (#101)
 
-[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.24.2...HEAD
+[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.25.0...HEAD
+[1.25.0]: https://github.com/luongnv89/context-stats/compare/v1.24.2...v1.25.0
 [1.24.2]: https://github.com/luongnv89/context-stats/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/luongnv89/context-stats/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/luongnv89/context-stats/compare/v1.23.0...v1.24.0

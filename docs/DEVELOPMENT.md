@@ -41,7 +41,7 @@ source venv/bin/activate && pytest tests/python/ -q -p no:cacheprovider
 
 ### Editable-install version skew
 
-If the version reported by `pip show context-stats` is older than `version` in `pyproject.toml` (for example a venv still holding **1.23.0** while `pyproject.toml` says **1.24.2**), the editable-install metadata is stale. Re-running the editable install clears it:
+If the version reported by `pip show context-stats` is older than `version` in `pyproject.toml` (for example a venv still holding **1.24.2** while `pyproject.toml` says **1.25.0**), the editable-install metadata is stale. Re-running the editable install clears it:
 
 ```bash
 pip install -e .
