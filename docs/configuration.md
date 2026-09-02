@@ -43,7 +43,7 @@ show_pr=false    # Hide PR number
 reduced_motion=false  # (default) Animations enabled
 reduced_motion=true   # Disable animations for accessibility
 
-# Pacman-style icon reflecting the current context zone (Plan/Code/Dump/ExDump/Dead)
+# Pacman-style icon reflecting the current context zone (Plan/Pricing/Code/Dump/ExDump/Dead)
 show_pacman=true   # (default) Show icon next to the zone label
 show_pacman=false  # Icon hidden
 
@@ -127,10 +127,11 @@ used between groups: context usage, zone, and pacman icon form one group
 kept together when the statusline wraps on a narrow terminal.
 
 The pacman icon is a quick emotional cue for the current context zone,
-shown next to the zone label. Each of the five zones maps to a distinct
-glyph — `ᗧ` (Plan), `ᗤ` (Code), `ᗣ` (Dump), `ᗢ` (ExDump), `×` (Dead) — and
-shares the zone's traffic-light color (`color_zone`). It is on by default;
-set `show_pacman=false` to hide it and keep the status line more compact.
+shown next to the zone label. Each of the six zones maps to a distinct
+glyph — `ᗧ` (Plan), `$` (Pricing), `ᗤ` (Code), `ᗣ` (Dump), `ᗢ` (ExDump),
+`×` (Dead) — and shares the zone's traffic-light color (`color_zone`). It
+is on by default; set `show_pacman=false` to hide it and keep the status
+line more compact.
 
 ## Token Colors
 
@@ -229,12 +230,21 @@ Override the default zone indicator thresholds to customize when zone transition
 ### 1M-Class Models (context >= 500k tokens)
 
 ```bash
-# Token counts for 1M models
-zone_1m_plan_max=150000    # (default) Plan → Code boundary
+# Token counts for 1M models (keep plan_max < pricing_max < code_max)
+zone_1m_plan_max=150000    # (default) Plan → Pricing boundary
+zone_pricing_max=200000    # (default) Pricing → Code boundary (cost warning band)
 zone_1m_code_max=250000    # (default) Code → Dump boundary
 zone_1m_dump_max=400000    # (default) Dump → ExDump boundary
 zone_1m_xdump_max=450000   # (default) ExDump → Dead boundary
 ```
+
+The **Pricing** zone appears between Plan and Code when the context used
+exceeds `zone_1m_plan_max` (150k). It is shown in **amber** with a `$` icon
+and a cost-aware recommendation (`Pricing tier increases — consider
+/compact`) because long sessions are more expensive even when cached. If
+`zone_pricing_max <= zone_1m_plan_max` the band never fires; if it is `>=`
+`zone_1m_code_max`, the Code zone becomes unreachable — keep
+`plan_max < pricing_max < code_max`.
 
 ### Standard Models (< 500k context)
 
