@@ -89,7 +89,7 @@ from claude_statusline.core.state import StateEntry
 class ZoneInfo:
     """Context zone indicator with color and actionable recommendation."""
 
-    zone: str  # "Plan", "Code", "Dump", "ExDump", or "Dead"
+    zone: str  # "Plan", "Pricing", "Code", "Dump", "ExDump", or "Dead"
     color: str  # "green", "yellow", "orange", "dark_red", or "gray"
     label: str  # Human-readable label
     recommendation: str  # One-line action guidance for the user

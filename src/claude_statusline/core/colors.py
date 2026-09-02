@@ -152,8 +152,8 @@ class ColorManager:
         """Traffic-light ANSI for a zone color name (Task 5.6, F-CLEAN-008).
 
         Maps the zone indicator's ``color`` field ("green", "yellow",
-        "orange", "dark_red", "gray") to its ANSI sequence: green/yellow go
-        through the override-aware slots, orange/dark_red/gray use the fixed
+        "orange", "amber", "dark_red", "gray") to its ANSI sequence: green/yellow go
+        through the override-aware slots, orange/amber/dark_red/gray use the fixed
         shared RGB constants. Unknown names fall back to the reset code.
         Returns "" entirely when colors are disabled.
         """
