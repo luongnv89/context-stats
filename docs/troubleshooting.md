@@ -21,6 +21,38 @@ context-stats doctor --fix --force
 
 It exits non-zero when any check fails. Restart Claude Code after a `--fix`.
 
+## The "statusLine is not wired" startup hint
+
+Because the CLI is the one context-stats process guaranteed to run while the
+status line is unwired, every `context-stats` invocation prints a one-line
+hint on stderr until `statusLine` is configured:
+
+```
+! statusLine is not wired into ~/.claude/settings.json — the status line will never run. Fix: context-stats doctor --fix
+```
+
+The hint is stderr-only and never changes the command's output or exit code.
+It appears once `settings.json` exists and parses but has no effective
+`statusLine` block; it stays silent when the file is missing, unreadable, or
+malformed (doctor diagnoses those on its own terms). Running
+`context-stats doctor --fix` wires the status line and the hint disappears.
+
+To suppress the hint without wiring the status line:
+
+```bash
+# in ~/.claude/statusline.conf
+suppress_setup_hint=true
+```
+
+or with the environment variable (no config file needed):
+
+```bash
+export CONTEXT_STATS_SUPPRESS_SETUP_HINT=1
+```
+
+Either one suppresses it; see [`docs/configuration.md`](configuration.md) for
+the full key reference.
+
 ## Common Issues
 
 ### Status line not appearing

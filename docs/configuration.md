@@ -55,6 +55,10 @@ show_cost=false    # Hide session cost
 show_effort=true   # (default) Show effort like Opus 4.6·high
 show_effort=false  # Hide effort level
 
+# Suppress the one-line "statusLine is not wired" startup hint (see below)
+suppress_setup_hint=false  # (default) hint shown while statusLine is missing from settings.json
+suppress_setup_hint=true   # never print the hint; same as CONTEXT_STATS_SUPPRESS_SETUP_HINT=1
+
 # Model Intelligence (MI) score display
 show_mi=false  # (default) MI score hidden
 show_mi=true   # Enable MI display in status line and summary
@@ -311,6 +315,39 @@ color_cyan=bright_cyan    # Git change count
 **Hex colors**: Any `#rrggbb` value (requires terminal with 24-bit color support)
 
 Unrecognized color values are ignored with a warning to stderr. Omitted slots use defaults.
+
+## Setup Hint
+
+`pip install context-stats` installs the commands but cannot wire `statusLine`
+into Claude Code's `~/.claude/settings.json` for you — that activation step
+lives in the README, and `context-stats doctor` (added in #187) diagnoses it.
+Because the CLI is the one context-stats process guaranteed to run while the
+status line is unwired, every `context-stats` invocation volunteers a one-line
+hint on stderr until the wiring exists (see `docs/troubleshooting.md`):
+
+```bash
+! statusLine is not wired into ~/.claude/settings.json — the status line will never run. Fix: context-stats doctor --fix
+```
+
+The hint goes to stderr only, never to stdout, and never changes the exit
+code. It is silent when the wiring exists, and also when `settings.json` is
+missing, unreadable, or malformed (doctor diagnoses those on their own
+terms). Once you run `context-stats doctor --fix` the hint disappears.
+
+To suppress it without wiring the status line, either set the config key:
+
+```bash
+suppress_setup_hint=true   # in ~/.claude/statusline.conf
+```
+
+or export the environment variable:
+
+```bash
+export CONTEXT_STATS_SUPPRESS_SETUP_HINT=1
+```
+
+Either one suppresses the hint (both are honored; the env var needs no
+config file). Default is `false` / unset — the hint is shown when unwired.
 
 ## Config File Format
 
