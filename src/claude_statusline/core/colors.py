@@ -7,6 +7,9 @@ from __future__ import annotations
 from claude_statusline._shared import BLUE, BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, YELLOW
 from claude_statusline._shared import COLOR_NAMES as COLOR_NAMES
 from claude_statusline._shared import (
+    ZONE_AMBER_ANSI as ZONE_AMBER_ANSI,
+)
+from claude_statusline._shared import (
     ZONE_DARK_RED_ANSI as ZONE_DARK_RED_ANSI,
 )
 from claude_statusline._shared import (
@@ -160,6 +163,7 @@ class ColorManager:
             return self.yellow
         fixed = {
             "orange": ZONE_ORANGE_ANSI,
+            "amber": ZONE_AMBER_ANSI,
             "dark_red": ZONE_DARK_RED_ANSI,
             "gray": ZONE_GRAY_ANSI,
         }

@@ -103,6 +103,7 @@ class Config:
 
     # Zone threshold overrides (0 = use defaults from intelligence.py)
     zone_1m_plan_max: int = 0
+    zone_pricing_max: int = 0
     zone_1m_code_max: int = 0
     zone_1m_dump_max: int = 0
     zone_1m_xdump_max: int = 0
@@ -313,6 +314,7 @@ class Config:
             "tps_unit": self.tps_unit,
             "tps_window": self.tps_window,
             "zone_1m_plan_max": self.zone_1m_plan_max,
+            "zone_pricing_max": self.zone_pricing_max,
             "zone_1m_code_max": self.zone_1m_code_max,
             "zone_1m_dump_max": self.zone_1m_dump_max,
             "zone_1m_xdump_max": self.zone_1m_xdump_max,

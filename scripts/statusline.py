@@ -116,6 +116,7 @@ MODEL_PROFILES = _shared.MODEL_PROFILES
 
 LARGE_MODEL_THRESHOLD = _shared.LARGE_MODEL_THRESHOLD
 ZONE_1M_P_MAX = _shared.ZONE_1M_P_MAX
+ZONE_1M_PRICING_MAX = _shared.ZONE_1M_PRICING_MAX
 ZONE_1M_C_MAX = _shared.ZONE_1M_C_MAX
 ZONE_1M_D_MAX = _shared.ZONE_1M_D_MAX
 ZONE_1M_X_MAX = _shared.ZONE_1M_X_MAX
@@ -280,6 +281,7 @@ def _context_zone_from_config(used_tokens, context_window_size, zone_config=None
         context_window_size,
         large_model_threshold=zc.get("large_model_threshold") or 0,
         zone_1m_plan_max=zc.get("zone_1m_plan_max") or 0,
+        zone_pricing_max=zc.get("zone_pricing_max") or 0,
         zone_1m_code_max=zc.get("zone_1m_code_max") or 0,
         zone_1m_dump_max=zc.get("zone_1m_dump_max") or 0,
         zone_1m_xdump_max=zc.get("zone_1m_xdump_max") or 0,
@@ -673,6 +675,7 @@ tps_window=5
 #
 # Zones indicate how much context pressure your session is under:
 #   Plan   (P) = plenty of room, ideal for planning and exploration
+#   Pricing    = large context window; pricing tier increases, consider /compact
 #   Code   (C) = normal coding zone, context is filling but healthy
 #   Dump   (D) = getting full, consider wrapping up or starting fresh
 #   ExDump (X) = critical, autocompact may trigger, quality degrading
@@ -691,10 +694,12 @@ tps_window=5
 
 # --- 1M-Class Models (context >= large_model_threshold) ---
 # Values are absolute token counts for zone boundaries (tokens used).
-# zone_1m_plan_max=70000       # Plan -> Code boundary
-# zone_1m_code_max=100000      # Code -> Dump boundary
-# zone_1m_dump_max=250000      # Dump -> ExDump boundary
-# zone_1m_xdump_max=275000     # ExDump -> Dead boundary
+# Keep order: plan_max < pricing_max < code_max (default 200000).
+# zone_1m_plan_max=150000      # Plan -> Pricing boundary
+# zone_pricing_max=200000      # Pricing -> Code boundary
+# zone_1m_code_max=250000      # Code -> Dump boundary
+# zone_1m_dump_max=400000      # Dump -> ExDump boundary
+# zone_1m_xdump_max=450000     # ExDump -> Dead boundary
 
 # --- Standard Models (context < large_model_threshold) ---
 # Ratios are 0-1 fractions of the total context window.
