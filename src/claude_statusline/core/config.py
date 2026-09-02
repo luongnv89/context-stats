@@ -47,6 +47,7 @@ show_pr=true
 show_cost=true
 show_effort=true
 show_pacman=true
+suppress_setup_hint=false
 """
 
 
@@ -97,6 +98,12 @@ class Config:
     # ExDump/Dead) — an emotional at-a-glance cue alongside the zone text.
     # On by default; set show_pacman=false to hide it.
     show_pacman: bool = True
+
+    # Suppress the one-line stderr hint the context-stats CLI prints while
+    # the statusLine wiring is missing from ~/.claude/settings.json. The
+    # renderer never branches on this — only the CLI startup hint reads it.
+    # Default false (hint shown when unwired).
+    suppress_setup_hint: bool = False
     tps_precision: int = 1  # decimal places for the tok/s value
     tps_unit: str = "tok/s"  # unit label appended to the value
     tps_window: int = 5  # number of recent turns averaged for rolling tok/s
@@ -205,6 +212,8 @@ class Config:
                     self.show_effort = value_lower != "false"
                 elif key == "show_pacman":
                     self.show_pacman = value_lower != "false"
+                elif key == "suppress_setup_hint":
+                    self.suppress_setup_hint = value_lower != "false"
                 elif key == "tps_precision":
                     try:
                         v = int(raw_value)
@@ -311,6 +320,7 @@ class Config:
             "show_cost": self.show_cost,
             "show_effort": self.show_effort,
             "show_pacman": self.show_pacman,
+            "suppress_setup_hint": self.suppress_setup_hint,
             "tps_unit": self.tps_unit,
             "tps_window": self.tps_window,
             "zone_1m_plan_max": self.zone_1m_plan_max,
