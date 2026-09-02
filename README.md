@@ -92,7 +92,6 @@ Six zones tell you exactly what to do next:
 |ExDump     |Dark red  |Near hard limit    |Start a new session                             |
 |Dead       |Gray      |Exhausted          |Stop - nothing productive left                  |
 
-
 Thresholds are **model-size-aware**: 1M context models use absolute token counts; standard models use utilization ratios. Both are configurable.
 
 |                 Plan zone                 |                 Code zone                 |                 Dump zone                 |
