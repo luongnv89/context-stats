@@ -219,9 +219,7 @@ class TestEffectiveStatusline:
     def test_wired_user_settings(self, fake_home):
         path = settings_path()
         path.parent.mkdir(parents=True)
-        path.write_text(
-            json.dumps(self._statusline("claude-statusline")), encoding="utf-8"
-        )
+        path.write_text(json.dumps(self._statusline("claude-statusline")), encoding="utf-8")
         effective = doctor._effective_statusline()
         assert effective is not None
         assert effective[0] == path
