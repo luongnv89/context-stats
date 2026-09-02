@@ -83,14 +83,15 @@ When the terminal is too narrow to fit everything on one line, the statusline wr
 
 Six zones tell you exactly what to do next:
 
-| Zone      |  Color   | Meaning                 | Action                            |
-| --------- | :------: | ----------------------- | --------------------------------- |
-| Planning  |  Green   | Plenty of room          | Keep planning and coding          |
-| Pricing   |  Amber   | Cost tier increases     | Consider `/compact` — sessions cost more past 150k |
-| Code-only |  Yellow  | Context tightening      | Finish current task, no new plans |
-| Dump      |  Orange  | Quality declining  | Wrap up and prepare to export     |
-| ExDump    | Dark red | Near hard limit    | Start a new session               |
-| Dead      |   Gray   | Exhausted          | Stop — nothing productive left    |
+| Zone      |  Color   | Meaning           | Action                                         |
+| --------- | :------: | ----------------- | ---------------------------------------------- |
+|Planning   |Green     |Plenty of room     |Keep planning and coding                        |
+|Pricing    |Amber     |Cost tier increases|Consider /compact - cost increases              |
+|Code-only  |Yellow    |Context tightening |Finish current task, no new plans               |
+|Dump       |Orange    |Quality declining  |Wrap up and prepare to export                   |
+|ExDump     |Dark red  |Near hard limit    |Start a new session                             |
+|Dead       |Gray      |Exhausted          |Stop - nothing productive left                  |
+
 
 Thresholds are **model-size-aware**: 1M context models use absolute token counts; standard models use utilization ratios. Both are configurable.
 
