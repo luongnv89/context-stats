@@ -200,23 +200,36 @@ _SUPPRESS_SETUP_HINT_ENV = "CONTEXT_STATS_SUPPRESS_SETUP_HINT"
 
 
 def _setup_hint_suppressed() -> bool:
-    """True when the user opted out via the conf key or the env var."""
+    """True when the user opted out via the conf key or the env var.
+
+    Read-only by design: a missing conf file means "not suppressed" without
+    ever materializing it (Config.load() would otherwise auto-create
+    ~/.claude/statusline.conf as a new side effect on commands that never
+    wrote it — issue #188 review). The path comes from the doctor's shared
+    helper so patched HOME stays honored.
+    """
     if os.environ.get(_SUPPRESS_SETUP_HINT_ENV, "").lower() in ("1", "true"):
         return True
     try:
+        from claude_statusline.cli.doctor import config_path
+
+        if not config_path().exists():
+            return False
         return Config.load().suppress_setup_hint
     except Exception:
         return False
 
 
-def _maybe_warn_setup_hint() -> None:
+def _maybe_warn_setup_hint(args: argparse.Namespace) -> None:
     """Volunteer that the status line is installed-but-unwired, if it is.
 
     One stderr line; never raises, never changes the exit code, never writes
     to stdout. Silent when the wiring exists, when settings.json is missing,
-    unreadable, or malformed (doctor diagnoses those on its own terms), or
-    when suppressed via the ``suppress_setup_hint`` config key or the
-    ``CONTEXT_STATS_SUPPRESS_SETUP_HINT`` env var.
+    unreadable, or malformed (doctor diagnoses those on its own terms), when
+    suppressed via the ``suppress_setup_hint`` config key or the
+    ``CONTEXT_STATS_SUPPRESS_SETUP_HINT`` env var, and on help requests
+    (subcommand ``-h``/``--help`` lands in ``remaining`` after parse_args;
+    top-level help already exits inside parse_args).
     """
     try:
         from claude_statusline.cli.doctor import (
@@ -225,6 +238,8 @@ def _maybe_warn_setup_hint() -> None:
             settings_path,
         )
 
+        if any(a in ("-h", "--help") for a in getattr(args, "remaining", [])):
+            return
         if _setup_hint_suppressed():
             return
         if _effective_statusline() is not None:
@@ -955,7 +970,7 @@ def main() -> None:
 
     # One-line stderr hint when the status line is installed but unwired
     # (issue #188): never raises, never changes the exit code or stdout.
-    _maybe_warn_setup_hint()
+    _maybe_warn_setup_hint(args)
 
     if args.action == "explain":
         import json

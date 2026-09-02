@@ -544,13 +544,44 @@ class TestSetupHint:
         self._invoke(monkeypatch, ["graph", "--no-watch"])
         assert capsys.readouterr().err == ""
 
-    @pytest.mark.parametrize("argv", [["--help"], ["-h"], [], ["--version"], ["-V"], ["graph", "--help"]])
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["--help"],
+            ["-h"],
+            [],
+            ["--version"],
+            ["-V"],
+            ["graph", "--help"],
+            ["doctor", "--help"],
+            ["doctor", "-h"],
+            ["export", "--help"],
+            ["export", "-h"],
+            ["report", "--help"],
+        ],
+    )
     def test_no_hint_on_help_and_version(self, isolated, monkeypatch, capsys, argv):
-        """parse_args exits before the hint hook, so help/version never hint."""
+        """parse_args (top-level) or the help-in-remaining guard (subcommand)
+        keep help/version output clean — never a hint on stderr."""
         self._write_settings(isolated, {"theme": "dark"})
         with pytest.raises(SystemExit):
             _run_main(monkeypatch, argv)
         assert capsys.readouterr().err == ""
+
+    def test_hint_check_never_creates_statusline_conf(self, isolated, monkeypatch, capsys):
+        """The hint lookups are read-only: an absent ~/.claude/statusline.conf
+        stays absent on commands that never otherwise load config (sessions,
+        report, doctor, cache-warm) — the hint check must not add the
+        materialization side effect (issue #188 review, Finding 1), while it
+        still fires when unwired."""
+        self._write_settings(isolated, {"theme": "dark"})
+        conf = isolated / ".claude" / "statusline.conf"
+        assert not conf.exists()
+        code = self._invoke(monkeypatch, ["sessions"])
+        captured = capsys.readouterr()
+        assert code is None
+        assert captured.err == self.HINT + "\n"  # still hints while unwired
+        assert not conf.exists()  # but never materializes the conf file
 
     def test_hint_preserves_stdout_for_every_action(self, isolated, monkeypatch, capsys):
         """AC#3: graph/export/report each emit the hint on stderr with a
