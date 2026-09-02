@@ -4,7 +4,7 @@
     "stdin": "{\"session_id\": \"golden-basic\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 10000, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 200, \"output_tokens\": 900}}, \"cost\": {\"total_cost_usd\": 0.42, \"total_lines_added\": 3, \"total_lines_removed\": 1, \"total_api_duration_ms\": 42000}}",
     "conf": "# comment-only config keeps built-in defaults\n",
     "columns": "200",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m·\u001b[0;32mPlan\u001b[0m·\u001b[0;32mᗧ\u001b[0m | \u001b[2m$0.42\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-basic\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m\u00b7\u001b[0;32mPlan\u001b[0m\u00b7\u001b[0;32m\u15e7\u001b[0m | \u001b[2m$0.42\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-basic\u001b[0m\n",
     "stderr_markers": []
   },
   {
@@ -12,7 +12,7 @@
     "stdin": "{\"session_id\": \"golden-effort\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\", \"thinking_budget\": 12000}, \"effort\": {\"level\": \"high\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 10000, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 200, \"output_tokens\": 900}}, \"cost\": {\"total_cost_usd\": 0.0}}",
     "conf": "# comment-only config keeps built-in defaults\n",
     "columns": "200",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m·\u001b[0;32mPlan\u001b[0m·\u001b[0;32mᗧ\u001b[0m | \u001b[2m$0.00\u001b[0m | \u001b[2mTest Model·12k tokens thinking·high\u001b[0m | \u001b[2mgolden-effort\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m\u00b7\u001b[0;32mPlan\u001b[0m\u00b7\u001b[0;32m\u15e7\u001b[0m | \u001b[2m$0.00\u001b[0m | \u001b[2mTest Model\u00b712k tokens thinking\u00b7high\u001b[0m | \u001b[2mgolden-effort\u001b[0m\n",
     "stderr_markers": []
   },
   {
@@ -20,7 +20,7 @@
     "stdin": "{\"session_id\": \"../../evil\", \"model\": {\"display_name\": \"Test Model\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 1000, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"output_tokens\": 0}}}",
     "conf": "# comment-only config keeps built-in defaults\n",
     "columns": "200",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m199,000 (99.5%)\u001b[0m·\u001b[0;32mPlan\u001b[0m·\u001b[0;32mᗧ\u001b[0m | \u001b[2m$0.00\u001b[0m | \u001b[2mTest Model\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m199,000 (99.5%)\u001b[0m\u00b7\u001b[0;32mPlan\u001b[0m\u00b7\u001b[0;32m\u15e7\u001b[0m | \u001b[2m$0.00\u001b[0m | \u001b[2mTest Model\u001b[0m\n",
     "stderr_markers": [
       "Invalid session_id"
     ]
@@ -30,7 +30,7 @@
     "stdin": "{\"session_id\": \"golden-narrow\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 10000, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 200, \"output_tokens\": 900}}, \"cost\": {\"total_cost_usd\": 1.25}}",
     "conf": "# comment-only config keeps built-in defaults\n",
     "columns": "60",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m·\u001b[0;32mPlan\u001b[0m·\u001b[0;32mᗧ\u001b[0m | \u001b[2m$1.25\u001b[0m | \u001b[2mTest Model\u001b[0m\n\u001b[2mgolden-narrow\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m189,300 (94.7%)\u001b[0m\u00b7\u001b[0;32mPlan\u001b[0m\u00b7\u001b[0;32m\u15e7\u001b[0m | \u001b[2m$1.25\u001b[0m | \u001b[2mTest Model\u001b[0m\n\u001b[2mgolden-narrow\u001b[0m\n",
     "stderr_markers": []
   },
   {
@@ -38,7 +38,7 @@
     "stdin": "{\"session_id\": \"golden-colors\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 190000, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"output_tokens\": 0}}, \"cost\": {\"total_cost_usd\": 3.5}}",
     "conf": "# comment-only config keeps built-in defaults\ncolor_green=#00ff00\ncolor_yellow=#ffff00\ncolor_red=#ff0000\nshow_mi=true\nshow_pacman=false\n",
     "columns": "200",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;90m10,000 (5.0%)\u001b[0m·\u001b[0;90mDead\u001b[0m | \u001b[38;2;255;0;0mMI:0.074\u001b[0m | \u001b[2m$3.50\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-colors\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;90m10,000 (5.0%)\u001b[0m\u00b7\u001b[0;90mDead\u001b[0m | \u001b[38;2;255;0;0mMI:0.074\u001b[0m | \u001b[2m$3.50\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-colors\u001b[0m\n",
     "stderr_markers": []
   },
   {
@@ -46,7 +46,7 @@
     "stdin": "{\"session_id\": \"golden-toggles\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\"}, \"effort\": {\"level\": \"medium\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 200000, \"current_usage\": {\"input_tokens\": 5000, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"output_tokens\": 100}}, \"cost\": {\"total_cost_usd\": 0.99}}",
     "conf": "# comment-only config keeps built-in defaults\nshow_cost=false\nshow_pacman=false\nshow_effort=false\nautocompact=true\n",
     "columns": "200",
-    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m150,000 (75.0%)\u001b[0m·\u001b[0;32mPlan\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-toggles\u001b[0m\n",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[0;32m150,000 (75.0%)\u001b[0m\u00b7\u001b[0;32mPlan\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-toggles\u001b[0m\n",
     "stderr_markers": []
   },
   {
@@ -74,5 +74,13 @@
     "stderr_markers": [
       "rendering failed"
     ]
+  },
+  {
+    "name": "1m_pricing_zone",
+    "stdin": "{\"session_id\": \"golden-pricing\", \"model\": {\"id\": \"claude-test\", \"display_name\": \"Test Model\"}, \"workspace\": {\"current_dir\": \"/tmp/golden-proj\", \"project_dir\": \"/tmp/golden-proj\"}, \"context_window\": {\"context_window_size\": 1000000, \"current_usage\": {\"input_tokens\": 175000, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 200, \"output_tokens\": 5300}}, \"cost\": {\"total_cost_usd\": 1.23}}",
+    "conf": "# comment-only config keeps built-in defaults\n",
+    "columns": "200",
+    "expected_stdout": "\u001b[0;36mgolden-proj\u001b[0m | \u001b[38;2;255;191;0m824,300 (82.4%)\u001b[0m\u00b7\u001b[38;2;255;191;0mPricing\u001b[0m\u00b7\u001b[38;2;255;191;0m$\u001b[0m | \u001b[2m$1.23\u001b[0m | \u001b[2mTest Model\u001b[0m | \u001b[2mgolden-pricing\u001b[0m\n",
+    "stderr_markers": []
   }
 ]

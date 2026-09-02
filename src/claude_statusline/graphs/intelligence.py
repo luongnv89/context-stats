@@ -61,6 +61,9 @@ from claude_statusline._shared import (
     ZONE_1M_P_MAX as ZONE_1M_P_MAX,
 )
 from claude_statusline._shared import (
+    ZONE_1M_PRICING_MAX as ZONE_1M_PRICING_MAX,
+)
+from claude_statusline._shared import (
     ZONE_1M_X_MAX as ZONE_1M_X_MAX,
 )
 from claude_statusline._shared import (
@@ -86,7 +89,7 @@ from claude_statusline.core.state import StateEntry
 class ZoneInfo:
     """Context zone indicator with color and actionable recommendation."""
 
-    zone: str  # "Plan", "Code", "Dump", "ExDump", or "Dead"
+    zone: str  # "Plan", "Pricing", "Code", "Dump", "ExDump", or "Dead"
     color: str  # "green", "yellow", "orange", "dark_red", or "gray"
     label: str  # Human-readable label
     recommendation: str  # One-line action guidance for the user
@@ -98,6 +101,7 @@ class ZoneInfo:
 # means touching this tuple and the dataclass only.
 _ZONE_THRESHOLD_FIELDS: tuple[str, ...] = (
     "zone_1m_plan_max",
+    "zone_pricing_max",
     "zone_1m_code_max",
     "zone_1m_dump_max",
     "zone_1m_xdump_max",
@@ -118,6 +122,7 @@ class ZoneThresholds:
     """
 
     zone_1m_plan_max: int = 0
+    zone_pricing_max: int = 0
     zone_1m_code_max: int = 0
     zone_1m_dump_max: int = 0
     zone_1m_xdump_max: int = 0
@@ -192,7 +197,8 @@ def get_context_zone(
 
     For 1M models (context_window >= large threshold):
       P: < zone_1m_plan_max used
-      C: plan_max–code_max used
+      Price: plan_max–pricing_max used (cost warning band)
+      C: pricing_max–code_max used
       D: code_max–dump_max used
       X: dump_max–xdump_max used
       Z: >= xdump_max used
@@ -233,6 +239,7 @@ def get_context_zone(
 # Human-readable labels per zone (package-only presentation detail)
 _ZONE_LABELS: dict[str, str] = {
     "Plan": "Planning",
+    "Pricing": "Pricing tier",
     "Code": "Code-only",
     "Dump": "Dump zone",
     "ExDump": "Hard limit",

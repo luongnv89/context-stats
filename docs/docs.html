@@ -6,7 +6,7 @@
         <title>Documentation — context-stats</title>
         <meta
             name="description"
-            content="Full guide to context-stats: the live statusline, per-session export, multi-week reports, the five context zones, Model Intelligence, cache keep-warm, and configuration."
+            content="Full guide to context-stats: the live statusline, per-session export, multi-week reports, the six context zones, Model Intelligence, cache keep-warm, and configuration."
         />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
         <link rel="canonical" href="https://luongnv89.github.io/context-stats/docs.html" />
@@ -942,10 +942,10 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
 
                 <!-- ZONES -->
                 <section id="zones">
-                    <h2>The five context zones</h2>
+                    <h2>The six context zones</h2>
                     <p>
                         As your context fills, context-stats classifies the session into one of
-                        five zones — each with a single, clear action.
+                        six zones — each with a single, clear action.
                     </p>
                     <table class="zone-table">
                         <thead>
@@ -953,6 +953,7 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                         </thead>
                         <tbody>
                             <tr><td><span class="pill" style="background:var(--green)"></span>Planning</td><td>Plenty of room. Model at full strength.</td><td>Safe to plan and code.</td></tr>
+                            <tr><td><span class="pill" style="background:#ffbf00"></span>Pricing</td><td>Past 150k tokens; cost tier increases (1M-class models).</td><td>Consider <span class="inline-code">/compact</span> — longer sessions cost more even when cached.</td></tr>
                             <tr><td><span class="pill" style="background:var(--yellow)"></span>Code-only</td><td>Comfortable working range.</td><td>Avoid starting new tasks; finish the current one.</td></tr>
                             <tr><td><span class="pill" style="background:var(--orange)"></span>Dump zone</td><td>Getting full; quality starts to slip.</td><td>Consider <span class="inline-code">/compact focus on X</span> or delegate to a subagent.</td></tr>
                             <tr><td><span class="pill" style="background:var(--red)"></span>Hard limit</td><td>Very full; high risk of degradation.</td><td>Run <span class="inline-code">/compact</span> now before quality degrades further.</td></tr>
@@ -961,8 +962,9 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                     </table>
                     <p style="font-size: 13.5px; color: var(--text-dim)">
                         Zone names map to the internal keys <span class="inline-code">Plan</span>,
-                        <span class="inline-code">Code</span>, <span class="inline-code">Dump</span>,
-                        <span class="inline-code">ExDump</span>, and <span class="inline-code">Dead</span>.
+                        <span class="inline-code">Pricing</span>, <span class="inline-code">Code</span>,
+                        <span class="inline-code">Dump</span>, <span class="inline-code">ExDump</span>, and
+                        <span class="inline-code">Dead</span>.
                     </p>
                 </section>
 

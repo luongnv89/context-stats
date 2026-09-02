@@ -72,7 +72,8 @@ LARGE_MODEL_THRESHOLD = 500_000  # >= 500k context = 1M-class model
 # Recalibrated from observed context rot onset at 300-400k tokens.
 # Source: x.com/trq212/status/2044548257058328723
 ZONE_1M_P_MAX = 150_000  # P zone: < 150k used
-ZONE_1M_C_MAX = 250_000  # C zone: 150k–250k used
+ZONE_1M_PRICING_MAX = 200_000  # Pricing zone: 150k–200k used (cost warning band)
+ZONE_1M_C_MAX = 250_000  # C zone: 200k–250k used
 ZONE_1M_D_MAX = 400_000  # D zone: 250k–400k used
 ZONE_1M_X_MAX = 450_000  # X zone: 400k–450k used; Z zone: >= 450k
 ZONE_STD_DUMP_ZONE = 0.40
@@ -83,6 +84,7 @@ ZONE_STD_DEAD_ZONE = 0.75
 # Zone recommendation strings — one-line action guidance per zone
 _ZONE_RECOMMENDATIONS: dict[str, str] = {
     "Plan": "Safe to plan and code",
+    "Pricing": "Pricing tier increases — consider /compact",
     "Code": "Avoid starting new tasks; finish current one",
     "Dump": "Consider `/compact focus on X` or delegate to subagent",
     "ExDump": "Run `/compact` now before quality degrades further",
@@ -94,6 +96,7 @@ _ZONE_RECOMMENDATIONS: dict[str, str] = {
 # counted correctly by visible_width()'s plain len().
 PACMAN_ICONS: dict[str, str] = {
     "Plan": "ᗧ",
+    "Pricing": "$",
     "Code": "ᗤ",
     "Dump": "ᗣ",
     "ExDump": "ᗢ",
@@ -176,6 +179,7 @@ _COLOR_KEYS: dict[str, str] = {
 # Zone threshold config keys (integer token counts)
 _ZONE_INT_KEYS: set[str] = {
     "zone_1m_plan_max",
+    "zone_pricing_max",
     "zone_1m_code_max",
     "zone_1m_dump_max",
     "zone_1m_xdump_max",
@@ -220,6 +224,7 @@ _PR_CACHE_NEGATIVE_TTL_SECONDS = 10
 # (F-CLEAN-010): orange (Dump), dark red (ExDump), and gray (Dead) are true-color
 # literals on both implementations, so they are named once here.
 ZONE_ORANGE_ANSI = "\033[38;2;255;165;0m"  # RGB orange
+ZONE_AMBER_ANSI = "\033[38;2;255;191;0m"  # RGB amber (Pricing band, distinct from orange)
 ZONE_DARK_RED_ANSI = "\033[38;2;139;0;0m"  # RGB dark red
 ZONE_GRAY_ANSI = "\033[0;90m"  # bright black / gray
 
@@ -267,6 +272,8 @@ def zone_ansi_code(
         return yellow
     if color_name == "orange":
         return ZONE_ORANGE_ANSI
+    if color_name == "amber":
+        return ZONE_AMBER_ANSI
     if color_name == "dark_red":
         return ZONE_DARK_RED_ANSI
     if color_name == "gray":
@@ -393,6 +400,7 @@ def context_zone_tuple(
     context_window_size: int,
     *,
     zone_1m_plan_max: int = 0,
+    zone_pricing_max: int = 0,
     zone_1m_code_max: int = 0,
     zone_1m_dump_max: int = 0,
     zone_1m_xdump_max: int = 0,
@@ -414,12 +422,15 @@ def context_zone_tuple(
 
     if is_large:
         p_max = zone_1m_plan_max or ZONE_1M_P_MAX
+        pricing_max = zone_pricing_max or ZONE_1M_PRICING_MAX
         c_max = zone_1m_code_max or ZONE_1M_C_MAX
         d_max = zone_1m_dump_max or ZONE_1M_D_MAX
         x_max = zone_1m_xdump_max or ZONE_1M_X_MAX
 
         if used_tokens < p_max:
             return ("Plan", "green", _ZONE_RECOMMENDATIONS["Plan"])
+        if used_tokens < pricing_max:
+            return ("Pricing", "amber", _ZONE_RECOMMENDATIONS["Pricing"])
         if used_tokens < c_max:
             return ("Code", "yellow", _ZONE_RECOMMENDATIONS["Code"])
         if used_tokens < d_max:

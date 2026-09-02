@@ -7,6 +7,9 @@ from __future__ import annotations
 from claude_statusline._shared import BLUE, BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, YELLOW
 from claude_statusline._shared import COLOR_NAMES as COLOR_NAMES
 from claude_statusline._shared import (
+    ZONE_AMBER_ANSI as ZONE_AMBER_ANSI,
+)
+from claude_statusline._shared import (
     ZONE_DARK_RED_ANSI as ZONE_DARK_RED_ANSI,
 )
 from claude_statusline._shared import (
@@ -149,8 +152,8 @@ class ColorManager:
         """Traffic-light ANSI for a zone color name (Task 5.6, F-CLEAN-008).
 
         Maps the zone indicator's ``color`` field ("green", "yellow",
-        "orange", "dark_red", "gray") to its ANSI sequence: green/yellow go
-        through the override-aware slots, orange/dark_red/gray use the fixed
+        "orange", "amber", "dark_red", "gray") to its ANSI sequence: green/yellow go
+        through the override-aware slots, orange/amber/dark_red/gray use the fixed
         shared RGB constants. Unknown names fall back to the reset code.
         Returns "" entirely when colors are disabled.
         """
@@ -160,6 +163,7 @@ class ColorManager:
             return self.yellow
         fixed = {
             "orange": ZONE_ORANGE_ANSI,
+            "amber": ZONE_AMBER_ANSI,
             "dark_red": ZONE_DARK_RED_ANSI,
             "gray": ZONE_GRAY_ANSI,
         }
