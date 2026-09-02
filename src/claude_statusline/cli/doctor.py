@@ -357,6 +357,31 @@ def _status_line_overrides() -> tuple[list[tuple[Path, dict]], list[str]]:
     return overrides, warnings
 
 
+def _effective_statusline() -> tuple[Path, dict] | None:
+    """Resolve the ``statusLine`` block that would actually run, or None.
+
+    The single source of truth for "is the status line wired?", shared by
+    :func:`check_settings` and the CLI's startup hint. The user settings
+    file's ``statusLine`` wins unless a higher-precedence project file
+    overrides it. Pure file reads — no subprocess, never raises: a missing,
+    unreadable, or malformed user settings file yields None (doctor reports
+    those distinctly; the startup hint stays silent and points at doctor).
+    """
+    path = settings_path()
+    settings, error = _read_settings(path)
+    if error is not None:
+        return None
+    assert settings is not None  # narrowed by the error branch above
+    overrides, _warnings = _status_line_overrides()
+    block = settings.get("statusLine")
+    effective: tuple[Path, dict] | None = None
+    if isinstance(block, dict) and block.get("command"):
+        effective = (path, block)
+    if overrides:
+        effective = overrides[-1]  # highest precedence wins
+    return effective
+
+
 def _check_status_line_block(report: DoctorReport, block: dict, source: Path) -> None:
     """Validate the ``statusLine`` that actually runs, naming its source file."""
     is_user = _same_file(source, settings_path())
@@ -448,13 +473,7 @@ def check_settings(report: DoctorReport) -> None:
             ),
         )
 
-    block = settings.get("statusLine")
-    effective: tuple[Path, dict] | None = None
-    if isinstance(block, dict) and block.get("command"):
-        effective = (path, block)
-    if overrides:
-        effective = overrides[-1]  # highest precedence wins
-
+    effective = _effective_statusline()
     if effective is None:
         report.add(
             "Claude Code settings",
@@ -471,6 +490,7 @@ def check_settings(report: DoctorReport) -> None:
         )
         return
 
+    assert effective is not None  # narrowed by the None return above
     _check_status_line_block(report, effective[1], effective[0])
 
 
