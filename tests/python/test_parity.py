@@ -655,9 +655,7 @@ class TestPacmanPairs:
     def test_pacman_icons_equal(self):
         assert sl.PACMAN_ICONS == PACMAN_ICONS
 
-    @pytest.mark.parametrize(
-        "zone", ["Plan", "Pricing", "Code", "Dump", "ExDump", "Dead", "?"]
-    )
+    @pytest.mark.parametrize("zone", ["Plan", "Pricing", "Code", "Dump", "ExDump", "Dead", "?"])
     def test_pacman_icon_grid(self, zone):
         assert sl.get_pacman_icon(zone) == get_pacman_icon(zone)
 
