@@ -77,6 +77,7 @@ from claude_statusline.graphs.intelligence import (
     ZONE_1M_C_MAX,
     ZONE_1M_D_MAX,
     ZONE_1M_P_MAX,
+    ZONE_1M_PRICING_MAX,
     ZONE_1M_X_MAX,
     ZONE_STD_DEAD_ZONE,
     ZONE_STD_DUMP_ZONE,
@@ -145,7 +146,7 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "MI profiles": ("test_model_profiles_equal", "test_get_model_profile_grid"),
     "MI formula": ("test_mi_formula_grid",),
     "MI colors": ("test_mi_color_grid",),
-    "Zone indicator": ("test_context_zone_grid",),
+    "Zone indicator": ("test_context_zone_grid", "test_pricing_zone_grid"),
     "Zone constants": ("test_zone_constants_equal",),
     "Per-property colors": (
         "test_color_keys_equal",
@@ -197,6 +198,7 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
     "Pacman icon mapping (zone → glyph)": (
         "test_pacman_icons_equal",
         "test_pacman_icon_grid",
+        "test_pricing_icon_and_recommendation_match_shared",
     ),
     "Pacman icon display (`show_pacman`, default on, next to zone label, reuses zone color)": (
         "test_render_byte_parity_basic",
@@ -392,6 +394,7 @@ class TestConstantPairs:
 
     def test_zone_constants_equal(self):
         assert sl.ZONE_1M_P_MAX == ZONE_1M_P_MAX
+        assert sl.ZONE_1M_PRICING_MAX == ZONE_1M_PRICING_MAX
         assert sl.ZONE_1M_C_MAX == ZONE_1M_C_MAX
         assert sl.ZONE_1M_D_MAX == ZONE_1M_D_MAX
         assert sl.ZONE_1M_X_MAX == ZONE_1M_X_MAX
@@ -444,6 +447,7 @@ class TestConstantPairs:
             "THINKING_K_ROUND_MIN",
             "THINKING_M_THRESHOLD",
             "ZONE_ORANGE_ANSI",
+            "ZONE_AMBER_ANSI",
             "ZONE_DARK_RED_ANSI",
             "ZONE_GRAY_ANSI",
         ):
@@ -593,6 +597,8 @@ class TestIntelligencePairs:
         (150_000, 200_000, {}),
         (149_999, 1_000_000, {}),
         (150_000, 1_000_000, {}),
+        (199_999, 1_000_000, {}),
+        (200_000, 1_000_000, {}),
         (250_000, 1_000_000, {}),
         (400_000, 1_000_000, {}),
         (450_000, 1_000_000, {}),
@@ -603,6 +609,8 @@ class TestIntelligencePairs:
         (130_000, 200_000, {"zone_std_hard_limit": 0.6}),
         (145_000, 200_000, {"zone_std_dead_ratio": 0.72}),
         (160_000, 1_000_000, {"zone_1m_plan_max": 170_000}),
+        (220_000, 1_000_000, {"zone_pricing_max": 230_000}),
+        (180_000, 1_000_000, {"zone_pricing_max": 170_000}),
         (260_000, 1_000_000, {"zone_1m_code_max": 270_000}),
         (410_000, 1_000_000, {"zone_1m_dump_max": 420_000}),
         (440_000, 1_000_000, {"zone_1m_xdump_max": 441_000}),
@@ -614,6 +622,29 @@ class TestIntelligencePairs:
         info = get_context_zone(used, size, ZoneThresholds(**overrides))
         assert script_tuple == (info.zone, info.color, info.recommendation)
 
+    @pytest.mark.parametrize(
+        ("used", "size", "overrides", "expected"),
+        [
+            (180_000, 1_000_000, {}, "Pricing"),
+            (199_999, 1_000_000, {}, "Pricing"),
+            (200_000, 1_000_000, {}, "Code"),
+            (180_000, 1_000_000, {"zone_pricing_max": 170_000}, "Code"),
+            (220_000, 1_000_000, {"zone_pricing_max": 230_000}, "Pricing"),
+            (180_000, 1_000_000, {"zone_pricing_max": 150_000}, "Code"),
+        ],
+        ids=str,
+    )
+    def test_pricing_zone_grid(self, used, size, overrides, expected):
+        """The Pricing band (plan_max, pricing_max) behaves identically on both
+        sides, including the zone_pricing_max override end-to-end (#195)."""
+        script_tuple = sl.get_context_zone(used, size, overrides or None)
+        info = get_context_zone(used, size, ZoneThresholds(**overrides))
+        assert script_tuple == (info.zone, info.color, info.recommendation)
+        assert script_tuple[0] == info.zone == expected
+        if expected == "Pricing":
+            assert script_tuple[1] == info.color == "amber"
+            assert script_tuple[2] == "Pricing tier increases — consider /compact"
+
 
 # ---------------------------------------------------------------------------
 # Rows: Pacman icons
@@ -624,9 +655,18 @@ class TestPacmanPairs:
     def test_pacman_icons_equal(self):
         assert sl.PACMAN_ICONS == PACMAN_ICONS
 
-    @pytest.mark.parametrize("zone", ["Plan", "Code", "Dump", "ExDump", "Dead", "?"])
+    @pytest.mark.parametrize(
+        "zone", ["Plan", "Pricing", "Code", "Dump", "ExDump", "Dead", "?"]
+    )
     def test_pacman_icon_grid(self, zone):
         assert sl.get_pacman_icon(zone) == get_pacman_icon(zone)
+
+    def test_pricing_icon_and_recommendation_match_shared(self):
+        """Pricing glyph + cost-aware recommendation are single-sourced: the
+        standalone bindings equal the package and the vendored shared copy."""
+        assert PACMAN_ICONS["Pricing"] == sl.PACMAN_ICONS["Pricing"] == "$"
+        assert shared_module._ZONE_RECOMMENDATIONS["Pricing"] == sl._ZONE_RECOMMENDATIONS["Pricing"]
+        assert "compact" in sl._ZONE_RECOMMENDATIONS["Pricing"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -987,6 +1027,7 @@ zone_std_dump_ratio=0.45
 zone_std_warn_buffer=40000
 zone_std_hard_limit=0.65
 zone_std_dead_ratio=0.72
+zone_pricing_max=180000
 large_model_threshold=600000
 compaction_drop_threshold=0.6
 compact_mi_warn_threshold=0.55
@@ -1040,6 +1081,7 @@ class TestConfigParsingPair:
         assert scfg["zone_config"]["zone_std_warn_buffer"] == pcfg.zone_std_warn_buffer
         assert scfg["zone_config"]["zone_std_hard_limit"] == pcfg.zone_std_hard_limit
         assert scfg["zone_config"]["zone_std_dead_ratio"] == pcfg.zone_std_dead_ratio
+        assert scfg["zone_config"]["zone_pricing_max"] == pcfg.zone_pricing_max == 180_000
         assert scfg["zone_config"]["large_model_threshold"] == pcfg.large_model_threshold
 
         # Compaction constants
@@ -1067,6 +1109,7 @@ class TestConfigParsingPair:
 
         for key in (
             "zone_1m_plan_max",
+            "zone_pricing_max",
             "zone_1m_code_max",
             "zone_1m_dump_max",
             "zone_1m_xdump_max",

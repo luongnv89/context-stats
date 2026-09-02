@@ -15,8 +15,12 @@ class TestZoneAnsiCode:
 
     def test_fixed_rgb_tiers(self):
         assert _shared.zone_ansi_code("orange", "G", "Y", "R") == _shared.ZONE_ORANGE_ANSI
+        assert _shared.zone_ansi_code("amber", "G", "Y", "R") == _shared.ZONE_AMBER_ANSI
         assert _shared.zone_ansi_code("dark_red", "G", "Y", "R") == _shared.ZONE_DARK_RED_ANSI
         assert _shared.zone_ansi_code("gray", "G", "Y", "R") == _shared.ZONE_GRAY_ANSI
+
+    def test_amber_is_distinct_from_orange(self):
+        assert _shared.ZONE_AMBER_ANSI != _shared.ZONE_ORANGE_ANSI
 
     def test_unknown_falls_back_to_reset(self):
         assert _shared.zone_ansi_code("magenta?", "G", "Y", "R") == "R"

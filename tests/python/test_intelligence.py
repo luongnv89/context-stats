@@ -17,6 +17,7 @@ from claude_statusline.graphs.intelligence import (
     ZONE_1M_C_MAX,
     ZONE_1M_D_MAX,
     ZONE_1M_P_MAX,
+    ZONE_1M_PRICING_MAX,
     ZONE_1M_X_MAX,
     ZoneThresholds,
     calculate_context_pressure,
@@ -281,7 +282,7 @@ class TestSharedVectors:
 
 
 class TestContextZone:
-    """Test the five-state context zone indicator (P/C/D/X/Z)."""
+    """Test the six-state context zone indicator (P/Price/C/D/X/Z)."""
 
     # --- 1M model tests (context_window >= 500k) ---
 
@@ -291,9 +292,15 @@ class TestContextZone:
         assert zone.zone == "Plan"
         assert zone.color == "green"
 
+    def test_1m_pricing_zone(self):
+        """1M model, 180k used → Pricing (amber). New band: 150k–200k."""
+        zone = get_context_zone(180_000, 1_000_000)
+        assert zone.zone == "Pricing"
+        assert zone.color == "amber"
+
     def test_1m_code_only_zone(self):
-        """1M model, 200k used → C (yellow). New range: 150k–250k."""
-        zone = get_context_zone(200_000, 1_000_000)
+        """1M model, 230k used → C (yellow). New range: 200k–250k."""
+        zone = get_context_zone(230_000, 1_000_000)
         assert zone.zone == "Code"
         assert zone.color == "yellow"
 
@@ -317,12 +324,21 @@ class TestContextZone:
 
     # --- 1M boundary tests ---
 
-    def test_1m_p_c_boundary(self):
-        """Boundary: exactly 150k → C (not P)."""
+    def test_1m_p_pricing_boundary(self):
+        """Boundary: exactly 150k → Pricing (not Plan)."""
         zone = get_context_zone(ZONE_1M_P_MAX, 1_000_000)
-        assert zone.zone == "Code"
+        assert zone.zone == "Pricing"
+        assert zone.color == "amber"
         zone_below = get_context_zone(ZONE_1M_P_MAX - 1, 1_000_000)
         assert zone_below.zone == "Plan"
+
+    def test_1m_pricing_c_boundary(self):
+        """Boundary: exactly 200k → Code (not Pricing)."""
+        zone = get_context_zone(ZONE_1M_PRICING_MAX, 1_000_000)
+        assert zone.zone == "Code"
+        assert zone.color == "yellow"
+        zone_below = get_context_zone(ZONE_1M_PRICING_MAX - 1, 1_000_000)
+        assert zone_below.zone == "Pricing"
 
     def test_1m_c_d_boundary(self):
         """Boundary: exactly 250k → D (not C)."""
@@ -394,9 +410,13 @@ class TestContextZone:
         """UC1: 1M model, 100k used → P (< 150k threshold)."""
         assert get_context_zone(100_000, 1_000_000).zone == "Plan"
 
+    def test_use_case_1b(self):
+        """UC1b: 1M model, 180k used → Pricing (150k–200k band)."""
+        assert get_context_zone(180_000, 1_000_000).zone == "Pricing"
+
     def test_use_case_2(self):
-        """UC2: 1M model, 200k used → C (150k–250k range)."""
-        assert get_context_zone(200_000, 1_000_000).zone == "Code"
+        """UC2: 1M model, 230k used → C (200k–250k range)."""
+        assert get_context_zone(230_000, 1_000_000).zone == "Code"
 
     def test_use_case_3(self):
         """UC3: 1M model, 300k used → D (250k–400k range)."""
@@ -437,22 +457,48 @@ class TestConfigurableZoneThresholds:
     # --- 1M model overrides ---
 
     def test_1m_custom_plan_max(self):
-        """Custom zone_1m_plan_max shifts P→C boundary."""
-        # Default: 200k → Plan (< 150k P_MAX is for 150k, so 200k → Code with default).
+        """Custom zone_1m_plan_max shifts P→Pricing boundary."""
+        # Default: 180k → Pricing (< 150k P_MAX is for 150k, so 180k → Pricing).
         # With plan_max=210k → still Plan.
-        zone = get_context_zone(200_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=210_000))
+        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=210_000))
         assert zone.zone == "Plan"
-        # Default: 200k → Code (150k–250k range)
-        zone_default = get_context_zone(200_000, 1_000_000)
-        assert zone_default.zone == "Code"
+        # Default: 180k → Pricing (150k–200k band)
+        zone_default = get_context_zone(180_000, 1_000_000)
+        assert zone_default.zone == "Pricing"
+
+    def test_1m_custom_pricing_max(self):
+        """Custom zone_pricing_max shifts Pricing→Code boundary."""
+        # 180k is Pricing by default. With pricing_max=170k → Code.
+        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_pricing_max=170_000))
+        assert zone.zone == "Code"
+        # Default stays Pricing
+        zone_default = get_context_zone(180_000, 1_000_000)
+        assert zone_default.zone == "Pricing"
+        assert zone_default.color == "amber"
+
+    def test_pricing_max_wider_band(self):
+        """pricing_max above the default widens the Pricing band into old Code range."""
+        # 220k is Code by default (200k–250k). With pricing_max=230k → Pricing.
+        zone = get_context_zone(220_000, 1_000_000, ZoneThresholds(zone_pricing_max=230_000))
+        assert zone.zone == "Pricing"
+
+    def test_degenerate_pricing_max_never_fires(self):
+        """pricing_max <= plan_max makes the Pricing band unreachable."""
+        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_pricing_max=150_000))
+        assert zone.zone == "Code"  # skips Pricing, falls through to Code
+
+    def test_degenerate_pricing_max_hides_code(self):
+        """pricing_max >= code_max collapses the Code band into Pricing without error."""
+        zone = get_context_zone(230_000, 1_000_000, ZoneThresholds(zone_pricing_max=260_000))
+        assert zone.zone == "Pricing"
 
     def test_1m_custom_code_max(self):
         """Custom zone_1m_code_max shifts C→D boundary."""
-        # 180k is within default C range (150k–250k). With code_max=160k → Dump.
-        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_1m_code_max=160_000))
+        # 220k is within default C range (200k–250k). With code_max=210k → Dump.
+        zone = get_context_zone(220_000, 1_000_000, ZoneThresholds(zone_1m_code_max=210_000))
         assert zone.zone == "Dump"
         # Default would be Code
-        zone_default = get_context_zone(180_000, 1_000_000)
+        zone_default = get_context_zone(220_000, 1_000_000)
         assert zone_default.zone == "Code"
 
     def test_1m_custom_dump_max(self):
@@ -509,16 +555,25 @@ class TestConfigurableZoneThresholds:
         # With threshold=300k → treated as 1M model.
         zone = get_context_zone(100_000, 400_000, ZoneThresholds(large_model_threshold=300_000))
         assert zone.zone == "Plan"  # Uses 1M thresholds (< 150k)
-        zone2 = get_context_zone(200_000, 400_000, ZoneThresholds(large_model_threshold=300_000))
-        assert zone2.zone == "Code"  # 1M: 150k–250k
+        zone2 = get_context_zone(180_000, 400_000, ZoneThresholds(large_model_threshold=300_000))
+        assert zone2.zone == "Pricing"  # 1M: 150k–200k band
 
     # --- Zero override = use default ---
 
     def test_zero_override_uses_default(self):
         """Override of 0 falls back to module-level default."""
-        # 200k is in the Code zone (150k–250k) with default thresholds.
-        zone = get_context_zone(200_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=0))
-        assert zone.zone == "Code"  # Same as default (150k boundary)
+        # 180k is in the Pricing zone (150k–200k) with default thresholds.
+        zone = get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_1m_plan_max=0))
+        assert zone.zone == "Pricing"  # Same as default (150k boundary)
+
+    def test_zero_pricing_override_uses_default(self):
+        """Override of 0 for zone_pricing_max falls back to module default (200k)."""
+        assert get_context_zone(180_000, 1_000_000, ZoneThresholds(zone_pricing_max=0)).zone == (
+            "Pricing"
+        )
+        assert get_context_zone(220_000, 1_000_000, ZoneThresholds(zone_pricing_max=0)).zone == (
+            "Code"
+        )
 
 
 class TestZoneRecommendations:
@@ -531,9 +586,16 @@ class TestZoneRecommendations:
         assert zone.recommendation == _ZONE_RECOMMENDATIONS["Plan"]
         assert "plan" in zone.recommendation.lower()
 
+    def test_pricing_recommendation(self):
+        """Pricing zone recommendation is cost-aware and mentions /compact."""
+        zone = get_context_zone(180_000, 1_000_000)
+        assert zone.zone == "Pricing"
+        assert zone.recommendation == _ZONE_RECOMMENDATIONS["Pricing"]
+        assert "compact" in zone.recommendation.lower()
+
     def test_code_recommendation(self):
         """Code zone recommendation advises against new tasks."""
-        zone = get_context_zone(200_000, 1_000_000)
+        zone = get_context_zone(230_000, 1_000_000)
         assert zone.zone == "Code"
         assert zone.recommendation == _ZONE_RECOMMENDATIONS["Code"]
         assert "task" in zone.recommendation.lower()
@@ -577,11 +639,12 @@ class TestZoneRecommendations:
         assert zone.recommendation == _ZONE_RECOMMENDATIONS["Plan"]
 
     def test_all_zones_have_non_empty_recommendations(self):
-        """All five zones produce non-empty recommendation strings."""
+        """All six zones produce non-empty recommendation strings."""
         # Sample one token value per zone for 1M model
         test_cases = [
             (100_000, 1_000_000, "Plan"),
-            (200_000, 1_000_000, "Code"),
+            (180_000, 1_000_000, "Pricing"),
+            (230_000, 1_000_000, "Code"),
             (300_000, 1_000_000, "Dump"),
             (420_000, 1_000_000, "ExDump"),
             (460_000, 1_000_000, "Dead"),
@@ -596,7 +659,8 @@ class TestZoneRecommendations:
         """Recommendation strings in ZoneInfo match the module-level map."""
         for used, window, expected_zone in [
             (100_000, 1_000_000, "Plan"),
-            (200_000, 1_000_000, "Code"),
+            (180_000, 1_000_000, "Pricing"),
+            (230_000, 1_000_000, "Code"),
             (300_000, 1_000_000, "Dump"),
             (420_000, 1_000_000, "ExDump"),
             (460_000, 1_000_000, "Dead"),
@@ -644,24 +708,25 @@ class TestZone1MRecalibration:
 class TestPacmanIcon:
     """Tests for the pacman-style icon reflecting context zone status (#98).
 
-    Each of the 5 zones (Plan, Code, Dump, ExDump, Dead) maps to a distinct,
-    single-codepoint glyph so the icon renders predictably in any terminal
-    and is counted correctly by visible_width()'s plain len().
+    Each of the 6 zones (Plan, Pricing, Code, Dump, ExDump, Dead) maps to a
+    distinct, single-codepoint glyph so the icon renders predictably in
+    any terminal and is counted correctly by visible_width()'s plain len().
     """
 
     @pytest.mark.parametrize(
         "zone",
-        ["Plan", "Code", "Dump", "ExDump", "Dead"],
+        ["Plan", "Pricing", "Code", "Dump", "ExDump", "Dead"],
     )
-    def test_all_five_zones_have_an_icon(self, zone):
+    def test_all_six_zones_have_an_icon(self, zone):
         """Every zone name produces a non-empty glyph."""
         icon = get_pacman_icon(zone)
         assert icon, f"Zone {zone} should have a non-empty pacman icon"
 
     def test_icons_are_distinct_per_zone(self):
-        """All 5 zone icons are distinct strings (no two zones share a glyph)."""
-        icons = [get_pacman_icon(zone) for zone in ("Plan", "Code", "Dump", "ExDump", "Dead")]
-        assert len(set(icons)) == 5, f"Expected 5 distinct icons, got {icons}"
+        """All 6 zone icons are distinct strings (no two zones share a glyph)."""
+        zones = ("Plan", "Pricing", "Code", "Dump", "ExDump", "Dead")
+        icons = [get_pacman_icon(zone) for zone in zones]
+        assert len(set(icons)) == 6, f"Expected 6 distinct icons, got {icons}"
 
     def test_icons_are_single_codepoint(self):
         """Each glyph is exactly one character wide.
@@ -676,6 +741,11 @@ class TestPacmanIcon:
     def test_plan_icon(self):
         """Plan zone (healthy) maps to its designated glyph."""
         assert get_pacman_icon("Plan") == PACMAN_ICONS["Plan"]
+
+    def test_pricing_icon(self):
+        """Pricing zone (cost warning) maps to its designated '$' glyph."""
+        assert get_pacman_icon("Pricing") == PACMAN_ICONS["Pricing"]
+        assert PACMAN_ICONS["Pricing"] == "$"
 
     def test_code_icon(self):
         """Code zone (still fine) maps to its designated glyph."""
@@ -698,15 +768,16 @@ class TestPacmanIcon:
         assert get_pacman_icon("NotAZone") == ""
         assert get_pacman_icon("") == ""
 
-    def test_pacman_icons_dict_has_exactly_five_zones(self):
-        """PACMAN_ICONS covers exactly the 5 documented zone names, no more/less."""
-        assert set(PACMAN_ICONS.keys()) == {"Plan", "Code", "Dump", "ExDump", "Dead"}
+    def test_pacman_icons_dict_has_exactly_six_zones(self):
+        """PACMAN_ICONS covers exactly the 6 documented zone names, no more/less."""
+        assert set(PACMAN_ICONS.keys()) == {"Plan", "Pricing", "Code", "Dump", "ExDump", "Dead"}
 
     def test_icon_matches_actual_zone_from_get_context_zone(self):
         """The icon for a zone returned by get_context_zone() is non-empty and consistent."""
         test_cases = [
             (100_000, 1_000_000, "Plan"),
-            (200_000, 1_000_000, "Code"),
+            (180_000, 1_000_000, "Pricing"),
+            (230_000, 1_000_000, "Code"),
             (300_000, 1_000_000, "Dump"),
             (420_000, 1_000_000, "ExDump"),
             (460_000, 1_000_000, "Dead"),
@@ -744,18 +815,25 @@ class TestGetContextZoneStructure:
 
         config = Config()
         config.zone_1m_plan_max = 160_000
+        config.zone_pricing_max = 210_000
         config.zone_std_dump_ratio = 0.45
         thresholds = ZoneThresholds.from_config(config)
-        assert thresholds == ZoneThresholds(zone_1m_plan_max=160_000, zone_std_dump_ratio=0.45)
+        assert thresholds == ZoneThresholds(
+            zone_1m_plan_max=160_000, zone_pricing_max=210_000, zone_std_dump_ratio=0.45
+        )
         # Lookup-table expansion feeds context_zone_tuple's exact kwargs
         assert thresholds.overrides()["zone_1m_plan_max"] == 160_000
+        assert thresholds.overrides()["zone_pricing_max"] == 210_000
 
     @pytest.mark.parametrize(
         ("used", "size", "expected"),
         [
-            # 1M boundaries: P|C at 150k, C|D at 250k, D|X at 400k, X|Z at 450k
+            # 1M boundaries: P|Price at 150k, Price|C at 200k, C|D at 250k,
+            # D|X at 400k, X|Z at 450k
             (ZONE_1M_P_MAX - 1, 1_000_000, "Plan"),
-            (ZONE_1M_P_MAX, 1_000_000, "Code"),
+            (ZONE_1M_P_MAX, 1_000_000, "Pricing"),
+            (ZONE_1M_PRICING_MAX - 1, 1_000_000, "Pricing"),
+            (ZONE_1M_PRICING_MAX, 1_000_000, "Code"),
             (ZONE_1M_C_MAX - 1, 1_000_000, "Code"),
             (ZONE_1M_C_MAX, 1_000_000, "Dump"),
             (ZONE_1M_D_MAX - 1, 1_000_000, "Dump"),
