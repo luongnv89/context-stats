@@ -398,6 +398,7 @@ _BOOL_CONFIG_KEYS = frozenset(
         "show_cost",
         "show_effort",
         "show_pacman",
+        "suppress_setup_hint",
     }
 )
 
@@ -487,6 +488,7 @@ def read_config():
         "show_cost": True,
         "show_effort": True,
         "show_pacman": True,
+        "suppress_setup_hint": False,
         "colors": {},
         "zone_config": {},
         "compaction_drop_threshold": COMPACTION_DROP_THRESHOLD,

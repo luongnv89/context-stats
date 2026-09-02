@@ -1010,6 +1010,7 @@ show_pr=false
 show_cost=false
 show_effort=false
 show_pacman=false
+suppress_setup_hint=true
 color_green=#7dcfff
 color_yellow=#e0af68
 color_red=#f7768e
@@ -1061,6 +1062,7 @@ class TestConfigParsingPair:
             "show_cost",
             "show_effort",
             "show_pacman",
+            "suppress_setup_hint",
         ]
         for key in boolean_int_str_keys:
             assert scfg[key] == getattr(pcfg, key), key
@@ -1131,6 +1133,7 @@ class TestConfigParsingPair:
             "show_cost",
             "show_effort",
             "show_pacman",
+            "suppress_setup_hint",
         ):
             assert scfg[key] == getattr(pcfg, key), key
         assert scfg["tps_precision"] == pcfg.tps_precision == 1

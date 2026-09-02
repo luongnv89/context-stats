@@ -9,6 +9,7 @@ stubbed so dispatch itself is what's under test.
 from __future__ import annotations
 
 import io
+import json
 import sys
 from pathlib import Path
 
@@ -443,6 +444,184 @@ class TestMainDispatch:
         monkeypatch.setattr(cs, "run_sessions", lambda minutes, colors: recorded.update(m=minutes))
         _run_main(monkeypatch, ["sessions", "--no-color"])
         assert recorded["m"] == 5  # default window preserved
+
+
+class TestSetupHint:
+    """Issue #188: the CLI volunteers that the status line is unwired.
+
+    The hint is stderr-only, never raises, never changes the exit code, and
+    is silent when wired, when settings.json is missing/unreadable/malformed,
+    or when suppressed via the conf key or the env var.
+    """
+
+    HINT = (
+        "! statusLine is not wired into ~/.claude/settings.json — "
+        "the status line will never run. Fix: context-stats doctor --fix"
+    )
+
+    @staticmethod
+    def _write_settings(home, data):
+        path = home / ".claude" / "settings.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    @staticmethod
+    def _write_conf(home, text):
+        path = home / ".claude" / "statusline.conf"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    @staticmethod
+    def _invoke(monkeypatch, argv):
+        """Run main(), returning the SystemExit code (or None)."""
+        try:
+            _run_main(monkeypatch, argv)
+            return None
+        except SystemExit as e:
+            return e.code
+
+    def test_unwired_emits_exactly_one_hint_line(self, isolated, monkeypatch, capsys):
+        """AC#1: valid settings.json without statusLine -> hint on stderr only."""
+        self._write_settings(isolated, {"theme": "dark"})
+        code = self._invoke(monkeypatch, ["graph", "--no-watch"])
+        captured = capsys.readouterr()
+        assert code == 0  # exit code untouched
+        assert captured.err == self.HINT + "\n"  # exactly one line
+        assert "No session data found." in captured.out  # stdout unchanged
+
+    def test_wired_is_silent(self, isolated, monkeypatch, capsys):
+        """AC#2: valid statusLine wiring -> no hint, stdout unaffected."""
+        self._write_settings(
+            isolated, {"statusLine": {"type": "command", "command": "claude-statusline"}}
+        )
+        code = self._invoke(monkeypatch, ["graph", "--no-watch"])
+        captured = capsys.readouterr()
+        assert code == 0
+        assert captured.err == ""
+        assert "No session data found." in captured.out
+
+    def test_missing_settings_is_silent(self, isolated, monkeypatch, capsys):
+        """No settings.json -> silent (doctor diagnoses that on its own terms)."""
+        code = self._invoke(monkeypatch, ["graph", "--no-watch"])
+        captured = capsys.readouterr()
+        assert code == 0
+        assert captured.err == ""
+
+    def test_malformed_settings_is_silent(self, isolated, monkeypatch, capsys):
+        self._write_settings(isolated, "{not json")
+        code = self._invoke(monkeypatch, ["graph", "--no-watch"])
+        captured = capsys.readouterr()
+        assert code == 0
+        assert captured.err == ""
+
+    def test_unreadable_settings_is_silent(self, isolated, monkeypatch, capsys):
+        self._write_settings(isolated, {"theme": "dark"})
+        real_read_text = Path.read_text
+
+        def unreadable(self_, *a, **k):
+            if self_.name == "settings.json":
+                raise OSError("permission denied")
+            return real_read_text(self_, *a, **k)
+
+        monkeypatch.setattr(Path, "read_text", unreadable)
+        code = self._invoke(monkeypatch, ["graph", "--no-watch"])
+        captured = capsys.readouterr()
+        assert code == 0
+        assert captured.err == ""
+
+    def test_suppress_via_config_key(self, isolated, monkeypatch, capsys):
+        """AC#5: suppress_setup_hint=true in statusline.conf silences the hint."""
+        self._write_settings(isolated, {"theme": "dark"})
+        self._write_conf(isolated, "suppress_setup_hint=true\n")
+        self._invoke(monkeypatch, ["graph", "--no-watch"])
+        assert capsys.readouterr().err == ""
+
+    @pytest.mark.parametrize("value", ["1", "true"])
+    def test_suppress_via_env_var(self, isolated, monkeypatch, capsys, value):
+        """AC#5: CONTEXT_STATS_SUPPRESS_SETUP_HINT env var silences the hint."""
+        self._write_settings(isolated, {"theme": "dark"})
+        monkeypatch.setenv("CONTEXT_STATS_SUPPRESS_SETUP_HINT", value)
+        self._invoke(monkeypatch, ["graph", "--no-watch"])
+        assert capsys.readouterr().err == ""
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["--help"],
+            ["-h"],
+            [],
+            ["--version"],
+            ["-V"],
+            ["graph", "--help"],
+            ["doctor", "--help"],
+            ["doctor", "-h"],
+            ["export", "--help"],
+            ["export", "-h"],
+            ["report", "--help"],
+        ],
+    )
+    def test_no_hint_on_help_and_version(self, isolated, monkeypatch, capsys, argv):
+        """parse_args (top-level) or the help-in-remaining guard (subcommand)
+        keep help/version output clean — never a hint on stderr."""
+        self._write_settings(isolated, {"theme": "dark"})
+        with pytest.raises(SystemExit):
+            _run_main(monkeypatch, argv)
+        assert capsys.readouterr().err == ""
+
+    def test_hint_check_never_creates_statusline_conf(self, isolated, monkeypatch, capsys):
+        """The hint lookups are read-only: an absent ~/.claude/statusline.conf
+        stays absent on commands that never otherwise load config (sessions,
+        report, doctor, cache-warm) — the hint check must not add the
+        materialization side effect (issue #188 review, Finding 1), while it
+        still fires when unwired."""
+        self._write_settings(isolated, {"theme": "dark"})
+        conf = isolated / ".claude" / "statusline.conf"
+        assert not conf.exists()
+        code = self._invoke(monkeypatch, ["sessions"])
+        captured = capsys.readouterr()
+        assert code is None
+        assert captured.err == self.HINT + "\n"  # still hints while unwired
+        assert not conf.exists()  # but never materializes the conf file
+
+    def test_hint_preserves_stdout_for_every_action(self, isolated, monkeypatch, capsys):
+        """AC#3: graph/export/report each emit the hint on stderr with a
+        byte-identical stdout to the wired state."""
+        from claude_statusline.cli import export as export_mod
+        from claude_statusline.cli import report as report_mod
+
+        monkeypatch.setattr(export_mod, "run_export", lambda argv: sys.stdout.write("EXPORT\n"))
+        monkeypatch.setattr(
+            report_mod, "run_report", lambda remaining: sys.stdout.write("REPORT\n")
+        )
+
+        for argv in (["graph", "--no-watch"], ["export"], ["report"]):
+            outs = []
+            for wired in (False, True):
+                settings = (
+                    {"statusLine": {"type": "command", "command": "claude-statusline"}}
+                    if wired
+                    else {"theme": "dark"}
+                )
+                self._write_settings(isolated, settings)
+                code = self._invoke(monkeypatch, argv)
+                captured = capsys.readouterr()
+                assert code in (None, 0)
+                outs.append(captured.out)
+                assert captured.err == ("" if wired else self.HINT + "\n"), argv
+            assert outs[0] == outs[1], f"stdout differs between wired/unwired for {argv}"
+
+    def test_hint_never_raises_when_home_is_broken(self, isolated, monkeypatch, capsys):
+        """AC#4: even a raising HOME/settings-path stays silent, never crashes."""
+        from claude_statusline.cli import export as export_mod
+
+        monkeypatch.setattr(export_mod, "run_export", lambda argv: None)
+
+        def boom():
+            raise OSError("home gone")
+
+        monkeypatch.setattr(Path, "home", staticmethod(boom))
+        _run_main(monkeypatch, ["export"])  # must not raise
+        assert capsys.readouterr().err == ""
 
 
 # ---------------------------------------------------------------------------

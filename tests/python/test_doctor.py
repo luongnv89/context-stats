@@ -209,6 +209,57 @@ class TestCheckSettings:
         assert "not valid UTF-8" in _messages(report, "Claude Code settings")
 
 
+class TestEffectiveStatusline:
+    """Issue #188: the wiring predicate shared by doctor and the CLI hint."""
+
+    @staticmethod
+    def _statusline(command: str) -> dict:
+        return {"statusLine": {"type": "command", "command": command}}
+
+    def test_wired_user_settings(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(self._statusline("claude-statusline")), encoding="utf-8")
+        effective = doctor._effective_statusline()
+        assert effective is not None
+        assert effective[0] == path
+        assert effective[1]["command"] == "claude-statusline"
+
+    def test_unwired_valid_settings_is_none(self, fake_home):
+        _write_json(settings_path(), {"theme": "dark"})
+        assert doctor._effective_statusline() is None
+
+    def test_foreign_command_counts_as_wired(self, fake_home):
+        """Any `command`-bearing block suppresses the hint; doctor warns on it."""
+        _write_json(settings_path(), self._statusline("some-other-tool"))
+        assert doctor._effective_statusline() is not None
+
+    def test_missing_settings_is_none(self, fake_home):
+        assert doctor._effective_statusline() is None
+
+    def test_malformed_settings_is_none(self, fake_home):
+        path = settings_path()
+        path.parent.mkdir(parents=True)
+        path.write_text("{not json", encoding="utf-8")
+        assert doctor._effective_statusline() is None
+
+    def test_unreadable_settings_is_none(self, fake_home, monkeypatch):
+        _write_json(settings_path(), {"theme": "dark"})
+        monkeypatch.setattr(
+            Path, "read_text", lambda *_a, **_k: (_ for _ in ()).throw(OSError("denied"))
+        )
+        assert doctor._effective_statusline() is None
+
+    def test_project_override_wins(self, fake_home):
+        _write_json(settings_path(), self._statusline("claude-statusline"))
+        local = Path.cwd() / ".claude" / "settings.local.json"
+        _write_json(local, self._statusline("other-tool"))
+        effective = doctor._effective_statusline()
+        assert effective is not None
+        assert effective[0] == local
+        assert effective[1]["command"] == "other-tool"
+
+
 class TestApplyFix:
     def test_creates_settings_when_absent(self, fake_home):
         apply_fix(DoctorReport(), force=False)
