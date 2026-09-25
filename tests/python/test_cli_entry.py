@@ -104,7 +104,11 @@ class TestNormalizeArgv:
         with pytest.raises(SystemExit) as ei:
             cs._normalize_argv(["abc123", "bogus"])
         assert ei.value.code == 1
-        assert "Unknown action 'bogus'" in capsys.readouterr().err
+        err = capsys.readouterr().err
+        assert "Unknown action 'bogus'" in err
+        # The removed cache-warm tombstone (#198) is not advertised as valid.
+        assert "Valid actions:" in err
+        assert "cache-warm" not in err
 
 
 # ---------------------------------------------------------------------------
@@ -381,25 +385,50 @@ class TestMainDispatch:
         _run_main(monkeypatch, ["abc", "export", "--output", "r.md"])
         assert recorded["argv"] == ["abc", "--output", "r.md"]
 
-    def test_cache_warm_requires_resolvable_session(self, isolated, monkeypatch, capsys):
+    # --- cache-warm tombstone (issue #198) --------------------------------
+    # cache-warm never contacted the Anthropic API, so it could not keep the
+    # server-side prompt cache warm. The command was removed; every argv form
+    # now prints a removal notice and exits 1 — before any latest-session
+    # resolution, and without forking a background process.
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["cache-warm"],
+            ["cache-warm", "on"],
+            ["cache-warm", "on", "30m"],
+            ["cache-warm", "off"],
+            ["cache-warm", "--help"],
+            ["abc", "cache-warm", "on", "30m"],
+            ["abc", "cache-warm", "off"],
+        ],
+    )
+    @pytest.mark.parametrize("with_session", [True, False])
+    def test_cache_warm_is_removed_tombstone(
+        self, isolated, monkeypatch, capsys, argv, with_session
+    ):
+        import os
+
+        if with_session:
+            _write_state([_entry()], session="warmme")
+        forks: list[int] = []
+
+        def _no_fork() -> int:
+            forks.append(1)
+            return 4_194_303  # parent branch; never a real child
+
+        monkeypatch.setattr(os, "fork", _no_fork, raising=False)
         with pytest.raises(SystemExit) as ei:
-            _run_main(monkeypatch, ["cache-warm", "on"])
+            _run_main(monkeypatch, argv)
+        captured = capsys.readouterr()
         assert ei.value.code == 1
-        assert "No session data found" in capsys.readouterr().err
-
-    def test_cache_warm_dispatch_with_latest_session(self, isolated, monkeypatch):
-        _write_state([_entry()], session="warmme")
-        recorded = {}
-        from claude_statusline.cli import cache_warm as cw_mod
-
-        monkeypatch.setattr(
-            cw_mod,
-            "run_cache_warm",
-            lambda sid, remaining, colors: recorded.update(sid=sid, remaining=remaining),
-        )
-        _run_main(monkeypatch, ["cache-warm", "on"])
-        assert recorded["sid"] == "warmme"
-        assert recorded["remaining"] == ["on"]
+        assert forks == []  # no heartbeat process is ever spawned
+        assert captured.out == ""  # no "Cache-warm activated ..." claim
+        assert "Error: 'cache-warm' has been removed" in captured.err
+        assert "never contacted the Anthropic API" in captured.err
+        assert "https://github.com/luongnv89/context-stats/issues/198" in captured.err
+        assert "No session data found" not in captured.err
+        assert "Unknown action" not in captured.err
 
     def test_report_dispatch(self, isolated, monkeypatch):
         recorded = {}
@@ -571,7 +600,7 @@ class TestSetupHint:
     def test_hint_check_never_creates_statusline_conf(self, isolated, monkeypatch, capsys):
         """The hint lookups are read-only: an absent ~/.claude/statusline.conf
         stays absent on commands that never otherwise load config (sessions,
-        report, doctor, cache-warm) — the hint check must not add the
+        report, doctor) — the hint check must not add the
         materialization side effect (issue #188 review, Finding 1), while it
         still fires when unwired."""
         self._write_settings(isolated, {"theme": "dark"})

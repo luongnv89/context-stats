@@ -6,7 +6,7 @@
         <title>Documentation — context-stats</title>
         <meta
             name="description"
-            content="Full guide to context-stats: the live statusline, per-session export, multi-week reports, the six context zones, Model Intelligence, cache keep-warm, and configuration."
+            content="Full guide to context-stats: the live statusline, per-session export, multi-week reports, the six context zones, Model Intelligence, and configuration."
         />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
         <link rel="canonical" href="https://luongnv89.github.io/context-stats/docs.html" />
@@ -48,7 +48,6 @@
             { "@type": "Question", "name": "Does context-stats send any data to the cloud?", "acceptedAnswer": { "@type": "Answer", "text": "No. All session data stays local in ~/.claude/statusline/. There are no network requests, no telemetry, no external API calls of any kind." } },
             { "@type": "Question", "name": "Will it slow down my Claude Code sessions?", "acceptedAnswer": { "@type": "Answer", "text": "No. The statusline script runs synchronously on each prompt in under 10ms. Git operations have a 5-second timeout to prevent hangs." } },
             { "@type": "Question", "name": "Does it work on Windows?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. context-stats is pure Python 3.10+ with zero external dependencies and runs on macOS, Linux, and Windows." } },
-            { "@type": "Question", "name": "What is cache keep-warm and why do I need it?", "acceptedAnswer": { "@type": "Answer", "text": "Claude's prompt cache has a 5-minute TTL. cache-warm runs a lightweight heartbeat every 4 minutes to keep the cache alive for up to 30 minutes." } },
             { "@type": "Question", "name": "What does the compaction marker mean?", "acceptedAnswer": { "@type": "Answer", "text": "A >50% drop in token count between interactions is detected automatically and marked with a triangle. If MI was below 0.6 at that point, it is flagged as potentially lossy." } }
           ]
         }
@@ -450,6 +449,12 @@
                 margin: 8px 0 0;
                 font-size: 13.5px;
             }
+            @media (min-width: 601px) {
+                /* Odd trailing card spans both columns (no empty cell) */
+                .cmd-grid > .cmd:last-child:nth-child(odd) {
+                    grid-column: 1 / -1;
+                }
+            }
             @media (max-width: 600px) {
                 .cmd-grid {
                     grid-template-columns: 1fr;
@@ -634,7 +639,6 @@
                 <h4>Concepts</h4>
                 <a href="#zones">Context zones</a>
                 <a href="#mi">Model Intelligence</a>
-                <a href="#cache">Cache keep-warm</a>
                 <a href="#compaction">Compaction</a>
                 <h4>Reference</h4>
                 <a href="#config">Configuration</a>
@@ -756,18 +760,6 @@
                                 </button>
                             </div>
                             <p>Multi-project cost analytics (<span class="inline-code">--since-days 30</span>).</p>
-                        </div>
-                        <div class="cmd" data-copy="context-stats cache-warm on 30m">
-                            <div class="cmd-head">
-                                <code>context-stats cache-warm on 30m</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats cache-warm on 30m">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>Keep the prompt cache alive during idle gaps (heartbeat every 4 min).</p>
                         </div>
                         <div class="cmd" data-copy="context-stats explain">
                             <div class="cmd-head">
@@ -985,38 +977,6 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                         <li><strong>0.80 &lt; MI &lt; 0.90</strong> — yellow: still solid; watch long chains.</li>
                         <li><strong>≤ 0.80</strong> — degrading; compaction below 0.60 is flagged lossy.</li>
                     </ul>
-                </section>
-
-                <!-- CACHE -->
-                <section id="cache">
-                    <h2>Cache keep-warm</h2>
-                    <p>
-                        Claude's prompt cache has a <strong>5-minute TTL</strong>. Any pause longer
-                        than that silently evicts the cache — and your next prompt pays full price
-                        to rebuild it.
-                    </p>
-                    <div class="callout">
-                        <strong>cache-warm</strong> runs a lightweight background heartbeat every
-                        4 minutes, keeping the cache alive for up to 30 minutes. The savings show
-                        up directly in your <span class="inline-code">context-stats export</span> report.
-                    </div>
-                    <div class="term" data-copy="context-stats cache-warm on 30m">
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">cache keep-warm</span>
-                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats cache-warm on 30m">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre><span class="g">$</span> context-stats cache-warm on 30m
-
-<span class="g">Cache-warm activated for session a3f9c12d….</span>
-<span class="dm">Heartbeat every 4 minutes, auto-stops in 30m.</span></pre>
-                    </div>
                 </section>
 
                 <!-- COMPACTION -->
