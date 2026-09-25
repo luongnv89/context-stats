@@ -4,13 +4,13 @@
 
 ## Landing Page
 
-- [context-stats](https://luongnv89.github.io/context-stats/): Real-time context monitoring, three levels of analytics, terminal dashboard, context zones, and cache keep-warm
+- [context-stats](https://luongnv89.github.io/context-stats/): Real-time context monitoring, three levels of analytics, terminal dashboard, and context zones
 
 ## Documentation
 
 - [Installation](https://luongnv89.github.io/context-stats/installation.html): Quick install via pip, one command, zero dependencies
 - [Configuration](https://luongnv89.github.io/context-stats/configuration.html): Customize 18 colors, toggle MI display, delta tracking, and more
-- [CLI Scripts](https://luongnv89.github.io/context-stats/scripts.html): All commands — graph, sessions, export, report, cache-warm, explain
+- [CLI Scripts](https://luongnv89.github.io/context-stats/scripts.html): All commands — graph, sessions, export, report, explain
 - [CSV Format](https://luongnv89.github.io/context-stats/CSV_FORMAT.html): State file field specification (15 comma-separated fields)
 - [Model Intelligence](https://luongnv89.github.io/context-stats/MODEL_INTELLIGENCE.html): MI score calibration against MRCR v2 8-needle benchmark
 - [Architecture](https://luongnv89.github.io/context-stats/ARCHITECTURE.html): System architecture, data flow, and implementation details

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`cache-warm` command** — `context-stats cache-warm` never contacted the Anthropic API. Its background "heartbeat" only rewrote a local `.heartbeat` file that nothing read, so it could not keep the server-side prompt cache warm, and the `Cache Warm: active` summary badge and "Cache-warm activated" message were misleading. The command, its background process, the graph-summary badge, and the documentation that described it have been removed. Invoking `cache-warm` in any form now prints a removal notice to stderr and exits 1. The "no network requests" guarantee is unchanged (#198)
+
+### Fixed
+
+- **Misleading cache-warm claims** — Removed the documentation claims that `cache-warm` kept the prompt cache alive and that its savings appeared in the `export` report. The 1.16.0 entry below also claimed a Windows subprocess fallback that never existed: on platforms without `os.fork` the command exited with an error (#198)
+
 ## [1.25.0] - 2026-09-02
 
 ### Added

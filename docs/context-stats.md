@@ -168,7 +168,6 @@ ACTIONS:
     export        Export session stats as a markdown report
     sessions      List recent sessions
     explain       Diagnostic dump of Claude Code's JSON context (reads from stdin)
-    cache-warm    Keep the session prompt cache alive via a background heartbeat
     report        Cross-project token usage analytics
     doctor        Diagnose the install; --fix repairs the statusLine wiring
 

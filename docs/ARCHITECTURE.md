@@ -78,7 +78,6 @@ src/claude_statusline/
 │   ├── __init__.py
 │   ├── statusline.py              # claude-statusline entry point
 │   ├── context_stats.py           # context-stats dashboard entry point
-│   ├── cache_warm.py              # context-stats cache-warm subcommand
 │   ├── explain.py                 # context-stats explain subcommand
 │   ├── export.py                  # context-stats export subcommand
 │   └── report.py                  # context-stats report subcommand

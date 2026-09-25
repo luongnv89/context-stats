@@ -186,21 +186,6 @@ Example output:
 | Final zone   | Dump zone         | Whether the session stayed in a safe range |
 ```
 
-### Cache Keep-Warm
-
-Claude's prompt cache has a ~5 minute TTL. Keep it alive during pauses to avoid expensive cache misses:
-
-```bash
-context-stats cache-warm on 30m              # Latest session
-context-stats <session_id> cache-warm on 30m  # Specific session
-```
-
-```bash
-context-stats cache-warm off
-```
-
-Heartbeats fire every 4 minutes. Runs as a detached background process.
-
 ---
 
 ## Level 3: Usage Report
