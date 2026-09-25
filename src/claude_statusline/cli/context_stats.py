@@ -14,7 +14,6 @@ Actions:
     export      Export session stats as a markdown report
     sessions    List recent sessions
     explain     Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
-    cache-warm  Keep session prompt cache alive via a background heartbeat
     doctor      Diagnose (and optionally repair) the installation
 
 Options:
@@ -79,7 +78,6 @@ ACTIONS:
     export        Export session stats as a markdown report
     sessions      List recent sessions (default: last 5 minutes)
     explain       Diagnostic dump of Claude Code's JSON context (pipe JSON to stdin)
-    cache-warm    Keep session prompt cache alive via a background heartbeat
     report        Generate comprehensive token usage analytics across all projects
     doctor        Diagnose the install and repair the Claude Code statusLine wiring
 
@@ -89,10 +87,6 @@ DOCTOR OPTIONS:
 
 SESSIONS OPTIONS:
     --minutes N    Show sessions from the last N minutes (default: 5)
-
-CACHE-WARM OPTIONS:
-    on [duration]  Start heartbeat for the given duration (e.g. 30m, 1h). Default: 30m
-    off            Stop an active heartbeat immediately
 
 GRAPH OPTIONS:
     --type <type>  Graph type to display:
@@ -160,12 +154,6 @@ EXAMPLES:
     # Diagnostic dump (pipe Claude Code JSON context)
     echo '{"model":{"display_name":"Opus"},...}' | context-stats explain
 
-    # Start cache-warm heartbeat for 30 minutes
-    context-stats abc123def cache-warm on 30m
-
-    # Stop an active cache-warm heartbeat
-    context-stats abc123def cache-warm off
-
     # Output to file (no colors, single run)
     context-stats abc123def graph --no-watch --no-color > output.txt
 
@@ -186,6 +174,18 @@ DATA SOURCE:
 
 # Known action names — used to distinguish actions from session IDs in argv
 _KNOWN_ACTIONS = {"graph", "export", "explain", "cache-warm", "report", "sessions", "doctor"}
+
+#: Removed actions kept in _KNOWN_ACTIONS only so their argv still parses (and
+#: is never mistaken for a session_id); main() answers them with a removal
+#: notice. Excluded from the "Valid actions" listing.
+_REMOVED_ACTIONS = {"cache-warm"}
+
+#: Removal notice for the former cache-warm command (issue #198).
+_CACHE_WARM_REMOVED = (
+    "Error: 'cache-warm' has been removed: it never contacted the Anthropic API, "
+    "so it could not keep the server-side prompt cache warm. "
+    "See https://github.com/luongnv89/context-stats/issues/198\n"
+)
 
 #: One-line stderr hint volunteering that the status line is installed but
 #: unwired (issue #188). Emitted by main() until the statusLine wiring exists
@@ -307,7 +307,8 @@ def _normalize_argv(argv: list[str]) -> tuple[str, str | None, list[str]]:
 
     if action not in _KNOWN_ACTIONS:
         sys.stderr.write(
-            f"Error: Unknown action '{action}'. Valid actions: {', '.join(sorted(_KNOWN_ACTIONS))}\n"
+            f"Error: Unknown action '{action}'. "
+            f"Valid actions: {', '.join(sorted(_KNOWN_ACTIONS - _REMOVED_ACTIONS))}\n"
         )
         sys.exit(1)
 
@@ -710,21 +711,11 @@ def render_once(
                 compaction_events.append((ci, score.mi))
 
     # Summary and footer
-    from claude_statusline.cli.cache_warm import _warm_state_path, is_cache_warm_active
-
-    session_id = state_file.session_id or ""
-    # Only show cache-warm status when a state file exists for this session
-    cache_warm_status = (
-        is_cache_warm_active(session_id)
-        if session_id and _warm_state_path(session_id).exists()
-        else None
-    )
     renderer.render_summary(
         entries,
         deltas,
         mi_score=mi_score,
         graph_type=graph_type,
-        cache_warm_status=cache_warm_status,
         compaction_events=compaction_events or None,
         compact_mi_warn_threshold=mi_config.compact_mi_warn_threshold,
     )
@@ -968,6 +959,12 @@ def main() -> None:
 
     args = parse_args()
 
+    # cache-warm was removed (issue #198): answer every argv form with the
+    # removal notice before any session resolution or setup hint.
+    if args.action == "cache-warm":
+        sys.stderr.write(_CACHE_WARM_REMOVED)
+        sys.exit(1)
+
     # One-line stderr hint when the status line is installed but unwired
     # (issue #188): never raises, never changes the exit code or stdout.
     _maybe_warn_setup_hint(args)
@@ -996,25 +993,6 @@ def main() -> None:
             export_argv.append(args.session_id)
         export_argv.extend(args.remaining)
         run_export(export_argv)
-        return
-
-    if args.action == "cache-warm":
-        from claude_statusline.cli.cache_warm import run_cache_warm
-
-        session_id = args.session_id
-        if session_id is None:
-            # Resolve latest session for cache-warm (requires a real session_id)
-            sf = StateFile(None)
-            latest = sf.find_latest_state_file()
-            if latest:
-                session_id = latest.stem.removeprefix("statusline.")
-            else:
-                sys.stderr.write("Error: No session data found. Cannot start cache-warm.\n")
-                sys.exit(1)
-
-        color_enabled = "--no-color" not in sys.argv and sys.stdout.isatty()
-        colors = ColorManager(enabled=color_enabled)
-        run_cache_warm(session_id, args.remaining, colors)
         return
 
     if args.action == "sessions":

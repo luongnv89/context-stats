@@ -299,7 +299,6 @@ class GraphRenderer:
         deltas: list[int],
         mi_score: IntelligenceScore | None = None,
         graph_type: str | None = None,
-        cache_warm_status: tuple[bool, int] | None = None,
         compaction_events: list[tuple[int, float]] | None = None,
         compact_mi_warn_threshold: float = 0.6,
     ) -> None:
@@ -310,7 +309,6 @@ class GraphRenderer:
             deltas: List of token deltas
             mi_score: Optional IntelligenceScore for MI display
             graph_type: Graph type being displayed
-            cache_warm_status: Optional (active, seconds_remaining) from cache_warm module
             compaction_events: Optional list of ``(entry_index, mi_at_compact)`` tuples
                                for each detected compaction event.
             compact_mi_warn_threshold: MI threshold below which a compaction is flagged
@@ -476,18 +474,6 @@ class GraphRenderer:
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
         )
-        if cache_warm_status is not None:
-            active, remaining = cache_warm_status
-            if active:
-                mins = remaining // 60
-                secs = remaining % 60
-                warm_time = f"{mins}m {secs}s" if mins else f"{secs}s"
-                self._emit(
-                    f"  {self.colors.green}{'Cache Warm:':<20}{self.colors.reset} "
-                    f"active ({warm_time} remaining)"
-                )
-            else:
-                self._emit(f"  {self.colors.dim}{'Cache Warm:':<20}{self.colors.reset} inactive")
         self._emit()
 
     def render_footer(self, version: str = "1.6.1", commit_hash: str = "dev") -> None:

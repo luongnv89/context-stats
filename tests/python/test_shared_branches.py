@@ -136,45 +136,6 @@ class TestRendererBranches:
             ),
         )
 
-    def _entry(self, i=0):
-        from claude_statusline.core.state import StateEntry
-
-        return StateEntry(
-            timestamp=1710288000 + i * 300,
-            total_input_tokens=50_000,
-            total_output_tokens=5_000,
-            current_input_tokens=10_000 + i,
-            current_output_tokens=2_000,
-            cache_creation=5_000,
-            cache_read=15_000,
-            cost_usd=0.05,
-            lines_added=1,
-            lines_removed=1,
-            session_id="s",
-            model_id="claude-opus-4-6",
-            workspace_project_dir="/w",
-            context_window_size=200_000,
-        )
-
-    def _summary(self, entries, **kwargs):
-        r = self._renderer()
-        r.begin_buffering()
-        r.render_summary(entries, [100] * max(0, len(entries) - 1), **kwargs)
-        return r.get_buffer()
-
-    def test_summary_cache_warm_active(self):
-        out = self._summary([self._entry()], cache_warm_status=(True, 125))
-        assert "Cache Warm:" in out
-        assert "active (2m 5s remaining)" in out
-
-    def test_summary_cache_warm_active_seconds_only(self):
-        out = self._summary([self._entry()], cache_warm_status=(True, 45))
-        assert "45s remaining" in out
-
-    def test_summary_cache_warm_inactive(self):
-        out = self._summary([self._entry()], cache_warm_status=(False, 0))
-        assert "inactive" in out
-
     def test_render_timeseries_empty_data_is_noop(self):
         r = self._renderer()
         r.begin_buffering()
