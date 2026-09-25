@@ -449,6 +449,12 @@
                 margin: 8px 0 0;
                 font-size: 13.5px;
             }
+            @media (min-width: 601px) {
+                /* Odd trailing card spans both columns (no empty cell) */
+                .cmd-grid > .cmd:last-child:nth-child(odd) {
+                    grid-column: 1 / -1;
+                }
+            }
             @media (max-width: 600px) {
                 .cmd-grid {
                     grid-template-columns: 1fr;
