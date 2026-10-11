@@ -174,6 +174,7 @@ Components:
 - `+2,500` - Token delta since last refresh (`show_delta`)
 - `$0.42` - Cumulative session cost (`show_cost`)
 - `Opus 4.6·high` - Model name with reasoning effort suffix (`show_effort`)
+- `me@example.com` - Logged-in Claude account email (`show_account`, off by default)
 - `abc-123` - Session ID (`show_session`)
 
 Every segment is toggleable via `~/.claude/statusline.conf` — see [docs/configuration.md](docs/configuration.md) for keys and defaults.

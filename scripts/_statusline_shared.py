@@ -174,6 +174,7 @@ _COLOR_KEYS: dict[str, str] = {
     "color_cost": "cost",
     "color_model": "model",
     "color_session": "session",
+    "color_account": "account",
 }
 
 # Zone threshold config keys (integer token counts)
@@ -580,6 +581,37 @@ def _resolve_project_dir(raw):
     except OSError:
         return None
     return candidate if os.path.isdir(candidate) else None
+
+
+def _claude_account_file() -> str:
+    """Location of Claude Code's global config (holds the logged-in account).
+
+    Claude Code keeps it at ``$CLAUDE_CONFIG_DIR/.claude.json`` when that
+    variable is set (multi-account setups), else ``~/.claude.json``.
+    """
+    config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+    base = os.path.expanduser(config_dir) if config_dir else os.path.expanduser("~")
+    return os.path.join(base, ".claude.json")
+
+
+def read_account_email(path: str | None = None) -> str | None:
+    """Email of the logged-in Claude account (``oauthAccount.emailAddress``).
+
+    Local file read only — no network. Returns None when the file is missing
+    or unparseable, or carries no OAuth account (API-key auth). Non-printable
+    characters are stripped so the value cannot inject terminal escapes.
+    """
+    try:
+        with open(path or _claude_account_file(), encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    account = _extract(data, "oauthAccount", {})
+    email = account.get("emailAddress") if isinstance(account, dict) else None
+    if not isinstance(email, str):
+        return None
+    email = "".join(ch for ch in email if ch.isprintable()).strip()
+    return email or None
 
 
 def _format_thinking_info(budget) -> str:

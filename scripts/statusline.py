@@ -191,6 +191,7 @@ get_terminal_width = _shared.get_terminal_width
 fit_to_width = _shared.fit_to_width
 _ensure_utf8_stdout = _shared._ensure_utf8_stdout
 _extract = _shared._extract
+read_account_email = _shared.read_account_email
 _resolve_project_dir = _shared._resolve_project_dir
 _format_thinking_info = _shared._format_thinking_info
 _tps_tail_size = _shared._tps_tail_size
@@ -398,6 +399,7 @@ _BOOL_CONFIG_KEYS = frozenset(
         "show_cost",
         "show_effort",
         "show_pacman",
+        "show_account",
         "suppress_setup_hint",
     }
 )
@@ -488,6 +490,7 @@ def read_config():
         "show_cost": True,
         "show_effort": True,
         "show_pacman": True,
+        "show_account": False,
         "suppress_setup_hint": False,
         "colors": {},
         "zone_config": {},
@@ -611,6 +614,14 @@ show_effort=true
 #   true  = icon visible (default)
 #   false = icon hidden
 show_pacman=true
+
+# Show the email of the logged-in Claude account (e.g., "me@example.com"),
+# read locally from Claude Code's .claude.json ($CLAUDE_CONFIG_DIR/.claude.json
+# when set, else ~/.claude.json). Handy when switching between accounts.
+# Hidden automatically for API-key sessions (no logged-in account).
+#   false = account hidden (default — the email is personal data)
+#   true  = account visible
+show_account=false
 
 
 # ─── Model Intelligence (MI) ────────────────────────────────────────────────
@@ -791,6 +802,8 @@ color_separator=dim
 # color_model=#C0C0C0
 # session ID shown at the end
 # color_session=#8B8682
+# logged-in account email (show_account=true)
+# color_account=#7AA2F7
 
 
 # ─── Statusline Layout Reference ────────────────────────────────────────────
@@ -1028,6 +1041,7 @@ def _resolve_render_colors(config):
         "cost": c.get("cost", separator),
         "model": c.get("model", separator),
         "session": c.get("session", separator),
+        "account": c.get("account", separator),
     }
     return palette, c, prop
 
@@ -1323,10 +1337,11 @@ def _emit_status_line(
     tps_info,
     delta_info,
     cost_info,
+    account_info,
     session_info,
 ):
     """Phase: assemble the atomic parts and emit the width-fitted line."""
-    # Output: dir | branch [changes] | XXk free (XX%)·zone·pacman | MI | tok/s | +delta | $cost | [Model] [id]
+    # Output: dir | branch [changes] | XXk free (XX%)·zone·pacman | MI | tok/s | +delta | $cost | [Model] [account] [id]
     # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{prop['project_name']}{inputs.dir_name}{RESET}"
     thinking_text = _format_thinking_info(inputs.thinking_budget)
@@ -1353,6 +1368,7 @@ def _emit_status_line(
         delta_info,
         cost_info,
         model_info,
+        account_info,
         session_info,
     ]
     print(fit_to_width(parts, max_width))
@@ -1428,6 +1444,10 @@ def _render(data):
         else ""
     )
 
+    # Logged-in account email if enabled (opt-in: personal data)
+    account_email = read_account_email() if config["show_account"] else None
+    account_info = f" | {prop['account']}{account_email}{RESET}" if account_email else ""
+
     _emit_status_line(
         inputs,
         prop,
@@ -1441,6 +1461,7 @@ def _render(data):
         tps_info,
         delta_info,
         cost_info,
+        account_info,
         session_info,
     )
 

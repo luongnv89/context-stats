@@ -49,6 +49,7 @@ from claude_statusline._shared import (
     _format_thinking_info,
     _resolve_project_dir,
     _tps_tail_size,
+    read_account_email,
 )
 from claude_statusline.core.colors import (
     INLINE_SEPARATOR,
@@ -404,7 +405,14 @@ def _render(data: dict) -> None:
     if config.show_session and payload.session_id:
         session_info = f"{SEGMENT_SEPARATOR}{colors.session}{payload.session_id}{colors.reset}"
 
-    # Output: directory | branch [changes] | XXk free (XX%)·zone·pacman | MI | +delta | $cost | [Model] [session_id]
+    # Logged-in account email if enabled (opt-in: personal data)
+    account_info = ""
+    if config.show_account:
+        account_email = read_account_email()
+        if account_email:
+            account_info = f"{SEGMENT_SEPARATOR}{colors.account}{account_email}{colors.reset}"
+
+    # Output: directory | branch [changes] | XXk free (XX%)·zone·pacman | MI | +delta | $cost | [Model] [account] [session_id]
     # Model name is lowest priority — wraps to a new line first when narrow
     base = f"{colors.project_name}{payload.dir_name}{colors.reset}"
     thinking_text = _format_thinking_info(payload.thinking_budget)
@@ -431,6 +439,7 @@ def _render(data: dict) -> None:
         usage.delta,
         cost_info,
         model_info,
+        account_info,
         session_info,
     ]
     print(fit_to_width(parts, max_width))

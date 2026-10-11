@@ -47,6 +47,7 @@ show_pr=true
 show_cost=true
 show_effort=true
 show_pacman=true
+show_account=false
 suppress_setup_hint=false
 """
 
@@ -98,6 +99,12 @@ class Config:
     # ExDump/Dead) — an emotional at-a-glance cue alongside the zone text.
     # On by default; set show_pacman=false to hide it.
     show_pacman: bool = True
+
+    # Logged-in Claude account email (oauthAccount.emailAddress from
+    # Claude Code's .claude.json) — tells multi-account users which account
+    # the session runs under. Off by default: the email is personal data that
+    # would otherwise leak into screenshots and screen shares.
+    show_account: bool = False
 
     # Suppress the one-line stderr hint the context-stats CLI prints while
     # the statusLine wiring is missing from ~/.claude/settings.json. The
@@ -212,6 +219,8 @@ class Config:
                     self.show_effort = value_lower != "false"
                 elif key == "show_pacman":
                     self.show_pacman = value_lower != "false"
+                elif key == "show_account":
+                    self.show_account = value_lower != "false"
                 elif key == "suppress_setup_hint":
                     self.suppress_setup_hint = value_lower != "false"
                 elif key == "tps_precision":
@@ -320,6 +329,7 @@ class Config:
             "show_cost": self.show_cost,
             "show_effort": self.show_effort,
             "show_pacman": self.show_pacman,
+            "show_account": self.show_account,
             "suppress_setup_hint": self.suppress_setup_hint,
             "tps_unit": self.tps_unit,
             "tps_window": self.tps_window,
