@@ -42,7 +42,6 @@ blogs/
 .ruff_cache/
 
 # dev tools
-openspec
 .claude
 .gitissue/
 .gitissue.yml
