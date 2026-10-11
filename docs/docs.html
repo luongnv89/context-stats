@@ -675,7 +675,7 @@
                             </button>
                         </div>
                         <pre><span class="g">$</span> pip install context-stats
-<span class="dm">Successfully installed context-stats-1.25.0</span></pre>
+<span class="dm">Successfully installed context-stats-2.0.0</span></pre>
                     </div>
                     <p>Then add the statusline to <span class="inline-code">~/.claude/settings.json</span>:</p>
                     <div class="term" data-copy='{
@@ -712,6 +712,10 @@
                 <section id="commands">
                     <h2>The commands</h2>
                     <p>Run any of these any time — no session ID needed. Click Copy to paste into your terminal.</p>
+                    <p>
+                        Remove old <span class="inline-code">cache-warm</span> calls from your scripts before upgrading to 2.0.0.
+                        The command never kept the prompt cache alive; it now reports removal and exits with an error.
+                    </p>
                     <div class="cmd-grid">
                         <div class="cmd" data-copy="context-stats graph">
                             <div class="cmd-head">
@@ -808,8 +812,10 @@
                     <p style="font-size: 13.5px; color: var(--text-dim)">
                         Every segment is configurable via <span class="inline-code">~/.claude/statusline.conf</span>.
                         Optional extras — the MI score (<span class="inline-code">show_mi</span>), token delta
-                        (<span class="inline-code">show_delta</span>), and open PR number (<span class="inline-code">show_pr</span>) —
-                        slot in when enabled.
+                        (<span class="inline-code">show_delta</span>), open PR number (<span class="inline-code">show_pr</span>),
+                        and account email (<span class="inline-code">show_account=true</span>) — slot in when enabled.
+                        Account email appears after the model name and stays hidden by default;
+                        customize its color with <span class="inline-code">color_account</span>.
                     </p>
 
                     <h3>The graph dashboard</h3>
@@ -999,16 +1005,18 @@ a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</s
                         Create <span class="inline-code">~/.claude/statusline.conf</span> with
                         simple <span class="inline-code">key=value</span> pairs. Customize 18 named
                         colors (or hex codes), toggle MI display, token detail, delta tracking,
-                        session ID, motion effects, tok/s, and more.
+                        session ID, motion effects, tok/s, account email, and more.
                     </p>
                     <div class="term" data-copy="# Display toggles
 show_mi=true
 show_delta=true
 show_tps=true
+show_account=true
 show_session_id=false
 
 # Colors (named or #hex)
 color_zone_code=yellow
+color_account=#7AA2F7
 color_mi_high=#10B981">
                         <div class="term-bar">
                             <span class="d r"></span><span class="d y"></span><span class="d g"></span>
@@ -1025,10 +1033,12 @@ color_mi_high=#10B981">
 show_mi=<span class="g">true</span>
 show_delta=<span class="g">true</span>
 show_tps=<span class="g">true</span>
+show_account=<span class="g">true</span>
 show_session_id=<span class="g">false</span>
 
 <span class="dm"># Colors (named or #hex)</span>
 color_zone_code=<span class="yl">yellow</span>
+color_account=<span class="c">#7AA2F7</span>
 color_mi_high=<span class="g">#10B981</span></pre>
                     </div>
                     <p>See the full reference in the <a href="configuration.md">configuration docs</a>.</p>

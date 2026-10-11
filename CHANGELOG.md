@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-12
+
+### Breaking Changes
+
+- **Remove the nonfunctional `cache-warm` command** — Existing invocations now print a removal notice to stderr and exit 1 instead of reporting success. Remove `cache-warm` invocations from scripts and workflows before upgrading. The old heartbeat never contacted the Anthropic API and did not keep the server-side prompt cache warm; this release also removes its background process and misleading graph-summary badge. Heartbeat processes started by older installations expire on their original schedule, and leftover local files are inert ([#200](https://github.com/luongnv89/context-stats/pull/200)) @luongnv89
+
 ### Added
 
 - **Account email in the statusline (`show_account`)** — shows the logged-in Claude account's email after the model name (e.g. `Opus 4.6·high | me@example.com`) so you can tell which account a session runs under. Read locally from `oauthAccount.emailAddress` in `$CLAUDE_CONFIG_DIR/.claude.json` (else `~/.claude.json`); hidden for API-key sessions. Off by default because the email is personal data; enable with `show_account=true`, color via `color_account`
@@ -18,6 +24,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Misleading cache-warm claims** — Removed the documentation claims that `cache-warm` kept the prompt cache alive and that its savings appeared in the `export` report. The 1.16.0 entry below also claimed a Windows subprocess fallback that never existed: on platforms without `os.fork` the command exited with an error (#198)
+
+### Dependencies
+
+- **Development dependency security updates** — Bump `virtualenv` to 21.7.16, `urllib3` to 2.8.0, and `python-discovery` to 1.6.2 to address the new dependency advisories while retaining Python 3.10–3.14 compatibility ([#203](https://github.com/luongnv89/context-stats/pull/203)) @luongnv89
+
+### Changed
+
+- **OpenSpec cleanup** — Remove archived OpenSpec specifications and changes, the ignore entry, and stale archive references; runtime behavior is unchanged ([#204](https://github.com/luongnv89/context-stats/pull/204)) @luongnv89
+
+### Contributors
+
+- @luongnv89 contributed the account-email option ([#201](https://github.com/luongnv89/context-stats/pull/201)), cache-warm removal ([#200](https://github.com/luongnv89/context-stats/pull/200)), dependency updates ([#203](https://github.com/luongnv89/context-stats/pull/203)), and OpenSpec cleanup ([#204](https://github.com/luongnv89/context-stats/pull/204)).
+
+**Full Changelog**: <https://github.com/luongnv89/context-stats/compare/v1.25.0...v2.0.0>
 
 ## [1.25.0] - 2026-09-02
 
@@ -84,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logo path in changelog** — Fixed the logo path references in the changelog navigation and footer (#93)
 - **Changelog nav layout** — Removed the search box and fixed the changelog navigation layout for better usability (#101)
 
-[Unreleased]: https://github.com/luongnv89/context-stats/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/luongnv89/context-stats/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/luongnv89/context-stats/compare/v1.25.0...v2.0.0
 [1.25.0]: https://github.com/luongnv89/context-stats/compare/v1.24.2...v1.25.0
 [1.24.2]: https://github.com/luongnv89/context-stats/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/luongnv89/context-stats/compare/v1.24.0...v1.24.1

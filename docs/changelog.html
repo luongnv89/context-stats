@@ -409,14 +409,54 @@
         <div class="container">
             <div class="timeline" id="timeline">
 
-                <!-- 1.25.0 — Latest -->
-                <div class="release latest open" data-version="1.25.0">
+                <!-- 2.0.0 — Latest -->
+                <div class="release latest open" data-version="2.0.0">
+                    <div class="release-dot"></div>
+                    <div class="release-card">
+                        <div class="release-header" onclick="toggleRelease(this)">
+                            <div class="release-meta">
+                                <span class="release-version">v2.0.0</span>
+                                <span class="release-badge latest">Latest</span>
+                                <span class="release-date">2026-10-12</span>
+                            </div>
+                            <span class="release-arrow">▾</span>
+                        </div>
+                        <div class="release-body">
+                            <div class="release-content">
+                                <div class="chg-section removed">
+                                    <div class="chg-section-title removed"><span class="dot"></span>Action needed before upgrading</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Remove cache-warm calls</strong> — The command never kept the prompt cache alive. Remove <code>cache-warm</code> invocations from your scripts before upgrading; it now reports that the feature was removed and exits with an error.</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section added">
+                                    <div class="chg-section-title added"><span class="dot"></span>Added</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Optional account email</strong> — Show your logged-in Claude account email after the model name to distinguish accounts. It stays hidden by default; enable it with <code>show_account=true</code> and customize its color with <code>color_account</code>.</li>
+                                    </ul>
+                                </div>
+                                <div class="chg-section fixed">
+                                    <div class="chg-section-title fixed"><span class="dot"></span>Fixed</div>
+                                    <ul class="chg-list">
+                                        <li><strong>Clearer session summaries</strong> — Session summaries no longer show a misleading cache-keep-alive badge.</li>
+                                    </ul>
+                                </div>
+                                <a class="release-link" href="https://github.com/luongnv89/context-stats/releases/tag/v2.0.0" target="_blank" rel="noopener">
+                                    Release notes on GitHub →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.25.0 -->
+                <div class="release" data-version="1.25.0">
                     <div class="release-dot"></div>
                     <div class="release-card">
                         <div class="release-header" onclick="toggleRelease(this)">
                             <div class="release-meta">
                                 <span class="release-version">v1.25.0</span>
-                                <span class="release-badge latest">Latest</span>
+                                <span class="release-badge version">1.25.0</span>
                                 <span class="release-date">2026-09-02</span>
                             </div>
                             <span class="release-arrow">▾</span>

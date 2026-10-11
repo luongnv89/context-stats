@@ -75,6 +75,14 @@ Checks performed:
 `--fix` preserves every other settings key, backs the file up first, and is
 idempotent. Exit status is 0 when all checks pass, 1 otherwise.
 
+## Upgrading to 2.0.0
+
+Remove `context-stats cache-warm` invocations from scripts and workflows. The
+command has been removed: it only wrote a local heartbeat file and never kept
+the server-side prompt cache warm. Every invocation now prints a removal notice
+to stderr and exits with status 1. Session summaries also stop showing the
+misleading cache-keep-alive badge.
+
 ## Output
 
 ```
@@ -110,7 +118,7 @@ Session Summary
   Model:               claude-sonnet-4-6
   Session Duration:    2h 29m
 
-Powered by context-stats v1.25.0 - https://github.com/luongnv89/context-stats
+Powered by context-stats v2.0.0 - https://github.com/luongnv89/context-stats
 ```
 
 ## Features

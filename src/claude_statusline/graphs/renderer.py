@@ -476,7 +476,7 @@ class GraphRenderer:
         )
         self._emit()
 
-    def render_footer(self, version: str = "1.6.1", commit_hash: str = "dev") -> None:
+    def render_footer(self, version: str = "2.0.0", commit_hash: str = "dev") -> None:
         """Render the footer with version info.
 
         Args:

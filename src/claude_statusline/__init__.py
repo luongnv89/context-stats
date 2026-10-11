@@ -3,7 +3,7 @@
 Never run out of context unexpectedly - monitor your session context in real-time.
 """
 
-__version__ = "1.25.0"
+__version__ = "2.0.0"
 
 from claude_statusline.core.config import Config
 from claude_statusline.core.state import StateFile
