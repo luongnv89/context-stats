@@ -191,6 +191,13 @@ SYNC_ROWS: dict[str, tuple[str, ...]] = {
         "test_render_byte_parity_effort_and_thinking",
         "test_render_byte_parity_show_cost_off",
     ),
+    "Account email display (`oauthAccount.emailAddress` from `$CLAUDE_CONFIG_DIR/.claude.json` "
+    "else `~/.claude.json`, default off, after the model)": (
+        "test_read_account_email_grid",
+        "test_account_file_resolution",
+        "test_render_byte_parity_account_on",
+        "test_render_byte_parity_account_off",
+    ),
     "UTF-8 stdout guard (Windows cp1252 defense, called first in `main()`)": (
         "test_utf8_guard_reused_in_context_stats",
         "test_utf8_guard_behavior_grid",
@@ -293,6 +300,8 @@ def isolated_home(tmp_path, monkeypatch):
     (conf_dir / "statusline.conf").write_text(COMMENT_ONLY_CONF, encoding="utf-8")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
+    # Never let the developer's real Claude account leak into a render.
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     return home
 
 
@@ -649,6 +658,61 @@ class TestIntelligencePairs:
 # ---------------------------------------------------------------------------
 # Rows: Pacman icons
 # ---------------------------------------------------------------------------
+
+
+class TestAccountPair:
+    """The account reader is single-sourced; the script binds the shared body."""
+
+    def test_script_binds_shared_reader(self):
+        assert sl.read_account_email is shared_module.read_account_email
+
+    @pytest.mark.parametrize(
+        ("content", "expected"),
+        [
+            ('{"oauthAccount": {"emailAddress": "a@b.co"}}', "a@b.co"),
+            ('{"oauthAccount": {"emailAddress": "  a@b.co \\u001b[31m"}}', "a@b.co [31m"),
+            ('{"oauthAccount": {"emailAddress": ""}}', None),
+            ('{"oauthAccount": {"emailAddress": 42}}', None),
+            ('{"oauthAccount": {}}', None),
+            ('{"oauthAccount": null}', None),
+            ('{"oauthAccount": "x"}', None),
+            ('{"primaryApiKey": "k"}', None),
+            ("[1, 2]", None),
+            ("{not json", None),
+        ],
+    )
+    def test_read_account_email_grid(self, tmp_path, content, expected):
+        path = tmp_path / ".claude.json"
+        path.write_text(content, encoding="utf-8")
+        assert shared_module.read_account_email(str(path)) == expected
+        assert shared_module.read_account_email(str(tmp_path / "missing.json")) is None
+
+    def test_account_file_resolution(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+        assert shared_module._claude_account_file() == str(tmp_path / ".claude.json")
+        (tmp_path / ".claude.json").write_text(
+            '{"oauthAccount": {"emailAddress": "home@x.io"}}', encoding="utf-8"
+        )
+        assert shared_module.read_account_email() == "home@x.io"
+
+        profile = tmp_path / "profile"
+        profile.mkdir()
+        (profile / ".claude.json").write_text(
+            '{"oauthAccount": {"emailAddress": "profile@x.io"}}', encoding="utf-8"
+        )
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(profile))
+        assert shared_module._claude_account_file() == str(profile / ".claude.json")
+        assert shared_module.read_account_email() == "profile@x.io"
+
+    def test_show_account_defaults_off(self, tmp_path):
+        conf = tmp_path / "statusline.conf"
+        conf.write_text(COMMENT_ONLY_CONF, encoding="utf-8")
+        cfg = Config.load(conf)
+        assert cfg.show_account is False
+        assert cfg.to_dict()["show_account"] is False
+        assert ColorManager(enabled=True, overrides={"account": "X"}).account == "X"
 
 
 class TestPacmanPairs:
@@ -1010,6 +1074,7 @@ show_pr=false
 show_cost=false
 show_effort=false
 show_pacman=false
+show_account=true
 suppress_setup_hint=true
 color_green=#7dcfff
 color_yellow=#e0af68
@@ -1062,6 +1127,7 @@ class TestConfigParsingPair:
             "show_cost",
             "show_effort",
             "show_pacman",
+            "show_account",
             "suppress_setup_hint",
         ]
         for key in boolean_int_str_keys:
@@ -1133,6 +1199,7 @@ class TestConfigParsingPair:
             "show_cost",
             "show_effort",
             "show_pacman",
+            "show_account",
             "suppress_setup_hint",
         ):
             assert scfg[key] == getattr(pcfg, key), key
@@ -2000,6 +2067,45 @@ class TestRenderParity:
         assert "tok/s" in sl_out, sl_err
         assert "+3,200" in ANSI_RE.sub("", sl_out), "delta segment expected on both sides"
         assert pkg_out == sl_out
+
+    @staticmethod
+    def write_account(config_dir, email):
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / ".claude.json").write_text(
+            json.dumps({"oauthAccount": {"emailAddress": email}}), encoding="utf-8"
+        )
+
+    def test_render_byte_parity_account_on(self, tmp_path, monkeypatch, capsys, isolated_home):
+        conf = isolated_home / ".claude" / "statusline.conf"
+        conf.write_text(COMMENT_ONLY_CONF + "show_account=true\n", encoding="utf-8")
+        self.write_account(tmp_path / "profile", "dev@example.com")
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "profile"))
+        payload = build_payload(tmp_path)
+        sl_out, sl_err = render_standalone(payload, isolated_home)
+        pkg_out, _ = render_package(payload, monkeypatch, capsys, isolated_home)
+        assert pkg_out == sl_out
+        plain = self.plain(sl_out)
+        assert "dev@example.com" in plain, sl_err
+        # Placed after the model and before the session id.
+        assert plain.index(payload["model"]["display_name"]) < plain.index("dev@example.com")
+        assert plain.index("dev@example.com") < plain.index(payload["session_id"])
+
+    def test_render_byte_parity_account_off(self, tmp_path, monkeypatch, capsys, isolated_home):
+        # Default config (opt-in feature) and an API-key profile both hide it.
+        self.write_account(isolated_home, "home@example.com")
+        payload = build_payload(tmp_path)
+        sl_out, _ = render_standalone(payload, isolated_home)
+        pkg_out, _ = render_package(payload, monkeypatch, capsys, isolated_home)
+        assert pkg_out == sl_out
+        assert "@example.com" not in self.plain(sl_out)
+
+        conf = isolated_home / ".claude" / "statusline.conf"
+        conf.write_text(COMMENT_ONLY_CONF + "show_account=true\n", encoding="utf-8")
+        (isolated_home / ".claude.json").write_text('{"primaryApiKey": "x"}', encoding="utf-8")
+        sl_out, _ = render_standalone(payload, isolated_home)
+        pkg_out, _ = render_package(payload, monkeypatch, capsys, isolated_home)
+        assert pkg_out == sl_out
+        assert "@" not in self.plain(sl_out)
 
     def test_render_byte_parity_show_cost_off(self, tmp_path, monkeypatch, capsys, isolated_home):
         conf = isolated_home / ".claude" / "statusline.conf"

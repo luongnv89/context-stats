@@ -137,6 +137,10 @@ class ColorManager:
         return self._get_structural("session")
 
     @property
+    def account(self) -> str:
+        return self._get_structural("account")
+
+    @property
     def bold(self) -> str:
         return BOLD if self.enabled else ""
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Account email in the statusline (`show_account`)** — shows the logged-in Claude account's email after the model name (e.g. `Opus 4.6·high | me@example.com`) so you can tell which account a session runs under. Read locally from `oauthAccount.emailAddress` in `$CLAUDE_CONFIG_DIR/.claude.json` (else `~/.claude.json`); hidden for API-key sessions. Off by default because the email is personal data; enable with `show_account=true`, color via `color_account`
+
 ### Removed
 
 - **`cache-warm` command** — `context-stats cache-warm` never contacted the Anthropic API. Its background "heartbeat" only rewrote a local `.heartbeat` file that nothing read, so it could not keep the server-side prompt cache warm, and the `Cache Warm: active` summary badge and "Cache-warm activated" message were misleading. The command, its background process, the graph-summary badge, and the documentation that described it have been removed. Invoking `cache-warm` in any form now prints a removal notice to stderr and exits 1. The "no network requests" guarantee is unchanged (#198)

@@ -55,6 +55,10 @@ show_cost=false    # Hide session cost
 show_effort=true   # (default) Show effort like Opus 4.6·high
 show_effort=false  # Hide effort level
 
+# Show the logged-in Claude account email (read locally from .claude.json)
+show_account=false # (default) Account hidden
+show_account=true  # Show account like me@example.com
+
 # Suppress the one-line "statusLine is not wired" startup hint (see below)
 suppress_setup_hint=false  # (default) hint shown while statusLine is missing from settings.json
 suppress_setup_hint=true   # never print the hint; same as CONTEXT_STATS_SUPPRESS_SETUP_HINT=1
@@ -85,23 +89,24 @@ compact_mi_warn_threshold=0.6  # (default) MI below this at compact time -> loss
 my-project | main [3] | #42 | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
-| Component    | Description              | Default Color | Config Key             |
-| ------------ | ------------------------ | ------------- | ---------------------- |
-| `Opus 4.6`   | Current AI model         | Dim           | `color_model`          |
-| `my-project` | Current directory        | Cyan          | `color_project_name`   |
-| `main`       | Git branch               | Green         | `color_branch_name`    |
-| `[3]`        | Uncommitted changes      | Cyan          | `color_cyan`           |
-| `#42`        | PR number for the branch | Dim           | `color_separator`      |
-| `130,000`    | Available tokens         | Bold White    | `color_context_length` |
-| `(65.0%)`    | Context usage percentage | -             | -                      |
-| `42.5 tok/s` | Model throughput         | Dim           | `color_tps`            |
-| `+2,500`     | Token delta              | Dim           | `color_delta`          |
-| `Code`       | Context zone             | Zone color    | `color_zone`           |
-| `ᗤ`          | Pacman context-zone icon | Zone color    | `color_zone`           |
-| `MI:0.849`   | Model Intelligence score | Yellow        | `color_mi_score`       |
-| `$0.42`      | Cumulative session cost  | Dim           | `color_cost`           |
-| `·high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
-| `abc-123`    | Current session          | Dim           | `color_session`        |
+| Component        | Description              | Default Color | Config Key             |
+| ---------------- | ------------------------ | ------------- | ---------------------- |
+| `Opus 4.6`       | Current AI model         | Dim           | `color_model`          |
+| `my-project`     | Current directory        | Cyan          | `color_project_name`   |
+| `main`           | Git branch               | Green         | `color_branch_name`    |
+| `[3]`            | Uncommitted changes      | Cyan          | `color_cyan`           |
+| `#42`            | PR number for the branch | Dim           | `color_separator`      |
+| `130,000`        | Available tokens         | Bold White    | `color_context_length` |
+| `(65.0%)`        | Context usage percentage | -             | -                      |
+| `42.5 tok/s`     | Model throughput         | Dim           | `color_tps`            |
+| `+2,500`         | Token delta              | Dim           | `color_delta`          |
+| `Code`           | Context zone             | Zone color    | `color_zone`           |
+| `ᗤ`              | Pacman context-zone icon | Zone color    | `color_zone`           |
+| `MI:0.849`       | Model Intelligence score | Yellow        | `color_mi_score`       |
+| `$0.42`          | Cumulative session cost  | Dim           | `color_cost`           |
+| `·high`          | Reasoning effort level   | Dim (model)   | `color_model`          |
+| `me@example.com` | Logged-in account        | Dim           | `color_account`        |
+| `abc-123`        | Current session          | Dim           | `color_session`        |
 
 The five structural elements — model, tok/s, delta, cost, and session — default to
 `color_separator` when their own key is not set, so they can be colored together
@@ -123,6 +128,15 @@ The reasoning effort level is reported by Claude Code (`effort.level`, one of
 reports no effort (e.g. models without an effort setting); set
 `show_effort=false` to hide it. The effort label shares the model color
 (`color_model`).
+
+The account email tells you which Claude account a session runs under — useful
+when you switch between accounts. It is read locally (no network) from
+`oauthAccount.emailAddress` in Claude Code's `.claude.json`:
+`$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set, else
+`~/.claude.json`. It is shown after the model name and hides automatically for
+API-key sessions (no logged-in account). It is off by default because the email
+is personal data that would otherwise appear in screenshots and screen shares;
+set `show_account=true` to show it (color: `color_account`).
 
 Related elements are grouped with a thin `·` separator instead of the `|`
 used between groups: context usage, zone, and pacman icon form one group
@@ -290,6 +304,7 @@ color_delta=#FFF8DC               # Token delta since last refresh
 color_cost=#9ECE6A                # Session cost in USD
 color_model=#C0C0C0               # Model name
 color_session=#8B8682             # Session ID
+color_account=#7AA2F7             # Logged-in account email
 ```
 
 **Fallback chain:** Per-property key → base color key → built-in default. For example, if `color_project_name` is not set, the `color_blue` value is used (if set), otherwise the built-in default (cyan).
