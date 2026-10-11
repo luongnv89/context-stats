@@ -16,7 +16,7 @@ Items identified from the HOLD SCOPE mega review (2026-03-12).
 **Why:** The two implementations share no code or schema contract. Drift has occurred before and will occur again. This catches it automatically.
 **Effort:** S
 **Depends on:** None
-**Status:** Implemented in `tests/bash/test_parity.bats` with CI job in `.github/workflows/ci.yml`. Archived as `openspec/changes/archive/2026-03-12-cross-impl-parity-test/`.
+**Status:** Implemented in `tests/bash/test_parity.bats` with CI job in `.github/workflows/ci.yml`.
 
 ### ~~2. Document CSV state file format + comma guard~~ ✅ Done
 
@@ -24,7 +24,7 @@ Items identified from the HOLD SCOPE mega review (2026-03-12).
 **Why:** The CSV format is an implicit contract across 5 writer implementations with zero documentation. Commas in directory paths silently corrupt rows.
 **Effort:** S
 **Depends on:** None
-**Status:** Created `docs/CSV_FORMAT.md`, fixed ARCHITECTURE.md JSON→CSV, added comma→underscore guard in Python (`state.py`, `statusline.py`), Node.js (`statusline.js`), and bash (`statusline-full.sh`). Parity test with comma fixture passes. Archived as `openspec/changes/archive/2026-03-12-csv-format-doc-comma-guard/`.
+**Status:** Created `docs/CSV_FORMAT.md`, fixed ARCHITECTURE.md JSON→CSV, added comma→underscore guard in Python (`state.py`, `statusline.py`), Node.js (`statusline.js`), and bash (`statusline-full.sh`). Parity test with comma fixture passes.
 
 ### ~~3. Stderr logging for critical error paths~~ ✅ Done
 
