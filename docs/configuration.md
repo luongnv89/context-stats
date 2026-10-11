@@ -89,24 +89,24 @@ compact_mi_warn_threshold=0.6  # (default) MI below this at compact time -> loss
 my-project | main [3] | #42 | 130,000 (65.0%)·Code·ᗤ | MI:0.849 | 42.5 tok/s | +2,500 | $0.42 | Opus 4.6·high | abc-123
 ```
 
-| Component    | Description              | Default Color | Config Key             |
-| ------------ | ------------------------ | ------------- | ---------------------- |
-| `Opus 4.6`   | Current AI model         | Dim           | `color_model`          |
-| `my-project` | Current directory        | Cyan          | `color_project_name`   |
-| `main`       | Git branch               | Green         | `color_branch_name`    |
-| `[3]`        | Uncommitted changes      | Cyan          | `color_cyan`           |
-| `#42`        | PR number for the branch | Dim           | `color_separator`      |
-| `130,000`    | Available tokens         | Bold White    | `color_context_length` |
-| `(65.0%)`    | Context usage percentage | -             | -                      |
-| `42.5 tok/s` | Model throughput         | Dim           | `color_tps`            |
-| `+2,500`     | Token delta              | Dim           | `color_delta`          |
-| `Code`       | Context zone             | Zone color    | `color_zone`           |
-| `ᗤ`          | Pacman context-zone icon | Zone color    | `color_zone`           |
-| `MI:0.849`   | Model Intelligence score | Yellow        | `color_mi_score`       |
-| `$0.42`      | Cumulative session cost  | Dim           | `color_cost`           |
-| `·high`      | Reasoning effort level   | Dim (model)   | `color_model`          |
-| `me@example.com` | Logged-in account    | Dim           | `color_account`        |
-| `abc-123`    | Current session          | Dim           | `color_session`        |
+| Component        | Description              | Default Color | Config Key             |
+| ---------------- | ------------------------ | ------------- | ---------------------- |
+| `Opus 4.6`       | Current AI model         | Dim           | `color_model`          |
+| `my-project`     | Current directory        | Cyan          | `color_project_name`   |
+| `main`           | Git branch               | Green         | `color_branch_name`    |
+| `[3]`            | Uncommitted changes      | Cyan          | `color_cyan`           |
+| `#42`            | PR number for the branch | Dim           | `color_separator`      |
+| `130,000`        | Available tokens         | Bold White    | `color_context_length` |
+| `(65.0%)`        | Context usage percentage | -             | -                      |
+| `42.5 tok/s`     | Model throughput         | Dim           | `color_tps`            |
+| `+2,500`         | Token delta              | Dim           | `color_delta`          |
+| `Code`           | Context zone             | Zone color    | `color_zone`           |
+| `ᗤ`              | Pacman context-zone icon | Zone color    | `color_zone`           |
+| `MI:0.849`       | Model Intelligence score | Yellow        | `color_mi_score`       |
+| `$0.42`          | Cumulative session cost  | Dim           | `color_cost`           |
+| `·high`          | Reasoning effort level   | Dim (model)   | `color_model`          |
+| `me@example.com` | Logged-in account        | Dim           | `color_account`        |
+| `abc-123`        | Current session          | Dim           | `color_session`        |
 
 The five structural elements — model, tok/s, delta, cost, and session — default to
 `color_separator` when their own key is not set, so they can be colored together
