@@ -70,13 +70,15 @@
     var label = btn.querySelector("[data-label]");
     var original = label ? label.textContent : "";
     var status = document.getElementById("copy-status");
+    var resetTimer = null;
     btn.addEventListener("click", function () {
       var target = btn.getAttribute("data-copy-target");
       var targetEl = target ? document.getElementById(target) : null;
       var text = target ? (targetEl || {}).textContent : btn.getAttribute("data-copy");
       if (!text) return;
       var reset = function () {
-        setTimeout(function () {
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () {
           btn.classList.remove("is-done", "is-error");
           if (label) label.textContent = original;
         }, 1800);
