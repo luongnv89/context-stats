@@ -127,7 +127,7 @@ Each line is a CSV record with 15 comma-separated fields (timestamp, token count
 All data stays local:
 
 - State files are written to `~/.claude/statusline/`
-- No network requests are made
+- The only network call is the optional `gh` PR-number lookup (`show_pr=false` turns it off)
 - No telemetry or analytics
 
 ### Local trust boundary

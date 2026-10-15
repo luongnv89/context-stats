@@ -1,1157 +1,130 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Documentation — context-stats</title>
-        <meta
-            name="description"
-            content="Full guide to context-stats: the live statusline, per-session export, multi-week reports, the six context zones, Model Intelligence, and configuration."
-        />
-        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
-        <link rel="canonical" href="https://luongnv89.github.io/context-stats/docs.html" />
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getting started — context-stats</title>
+  <meta name="description" content="Install context-stats, wire it into Claude Code, configure the status line, and use every command.">
+  <link rel="canonical" href="https://luongnv89.github.io/context-stats/docs.html">
+  <meta property="og:title" content="Getting started — context-stats">
+  <meta property="og:description" content="Install context-stats, wire it into Claude Code, configure the status line, and use every command.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://luongnv89.github.io/context-stats/docs.html">
+  <meta property="og:site_name" content="context-stats">
+  <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/logo/logo-icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preload" href="assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.38 7.86 10.9.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></symbol>
+  </defs>
+</svg>
 
-        <meta property="og:title" content="Documentation — context-stats" />
-        <meta
-            property="og:description"
-            content="The full feature and usage guide for context-stats — live monitoring, session exports, multi-week reports, zones, MI, and config."
-        />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://luongnv89.github.io/context-stats/docs.html" />
-        <meta property="og:image" content="https://luongnv89.github.io/context-stats/images/token-graph.png" />
+<a class="skip" href="#main">Skip to content</a>
 
-        <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg" />
-        <meta name="theme-color" content="#0F172A" />
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="context-stats home">
+      <img src="assets/logo/logo-mark.svg" alt="" width="30" height="30">
+      <span>context<b>-stats</b></span>
+    </a>
+    <nav class="nav-main" aria-label="Main">
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <svg><use href="#i-menu"/></svg>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html#solution">Features</a></li>
+        <li><a href="index.html#install">How it works</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="docs.html" aria-current="page">Docs</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-            rel="stylesheet"
-        />
-
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "TechArticle",
-          "headline": "context-stats Documentation",
-          "description": "Full feature and usage guide for context-stats.",
-          "url": "https://luongnv89.github.io/context-stats/docs.html",
-          "author": { "@type": "Person", "name": "Nguyen Luong" }
-        }
-        </script>
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          "mainEntity": [
-            { "@type": "Question", "name": "Does context-stats send any data to the cloud?", "acceptedAnswer": { "@type": "Answer", "text": "No. All session data stays local in ~/.claude/statusline/. There are no network requests, no telemetry, no external API calls of any kind." } },
-            { "@type": "Question", "name": "Will it slow down my Claude Code sessions?", "acceptedAnswer": { "@type": "Answer", "text": "No. The statusline script runs synchronously on each prompt in under 10ms. Git operations have a 5-second timeout to prevent hangs." } },
-            { "@type": "Question", "name": "Does it work on Windows?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. context-stats is pure Python 3.10+ with zero external dependencies and runs on macOS, Linux, and Windows." } },
-            { "@type": "Question", "name": "What does the compaction marker mean?", "acceptedAnswer": { "@type": "Answer", "text": "A >50% drop in token count between interactions is detected automatically and marked with a triangle. If MI was below 0.6 at that point, it is flagged as potentially lossy." } }
-          ]
-        }
-        </script>
-
-        <style>
-            *,
-            *::before,
-            *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-            :root {
-                --bg: #0f172a;
-                --bg-deep: #0b1120;
-                --bg-card: #131c30;
-                --bg-subtle: #1c2740;
-                --border: #243049;
-                --border-hover: #334155;
-                --text: #f1f5f9;
-                --text-muted: #94a3b8;
-                --text-dim: #64748b;
-                --green: #10b981;
-                --cyan: #06b6d4;
-                --indigo: #818cf8;
-                --yellow: #f59e0b;
-                --orange: #f97316;
-                --red: #ef4444;
-                --glow: rgba(16, 185, 129, 0.18);
-                --radius: 14px;
-            }
-            html {
-                scroll-behavior: smooth;
-                scroll-padding-top: 80px;
-            }
-            body {
-                font-family: 'Inter', system-ui, -apple-system, sans-serif;
-                background: var(--bg);
-                color: var(--text);
-                line-height: 1.65;
-                -webkit-font-smoothing: antialiased;
-            }
-            a {
-                color: var(--cyan);
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-            code,
-            .mono {
-                font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
-            }
-
-            /* Nav */
-            nav {
-                position: sticky;
-                top: 0;
-                z-index: 50;
-                background: rgba(15, 23, 42, 0.85);
-                backdrop-filter: blur(12px);
-                border-bottom: 1px solid var(--border);
-            }
-            .nav-inner {
-                max-width: 1180px;
-                margin: 0 auto;
-                padding: 14px 24px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-            .nav-logo {
-                display: flex;
-                align-items: center;
-                gap: 11px;
-            }
-            .nav-logo img {
-                height: 34px;
-                display: block;
-            }
-            .nav-wordmark {
-                font-size: 22px;
-                font-weight: 800;
-                letter-spacing: -0.02em;
-                color: var(--text);
-            }
-            .nav-wordmark .stats {
-                color: var(--green);
-            }
-            .nav-links {
-                list-style: none;
-                display: flex;
-                align-items: center;
-                gap: 26px;
-                font-size: 14px;
-                font-weight: 500;
-            }
-            .nav-links a {
-                color: var(--text-muted);
-                text-decoration: none;
-            }
-            .nav-links a:hover {
-                color: var(--text);
-            }
-            .nav-cta {
-                padding: 8px 16px;
-                background: var(--green);
-                color: #04221a !important;
-                border-radius: 8px;
-                font-weight: 700;
-            }
-            @media (max-width: 820px) {
-                .nav-links li.hide-sm {
-                    display: none;
-                }
-            }
-
-            /* Layout: sidebar + content */
-            .layout {
-                max-width: 1180px;
-                margin: 0 auto;
-                padding: 0 24px;
-                display: grid;
-                grid-template-columns: 220px 1fr;
-                gap: 48px;
-                align-items: start;
-            }
-            .sidebar {
-                position: sticky;
-                top: 80px;
-                padding: 40px 0;
-            }
-            .sidebar h4 {
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: var(--text-dim);
-                margin: 20px 0 10px;
-            }
-            .sidebar a {
-                display: block;
-                padding: 5px 0;
-                color: var(--text-muted);
-                font-size: 14px;
-                text-decoration: none;
-                border-left: 2px solid transparent;
-                padding-left: 12px;
-                margin-left: -2px;
-                transition: color 0.15s, border-color 0.15s;
-            }
-            .sidebar a:hover {
-                color: var(--text);
-                border-color: var(--green);
-            }
-            .content {
-                padding: 40px 0 96px;
-                min-width: 0;
-            }
-            @media (max-width: 880px) {
-                .layout {
-                    grid-template-columns: 1fr;
-                    gap: 0;
-                }
-                .sidebar {
-                    display: none;
-                }
-            }
-
-            /* Doc hero */
-            .doc-hero {
-                padding: 56px 0 36px;
-                border-bottom: 1px solid var(--border);
-                margin-bottom: 48px;
-            }
-            .doc-hero .eyebrow {
-                color: var(--green);
-                font-weight: 700;
-                font-size: 13px;
-                letter-spacing: 0.08em;
-                text-transform: uppercase;
-            }
-            .doc-hero h1 {
-                font-size: clamp(2rem, 5vw, 3rem);
-                font-weight: 800;
-                letter-spacing: -0.02em;
-                margin: 12px 0 14px;
-                line-height: 1.1;
-            }
-            .doc-hero p {
-                color: var(--text-muted);
-                font-size: 1.1rem;
-                max-width: 640px;
-            }
-
-            /* Content typography */
-            .content h2 {
-                font-size: 1.7rem;
-                font-weight: 800;
-                letter-spacing: -0.02em;
-                margin: 56px 0 18px;
-                padding-top: 8px;
-            }
-            .content h2:first-of-type {
-                margin-top: 0;
-            }
-            .content h3 {
-                font-size: 1.2rem;
-                font-weight: 700;
-                margin: 32px 0 12px;
-            }
-            .content p {
-                color: var(--text-muted);
-                margin-bottom: 16px;
-            }
-            .content ul {
-                color: var(--text-muted);
-                margin: 0 0 18px 22px;
-            }
-            .content li {
-                margin-bottom: 7px;
-            }
-            .content strong {
-                color: var(--text);
-                font-weight: 600;
-            }
-            .content > section {
-                scroll-margin-top: 80px;
-            }
-            .inline-code {
-                background: var(--bg-subtle);
-                border: 1px solid var(--border);
-                border-radius: 5px;
-                padding: 2px 7px;
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 0.86em;
-                color: var(--cyan);
-            }
-
-            /* Terminal block */
-            .term {
-                background: var(--bg-deep);
-                border: 1px solid var(--border);
-                border-radius: var(--radius);
-                overflow: hidden;
-                margin: 18px 0 26px;
-            }
-            .term-bar {
-                display: flex;
-                gap: 7px;
-                align-items: center;
-                padding: 10px 14px;
-                background: var(--bg-card);
-                border-bottom: 1px solid var(--border);
-            }
-            .term-bar .d {
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-            }
-            .d.r {
-                background: #ff5f57;
-            }
-            .d.y {
-                background: #febc2e;
-            }
-            .d.g {
-                background: #28c840;
-            }
-            .term-bar .ttl {
-                margin-left: 8px;
-                font-size: 11.5px;
-                color: var(--text-dim);
-                font-family: 'JetBrains Mono', monospace;
-                flex: 1;
-                min-width: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .term-bar .copy-btn {
-                margin-left: auto;
-                flex-shrink: 0;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 5px 10px;
-                border: 1px solid var(--border);
-                border-radius: 7px;
-                background: var(--bg-deep);
-                color: var(--text-muted);
-                font-family: inherit;
-                font-size: 11.5px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: color 0.15s, border-color 0.15s, background 0.15s;
-            }
-            .term-bar .copy-btn:hover {
-                color: var(--text);
-                border-color: var(--border-hover);
-                background: var(--bg-subtle);
-            }
-            .term-bar .copy-btn.copied {
-                color: #04221a;
-                background: var(--green);
-                border-color: var(--green);
-            }
-            .term-bar .copy-btn svg {
-                width: 13px;
-                height: 13px;
-            }
-            .term pre {
-                padding: 18px 18px;
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 12.5px;
-                line-height: 1.7;
-                overflow-x: auto;
-                color: var(--text-muted);
-            }
-            .g {
-                color: var(--green);
-            }
-            .c {
-                color: var(--cyan);
-            }
-            .i {
-                color: var(--indigo);
-            }
-            .yl {
-                color: var(--yellow);
-            }
-            .or {
-                color: var(--orange);
-            }
-            .rd {
-                color: var(--red);
-            }
-            .dm {
-                color: var(--text-dim);
-            }
-
-            /* Cmd card grid */
-            .cmd-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 14px;
-                margin: 20px 0;
-            }
-            .cmd {
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                padding: 18px;
-            }
-            .cmd-head {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .cmd code {
-                color: var(--green);
-                font-size: 13px;
-                font-weight: 600;
-                flex: 1;
-                min-width: 0;
-                overflow-x: auto;
-                white-space: nowrap;
-            }
-            .cmd .copy-btn {
-                flex-shrink: 0;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 30px;
-                height: 30px;
-                padding: 0;
-                border: 1px solid var(--border);
-                border-radius: 7px;
-                background: var(--bg-deep);
-                color: var(--text-muted);
-                cursor: pointer;
-                transition: color 0.15s, border-color 0.15s, background 0.15s;
-            }
-            .cmd .copy-btn:hover {
-                color: var(--text);
-                border-color: var(--border-hover);
-                background: var(--bg-subtle);
-            }
-            .cmd .copy-btn.copied {
-                color: #04221a;
-                background: var(--green);
-                border-color: var(--green);
-            }
-            .cmd .copy-btn svg {
-                width: 14px;
-                height: 14px;
-            }
-            .cmd p {
-                margin: 8px 0 0;
-                font-size: 13.5px;
-            }
-            @media (min-width: 601px) {
-                /* Odd trailing card spans both columns (no empty cell) */
-                .cmd-grid > .cmd:last-child:nth-child(odd) {
-                    grid-column: 1 / -1;
-                }
-            }
-            @media (max-width: 600px) {
-                .cmd-grid {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            /* Zones table */
-            .zone-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 18px 0 26px;
-                font-size: 14px;
-            }
-            .zone-table th,
-            .zone-table td {
-                text-align: left;
-                padding: 12px 14px;
-                border-bottom: 1px solid var(--border);
-            }
-            .zone-table th {
-                color: var(--text-dim);
-                font-weight: 600;
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            .zone-table td {
-                color: var(--text-muted);
-            }
-            .zone-table tr td:first-child {
-                font-weight: 700;
-                color: var(--text);
-                white-space: nowrap;
-            }
-            .pill {
-                display: inline-block;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-
-            /* Callout */
-            .callout {
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-left: 3px solid var(--green);
-                border-radius: 8px;
-                padding: 16px 18px;
-                margin: 22px 0;
-                font-size: 14.5px;
-            }
-            .callout strong {
-                color: var(--green);
-            }
-
-            /* FAQ */
-            details {
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                margin-bottom: 12px;
-                background: var(--bg-card);
-                overflow: hidden;
-            }
-            summary {
-                padding: 16px 20px;
-                cursor: pointer;
-                font-weight: 600;
-                list-style: none;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            summary::-webkit-details-marker {
-                display: none;
-            }
-            summary::after {
-                content: '+';
-                color: var(--green);
-                font-size: 20px;
-                font-weight: 400;
-            }
-            details[open] summary::after {
-                content: '−';
-            }
-            details p {
-                padding: 0 20px 18px;
-                margin: 0;
-                font-size: 14.5px;
-            }
-
-            /* Reference links grid */
-            .ref-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 14px;
-                margin: 18px 0;
-            }
-            .ref {
-                display: block;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                padding: 16px;
-                color: var(--text);
-                text-decoration: none;
-                transition: border-color 0.15s;
-            }
-            .ref:hover {
-                border-color: var(--border-hover);
-                text-decoration: none;
-            }
-            .ref strong {
-                display: block;
-                font-size: 14.5px;
-            }
-            .ref span {
-                font-size: 12.5px;
-                color: var(--text-dim);
-            }
-            @media (max-width: 600px) {
-                .ref-grid {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            /* Footer */
-            footer {
-                border-top: 1px solid var(--border);
-                padding: 36px 0;
-            }
-            .footer-inner {
-                max-width: 1180px;
-                margin: 0 auto;
-                padding: 0 24px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 20px;
-                flex-wrap: wrap;
-                font-size: 14px;
-                color: var(--text-muted);
-            }
-            .footer-inner img {
-                height: 28px;
-                vertical-align: middle;
-                margin-right: 10px;
-            }
-            .footer-inner a {
-                color: var(--green);
-            }
-        </style>
-    </head>
-    <body>
-        <!-- NAV -->
-        <nav>
-            <div class="nav-inner">
-                <a class="nav-logo" href="index.html" aria-label="context-stats home">
-                    <img src="assets/logo/logo-mark.svg" alt="context-stats" />
-                    <span class="nav-wordmark">Context<span class="stats">Stats</span></span>
-                </a>
-                <ul class="nav-links">
-                    <li class="hide-sm"><a href="index.html">Home</a></li>
-                    <li class="hide-sm"><a href="#zones">Zones</a></li>
-                    <li class="hide-sm"><a href="#config">Config</a></li>
-                    <li><a href="https://github.com/luongnv89/context-stats" class="nav-cta">GitHub ★</a></li>
-                </ul>
-            </div>
+<main id="main">
+  <header class="page-head">
+    <div class="wrap">
+      <a class="back" href="index.html"><svg aria-hidden="true"><use href="#i-back"/></svg>Back to context-stats</a>
+      <h1>Getting started</h1>
+      <p class="meta">Docs · Product/Service: context-stats</p>
+    </div>
+  </header>
+  <div class="wrap doc-layout">
+      <aside class="toc">
+        <nav aria-label="On this page">
+          <h2>On this page</h2>
+          <ul>
+          <li><a href="#requirements">Requirements</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#configure">Configure</a></li>
+          <li><a href="#first-run">First run</a></li>
+          <li><a href="#commands">Commands</a></li>
+          <li><a href="#troubleshooting">Troubleshooting</a></li>
+          <li><a href="#uninstall">Uninstall</a></li>
+          </ul>
         </nav>
+      </aside>
+    <article class="prose">
+      <section id="requirements">
+        <h2>Requirements</h2>
+        <p>Python 3.10 or newer. Claude Code; v2.1.153 or newer for the multi-line layout on narrow terminals. Optional: git for branch info, the gh CLI for the PR number.</p>
+      </section>
+      <section id="install">
+        <h2>Install</h2>
+        <div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="pip install command"><code id="c-pip">pip install context-stats</code></pre><button class="copy" type="button" data-copy-target="c-pip" aria-label="Copy pip install command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div><div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="uv install command"><code id="c-uv">uv pip install context-stats</code></pre><button class="copy" type="button" data-copy-target="c-uv" aria-label="Copy uv install command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div>
+      </section>
+      <section id="configure">
+        <h2>Configure</h2>
+        <p>Wire the status line into Claude Code:</p><div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="doctor fix command"><code id="c-fix">context-stats doctor --fix</code></pre><button class="copy" type="button" data-copy-target="c-fix" aria-label="Copy doctor fix command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div><p>Or add this to <code>~/.claude/settings.json</code> by hand:</p><div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="settings.json snippet"><code id="c-json">{ "statusLine": { "type": "command", "command": "claude-statusline" } }</code></pre><button class="copy" type="button" data-copy-target="c-json" aria-label="Copy settings.json snippet"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div><p>Settings live in <code>~/.claude/statusline.conf</code> as key=value lines, no spaces around =. The file is created with defaults on first run.</p><ul class="kv"><li><code>show_delta</code><span>tokens used since the last refresh. Default true.</span></li><li><code>show_mi</code><span>Model Intelligence score. Default false.</span></li><li><code>show_cost</code><span>session cost in USD. Default true.</span></li><li><code>show_effort</code><span>reasoning effort next to the model. Default true.</span></li><li><code>show_pacman</code><span>zone icon next to the zone label. Default true.</span></li><li><code>show_pr</code><span>pull-request number for the current branch (needs gh). Default true.</span></li><li><code>show_session</code><span>session ID. Default true.</span></li><li><code>show_tps</code><span>generation throughput in tokens/s. Default false.</span></li><li><code>show_account</code><span>logged-in Claude account email. Default false.</span></li><li><code>token_detail</code><span>exact token counts (true) or abbreviated, like 64.0k (false). Default true.</span></li><li><code>autocompact</code><span>set true when autocompact is on in Claude Code's /config. Default false.</span></li><li><code>color_&lt;element&gt;</code><span>18 named colors or any #rrggbb hex, such as <code>color_mi_score=#ff9e64</code>.</span></li></ul>
+      </section>
+      <section id="first-run">
+        <h2>First run</h2>
+        <p>Restart Claude Code. On the next turn the status line shows, for example:</p><pre class="block" role="region" tabindex="0" aria-label="Example status line"><code>my-project | main [3] | 64,000 free (32.0%)·Code·ᗤ | MI:0.918 | +2,500 | $0.42 | Opus 4.6·high | abc-123</code></pre>
+      </section>
+      <section id="commands">
+        <h2>Commands</h2>
+        <ul class="kv"><li><code>context-stats doctor</code><span>check the install chain; exits non-zero on failure</span></li><li><code>context-stats doctor --fix</code><span>write the statusLine block into settings.json, with a backup</span></li><li><code>context-stats sessions</code><span>sessions active in the last 5 minutes; <code>--minutes 30</code> widens the window</span></li><li><code>context-stats graph</code><span>live context-growth graph for the latest session</span></li><li><code>context-stats graph --type all</code><span>every graph: delta, cumulative, cache, mi, io, tps</span></li><li><code>context-stats graph -w 5 / --no-watch</code><span>refresh every 5 seconds / draw once and exit</span></li><li><code>context-stats &lt;session_id&gt; graph</code><span>graphs for a specific session</span></li><li><code>context-stats export --output report.md</code><span>Markdown deep-dive of the latest session</span></li><li><code>context-stats report --since-days 30</code><span>cost and cache report across all projects</span></li></ul>
+      </section>
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <ul class="kv"><li><b>Status line not appearing</b><div>run <code>context-stats doctor</code> and apply the fix it prints.</div></li><li><b>context-stats: command not found</b><div>add ~/.local/bin to PATH:<div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="PATH export command"><code id="t-path">echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre><button class="copy" type="button" data-copy-target="t-path" aria-label="Copy PATH export command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div></div></li><li><b>Configuration not taking effect</b><div>remove spaces around = (<code>show_delta=true</code>), then restart Claude Code.</div></li><li><b>Delta always shows zero</b><div>the first refresh sets a baseline; check the state file grows with<div class="block-wrap"><pre class="block" role="region" tabindex="0" aria-label="State file line count command"><code id="t-wc">wc -l ~/.claude/statusline/statusline.*.state</code></pre><button class="copy" type="button" data-copy-target="t-wc" aria-label="Copy state file line count command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div></div></li></ul>
+      </section>
+      <section id="uninstall">
+        <h2>Uninstall</h2>
+        <p><span class="gap">[proof needed — documented uninstall command]</span>, then remove the statusLine block from <code>~/.claude/settings.json</code>.</p>
+      </section>
+      <p class="sr-only" id="copy-status" role="status" aria-live="polite"></p>
+    </article>
+  </div>
+</main>
 
-        <div class="layout">
-            <!-- SIDEBAR -->
-            <aside class="sidebar">
-                <h4>Getting started</h4>
-                <a href="#install">Install in 60s</a>
-                <a href="#commands">Commands</a>
-                <h4>The three levels</h4>
-                <a href="#live">Level 1 · Live</a>
-                <a href="#session">Level 2 · Session</a>
-                <a href="#report">Level 3 · Report</a>
-                <h4>Concepts</h4>
-                <a href="#zones">Context zones</a>
-                <a href="#mi">Model Intelligence</a>
-                <a href="#compaction">Compaction</a>
-                <h4>Reference</h4>
-                <a href="#config">Configuration</a>
-                <a href="#faq">FAQ</a>
-                <a href="#more">More docs</a>
-            </aside>
+<footer class="footer">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="context-stats home">
+      <img src="assets/logo/logo-mark.svg" alt="" width="30" height="30">
+      <span>context<b>-stats</b></span>
+    </a>
+    <nav aria-label="Footer">
+      <ul>
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a href="docs.html" aria-current="page">Docs</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>
 
-            <!-- CONTENT -->
-            <main class="content">
-                <div class="doc-hero">
-                    <span class="eyebrow">Documentation</span>
-                    <h1>Everything context-stats does, in detail.</h1>
-                    <p>
-                        A real-time view of your Claude Code context window, plus the session and
-                        multi-week analytics that tell you where your tokens actually go. No
-                        network calls — everything stays local.
-                    </p>
-                </div>
-
-                <!-- INSTALL -->
-                <section id="install">
-                    <h2>Install in 60 seconds</h2>
-                    <p>Pure Python 3.10+, zero external dependencies. macOS, Linux, and Windows.</p>
-                    <div class="term" data-copy="pip install context-stats">
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">terminal</span>
-                            <button type="button" class="copy-btn" aria-label="Copy install command">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre><span class="g">$</span> pip install context-stats
-<span class="dm">Successfully installed context-stats-2.0.0</span></pre>
-                    </div>
-                    <p>Then add the statusline to <span class="inline-code">~/.claude/settings.json</span>:</p>
-                    <div class="term" data-copy='{
-  "statusLine": {
-    "type": "command",
-    "command": "claude-statusline"
-  }
-}'>
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">~/.claude/settings.json</span>
-                            <button type="button" class="copy-btn" aria-label="Copy Claude Code statusline settings">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre>{
-  <span class="c">"statusLine"</span>: {
-    <span class="c">"type"</span>: <span class="g">"command"</span>,
-    <span class="c">"command"</span>: <span class="g">"claude-statusline"</span>
-  }
-}</pre>
-                    </div>
-                    <p>
-                        Start (or restart) Claude Code — your statusline is now live with context
-                        zone, Model Intelligence, and token delta on every prompt.
-                    </p>
-                </section>
-
-                <!-- COMMANDS -->
-                <section id="commands">
-                    <h2>The commands</h2>
-                    <p>Run any of these any time — no session ID needed. Click Copy to paste into your terminal.</p>
-                    <p>
-                        Remove old <span class="inline-code">cache-warm</span> calls from your scripts before upgrading to 2.0.0.
-                        The command never kept the prompt cache alive; it now reports removal and exits with an error.
-                    </p>
-                    <div class="cmd-grid">
-                        <div class="cmd" data-copy="context-stats graph">
-                            <div class="cmd-head">
-                                <code>context-stats graph</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats graph">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>Live ASCII dashboard — context, MI, cache, and delta per interaction.</p>
-                        </div>
-                        <div class="cmd" data-copy="context-stats sessions">
-                            <div class="cmd-head">
-                                <code>context-stats sessions</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats sessions">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>List recent sessions (last 5 minutes by default; <span class="inline-code">--minutes N</span> to widen).</p>
-                        </div>
-                        <div class="cmd" data-copy="context-stats export">
-                            <div class="cmd-head">
-                                <code>context-stats export</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats export">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>Export a full session report to Markdown — cache, timeline, zones.</p>
-                        </div>
-                        <div class="cmd" data-copy="context-stats report">
-                            <div class="cmd-head">
-                                <code>context-stats report</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats report">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>Multi-project cost analytics (<span class="inline-code">--since-days 30</span>).</p>
-                        </div>
-                        <div class="cmd" data-copy="context-stats explain">
-                            <div class="cmd-head">
-                                <code>context-stats explain</code>
-                                <button type="button" class="copy-btn" aria-label="Copy command: context-stats explain">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p>Explain the raw JSON Claude Code pipes to the statusline.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- LEVEL 1 -->
-                <section id="live">
-                    <h2>Level 1 — Live stats</h2>
-                    <p>
-                        The always-on statusline shows you, at a glance, the model, branch, and how
-                        much context window remains. Run <span class="inline-code">context-stats graph</span>
-                        any time to expand that into a full history.
-                    </p>
-                    <h3>The statusline</h3>
-                    <p>A single line rendered by Claude Code on every prompt:</p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">Claude Code statusline</span></div>
-                        <pre><span class="g">meta-app</span><span class="dm"> | </span><span class="c">feat/85-catalog-visibility-toggle</span> <span class="c">[3]</span><span class="dm"> | </span><span class="yl">132,944 (66.5%)·Code·ᗤ</span><span class="dm"> | 3.3 tok/s | Sonnet 4.6 | baaff3c8-2b25-458b-adcd-96ebdeb5125d</span></pre>
-                    </div>
-                    <p>
-                        Each <span class="inline-code">|</span>-separated segment, left to right — closely
-                        related elements are grouped inside a segment with an unspaced
-                        <span class="inline-code">·</span> instead:
-                    </p>
-                    <ul>
-                        <li><strong>meta-app</strong> — current project directory.</li>
-                        <li><strong>feat/85-… [3]</strong> — git branch and uncommitted change count.</li>
-                        <li><strong>132,944 (66.5%)</strong> — remaining context window, colored by zone.</li>
-                        <li><strong>Code</strong> — current context zone.</li>
-                        <li><strong>ᗤ</strong> — pacman icon mirroring that zone, in the same color.</li>
-                        <li><strong>3.3 tok/s</strong> — rolling model throughput over the last 5 turns.</li>
-                        <li><strong>Sonnet 4.6</strong> — active model.</li>
-                        <li><strong>baaff3c8-…</strong> — session ID.</li>
-                    </ul>
-                    <p style="font-size: 13.5px; color: var(--text-dim)">
-                        Every segment is configurable via <span class="inline-code">~/.claude/statusline.conf</span>.
-                        Optional extras — the MI score (<span class="inline-code">show_mi</span>), token delta
-                        (<span class="inline-code">show_delta</span>), open PR number (<span class="inline-code">show_pr</span>),
-                        and account email (<span class="inline-code">show_account=true</span>) — slot in when enabled.
-                        Account email appears after the model name and stays hidden by default;
-                        customize its color with <span class="inline-code">color_account</span>.
-                    </p>
-
-                    <h3>The graph dashboard</h3>
-                    <p>An on-demand ASCII view of cumulative usage, per-interval delta, and summary stats:</p>
-                    <div class="term" data-copy="context-stats graph">
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">context-stats graph</span>
-                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats graph">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre><span class="g">$</span> context-stats graph
-
-<span class="dm">Token Usage Graphs (Session: a3f9c12d…)</span>
-
-<span class="dm">Cumulative Token Usage          Max: 53,250  Min: 25,148</span>
-<span class="g">53,250 ┤              ▄▄▟████████</span>
-<span class="g">37,192 ┤          ▗▄███████████</span>
-<span class="g">25,148 ┤▄▄▄▄▄▟████</span>
-<span class="dm">       └─16:25───────16:27───────16:34</span>
-
-<span class="dm">Token Delta Per Interval        Max: 25,148  Min: 0</span>
-<span class="c">25,148 ┤▌          ▖      ▟</span>
-<span class="c">10,778 ┤▌    ▖     █   ▖  █</span>
-<span class="c">     0 ┤█▁▁▁▂▂▁▁▁▁██▁▁▁███▁</span>
-<span class="dm">       └─16:25───────16:27───────16:34</span>
-
-<span class="dm">Summary Statistics</span>
-<span class="dm">Current Tokens:   </span><span class="g">53,250</span>
-<span class="dm">Session Duration: </span>8m
-<span class="dm">Data Points:      </span>18
-<span class="dm">Average Delta:    </span><span class="c">2,958</span>
-<span class="dm">Max Delta:        </span><span class="c">25,148</span>
-<span class="dm">Total Growth:     </span><span class="g">28,102</span></pre>
-                    </div>
-                </section>
-
-                <!-- LEVEL 2 -->
-                <section id="session">
-                    <h2>Level 2 — Session deep dive</h2>
-                    <p>
-                        <span class="inline-code">context-stats export</span> writes a full
-                        Markdown report for a single session — summary, key takeaways, an
-                        interaction timeline (with MI and zone per step), context growth, and cache
-                        statistics — then prints a short confirmation:
-                    </p>
-                    <div class="term" data-copy="context-stats export --output report.md">
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">context-stats export</span>
-                            <button type="button" class="copy-btn" aria-label="Copy command: context-stats export --output report.md">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre><span class="g">$</span> context-stats export --output report.md
-
-<span class="g">Exported to report.md</span>
-<span class="dm">  Session:      </span>a3f9c12d-98e0-4a40-8150-690985da46d4
-<span class="dm">  Interactions: </span>38
-<span class="dm">  Model:        </span>claude-opus-4-5-20251101</pre>
-                    </div>
-                    <p>The generated <span class="inline-code">report.md</span> opens with a summary table:</p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">report.md — ## Summary</span></div>
-                        <pre><span class="dm">| Metric             | Value              |</span>
-<span class="dm">|--------------------|--------------------|</span>
-| Context window     | <span class="c">200,000 tokens</span>
-| Final usage        | <span class="or">124,800 (62.4%)</span>
-| Total input tokens | 812,340
-| Total output tokens| 793,218
-| Session cost       | <span class="g">$51.7475</span>
-| Lines changed      | <span class="g">+1,123</span> / <span class="rd">-887</span>
-| Final MI score     | <span class="or">0.572 (Dump zone)</span></pre>
-                    </div>
-                </section>
-
-                <!-- LEVEL 3 -->
-                <section id="report">
-                    <h2>Level 3 — Multi-week report</h2>
-                    <p>
-                        <span class="inline-code">context-stats report --since-days 30</span>
-                        aggregates across every session and project into a Markdown analytics
-                        report: an executive summary, per-model cost breakdown, and the top cost
-                        drivers. Here's a sample over 30 days:
-                    </p>
-                    <div class="term">
-                        <div class="term-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><span class="ttl">report.md — Executive Summary</span></div>
-                        <pre><span class="dm"># Token Usage Analytics Report</span>
-<span class="dm">Generated with: context-stats report --since-days 30</span>
-
-<span class="dm">| Metric             | Value     |</span>
-| Total Spend        | <span class="g">$1,842.35</span>
-| Total Sessions     | 312
-| Projects Analyzed  | 18
-| Cache Hit Ratio    | <span class="yl">41.2%</span>
-| Avg Session Cost   | <span class="g">$5.90</span>
-| Avg Session Duration | 3h 22m
-
-<span class="dm">## Model Usage Breakdown</span>
-<span class="dm">| Model  | Sessions | Tokens      | Cost      | %     |</span>
-| <span class="c">opus</span>   | 241      | 38,204,512  | <span class="g">$1512.30</span>  | 82.1% |
-| <span class="c">sonnet</span> | 42       |  5,918,340  | <span class="g">$ 218.75</span>  | 11.9% |
-| <span class="c">haiku</span>  | 29       |  5,102,876  | <span class="g">$ 111.30</span>  |  6.0% |
-
-<span class="dm">### Top Cost Driver</span>
-a3f9c12d… · <span class="c">project-alpha</span> · <span class="g">$87.40</span> · cache <span class="yl">5%</span> · 2h 14m</pre>
-                    </div>
-                    <p class="dm" style="font-size: 13px; color: var(--text-dim)">
-                        Project names and session IDs are anonymized in the sample. See the
-                        <a href="example-report-30days.md">full example report</a>.
-                    </p>
-                </section>
-
-                <!-- ZONES -->
-                <section id="zones">
-                    <h2>The six context zones</h2>
-                    <p>
-                        As your context fills, context-stats classifies the session into one of
-                        six zones — each with a single, clear action.
-                    </p>
-                    <table class="zone-table">
-                        <thead>
-                            <tr><th>Zone</th><th>What it means</th><th>Recommendation</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td><span class="pill" style="background:var(--green)"></span>Planning</td><td>Plenty of room. Model at full strength.</td><td>Safe to plan and code.</td></tr>
-                            <tr><td><span class="pill" style="background:#ffbf00"></span>Pricing</td><td>Past 150k tokens; cost tier increases (1M-class models).</td><td>Consider <span class="inline-code">/compact</span> — longer sessions cost more even when cached.</td></tr>
-                            <tr><td><span class="pill" style="background:var(--yellow)"></span>Code-only</td><td>Comfortable working range.</td><td>Avoid starting new tasks; finish the current one.</td></tr>
-                            <tr><td><span class="pill" style="background:var(--orange)"></span>Dump zone</td><td>Getting full; quality starts to slip.</td><td>Consider <span class="inline-code">/compact focus on X</span> or delegate to a subagent.</td></tr>
-                            <tr><td><span class="pill" style="background:var(--red)"></span>Hard limit</td><td>Very full; high risk of degradation.</td><td>Run <span class="inline-code">/compact</span> now before quality degrades further.</td></tr>
-                            <tr><td><span class="pill" style="background:#64748b"></span>Dead zone</td><td>Window essentially exhausted.</td><td>Start a new session with <span class="inline-code">/clear</span>.</td></tr>
-                        </tbody>
-                    </table>
-                    <p style="font-size: 13.5px; color: var(--text-dim)">
-                        Zone names map to the internal keys <span class="inline-code">Plan</span>,
-                        <span class="inline-code">Pricing</span>, <span class="inline-code">Code</span>,
-                        <span class="inline-code">Dump</span>, <span class="inline-code">ExDump</span>, and
-                        <span class="inline-code">Dead</span>.
-                    </p>
-                </section>
-
-                <!-- MI -->
-                <section id="mi">
-                    <h2>Model Intelligence (MI)</h2>
-                    <p>
-                        MI is a single 0–1 score estimating how well the model can still reason
-                        given how full the context is. It's calibrated against the
-                        <strong>MRCR v2 8-needle benchmark</strong>, using the formula
-                        <span class="inline-code">MI = max(0, 1 − u<sup>β</sup>)</span> where
-                        <span class="inline-code">u</span> is context utilization and
-                        <span class="inline-code">β</span> is a model-specific degradation curve
-                        (higher β = quality retained longer).
-                    </p>
-                    <ul>
-                        <li><strong>≥ 0.90</strong> — green: full reasoning quality.</li>
-                        <li><strong>0.80 &lt; MI &lt; 0.90</strong> — yellow: still solid; watch long chains.</li>
-                        <li><strong>≤ 0.80</strong> — degrading; compaction below 0.60 is flagged lossy.</li>
-                    </ul>
-                </section>
-
-                <!-- COMPACTION -->
-                <section id="compaction">
-                    <h2>Compaction detection</h2>
-                    <p>
-                        When Claude Code compacts its context — a <strong>&gt;50% drop</strong> in
-                        token count between interactions — context-stats detects it automatically
-                        and marks the point with a <span class="inline-code">▼</span> symbol. If MI
-                        was below 0.6 at that moment, the event is flagged as
-                        <strong>potentially lossy</strong>: key details may have been dropped from
-                        the summary, and you should verify anything important survived.
-                    </p>
-                </section>
-
-                <!-- CONFIG -->
-                <section id="config">
-                    <h2>Configuration</h2>
-                    <p>
-                        Create <span class="inline-code">~/.claude/statusline.conf</span> with
-                        simple <span class="inline-code">key=value</span> pairs. Customize 18 named
-                        colors (or hex codes), toggle MI display, token detail, delta tracking,
-                        session ID, motion effects, tok/s, account email, and more.
-                    </p>
-                    <div class="term" data-copy="# Display toggles
-show_mi=true
-show_delta=true
-show_tps=true
-show_account=true
-show_session_id=false
-
-# Colors (named or #hex)
-color_zone_code=yellow
-color_account=#7AA2F7
-color_mi_high=#10B981">
-                        <div class="term-bar">
-                            <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-                            <span class="ttl">~/.claude/statusline.conf</span>
-                            <button type="button" class="copy-btn" aria-label="Copy sample statusline.conf">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                                <span class="copy-label">Copy</span>
-                            </button>
-                        </div>
-                        <pre><span class="dm"># Display toggles</span>
-show_mi=<span class="g">true</span>
-show_delta=<span class="g">true</span>
-show_tps=<span class="g">true</span>
-show_account=<span class="g">true</span>
-show_session_id=<span class="g">false</span>
-
-<span class="dm"># Colors (named or #hex)</span>
-color_zone_code=<span class="yl">yellow</span>
-color_account=<span class="c">#7AA2F7</span>
-color_mi_high=<span class="g">#10B981</span></pre>
-                    </div>
-                    <p>See the full reference in the <a href="configuration.md">configuration docs</a>.</p>
-                </section>
-
-                <!-- FAQ -->
-                <section id="faq">
-                    <h2>FAQ</h2>
-                    <details>
-                        <summary>Does context-stats send any data to the cloud?</summary>
-                        <p>No. All session data stays local in <span class="inline-code">~/.claude/statusline/</span>. There are no network requests, no telemetry, and no external API calls of any kind. Your token usage and session data never leave your machine.</p>
-                    </details>
-                    <details>
-                        <summary>Will it slow down my Claude Code sessions?</summary>
-                        <p>No. The statusline script is a lightweight Python process that runs synchronously on each prompt, reading local CSV and writing a single line. Typical execution is under 10ms; git operations have a 5-second timeout to prevent hangs.</p>
-                    </details>
-                    <details>
-                        <summary>Does it work on Windows?</summary>
-                        <p>Yes. context-stats is pure Python 3.10+ with zero external dependencies and runs on macOS, Linux, and Windows.</p>
-                    </details>
-                    <details>
-                        <summary>How accurate are the token counts?</summary>
-                        <p>context-stats reads token data directly from Claude Code's statusline JSON and reports the exact values Claude Code provides. The MI score is calibrated against the MRCR v2 8-needle benchmark.</p>
-                    </details>
-                    <details>
-                        <summary>What's the difference between the statusline and the graph dashboard?</summary>
-                        <p>The statusline (<span class="inline-code">claude-statusline</span>) is the always-on one-line display Claude Code shows at each prompt. The graph dashboard (<span class="inline-code">context-stats graph</span>) is an on-demand ASCII view you run manually to see usage history, MI trends, cache activity, and delta per interaction.</p>
-                    </details>
-                    <details>
-                        <summary>Can I customize the colors and display?</summary>
-                        <p>Yes. Create <span class="inline-code">~/.claude/statusline.conf</span> with key=value pairs to customize colors, toggle MI/delta/session ID/tok-s, and more. See the configuration section above.</p>
-                    </details>
-                </section>
-
-                <!-- MORE DOCS -->
-                <section id="more">
-                    <h2>Deeper reference</h2>
-                    <p>For internals and contribution, see the source-controlled docs:</p>
-                    <div class="ref-grid">
-                        <a class="ref" href="installation.md"><strong>Installation</strong><span>Setup & platforms</span></a>
-                        <a class="ref" href="configuration.md"><strong>Configuration</strong><span>Every conf key</span></a>
-                        <a class="ref" href="MODEL_INTELLIGENCE.md"><strong>Model Intelligence</strong><span>The MI formula</span></a>
-                        <a class="ref" href="ARCHITECTURE.md"><strong>Architecture</strong><span>Data flow</span></a>
-                        <a class="ref" href="CSV_FORMAT.md"><strong>CSV format</strong><span>State file fields</span></a>
-                        <a class="ref" href="troubleshooting.md"><strong>Troubleshooting</strong><span>Common issues</span></a>
-                    </div>
-                </section>
-            </main>
-        </div>
-
-        <!-- FOOTER -->
-        <footer>
-            <div class="footer-inner">
-                <div>
-                    <img src="assets/logo/logo-mark.svg" alt="context-stats" />context-stats · MIT
-                    License · Made by <a href="https://github.com/luongnv89">luongnv89</a>
-                </div>
-                <div>
-                    <a href="index.html">Home</a> ·
-                    <a href="https://pypi.org/project/context-stats/">PyPI</a> ·
-                    <a href="https://github.com/luongnv89/context-stats">GitHub</a>
-                </div>
-            </div>
-        </footer>
-
-        <script>
-            (function () {
-                async function copyText(text) {
-                    if (navigator.clipboard && window.isSecureContext) {
-                        await navigator.clipboard.writeText(text);
-                        return;
-                    }
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    ta.setAttribute('readonly', '');
-                    ta.style.position = 'fixed';
-                    ta.style.top = '-9999px';
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                }
-
-                document.addEventListener('click', async (event) => {
-                    const btn = event.target.closest('.copy-btn');
-                    if (!btn) return;
-                    const host = btn.closest('[data-copy]');
-                    if (!host) return;
-                    const text = host.getAttribute('data-copy') || '';
-                    if (!text) return;
-
-                    try {
-                        await copyText(text);
-                        const label = btn.querySelector('.copy-label');
-                        const prev = label ? label.textContent : '';
-                        const prevAria = btn.getAttribute('aria-label') || 'Copy';
-                        btn.classList.add('copied');
-                        btn.setAttribute('aria-label', 'Copied');
-                        if (label) label.textContent = 'Copied';
-                        window.setTimeout(() => {
-                            btn.classList.remove('copied');
-                            if (label) label.textContent = prev || 'Copy';
-                            btn.setAttribute('aria-label', prevAria);
-                        }, 1600);
-                    } catch (_) {
-                        const label = btn.querySelector('.copy-label');
-                        if (label) label.textContent = 'Failed';
-                        window.setTimeout(() => {
-                            if (label) label.textContent = 'Copy';
-                        }, 1600);
-                    }
-                });
-            })();
-        </script>
-    </body>
+<script src="assets/site.js" defer></script>
+</body>
 </html>

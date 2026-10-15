@@ -321,7 +321,7 @@ cp examples/statusline.conf ~/.claude/statusline.conf
 Yes. MIT licensed, zero external dependencies.
 
 **Does it send my data anywhere?**
-No. Session data stays local in `~/.claude/statusline/`. Analytics read from `~/.claude/projects/`.
+No. Session data stays local in `~/.claude/statusline/`, and analytics aggregate those local state files.
 
 **What runtimes does it support?**
 Python 3.10+. Install via `pip install context-stats`.
@@ -369,7 +369,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 Context Stats hooks into Claude Code's status line feature to track token usage across sessions. The Python statusline script writes state data to local CSV files, which the `context-stats` CLI reads to render live graphs. Data is stored locally in `~/.claude/statusline/` and never sent anywhere.
 
-Claude Code invokes the statusline script via stdin JSON pipe — the script reads JSON from stdin and writes formatted text to stdout. The `report` subcommand reads Claude Code's own project logs from `~/.claude/projects/` to aggregate cross-session analytics.
+Claude Code invokes the statusline script via stdin JSON pipe — the script reads JSON from stdin and writes formatted text to stdout. The `report` subcommand aggregates the local state files in `~/.claude/statusline/` for cross-session analytics.
 
 </details>
 

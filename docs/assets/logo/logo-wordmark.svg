@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" width="180" height="40">
-  <!-- Wordmark only, transparent background -->
-  <text x="0" y="28" font-family="'Inter', 'SF Pro Display', system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.5"><tspan fill="#0F172A">Context</tspan><tspan fill="#10B981">Stats</tspan></text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" width="180" height="40" role="img" aria-label="ContextStats">
+  <title>ContextStats</title>
+  <path d="M10 0.5H170A9.5 9.5 0 0 1 179.5 10V30A9.5 9.5 0 0 1 170 39.5H10A9.5 9.5 0 0 1 0.5 30V10A9.5 9.5 0 0 1 10 0.5Z" fill="#0A0A0A" stroke="#262626"/>
+  <text x="90" y="27.5" text-anchor="middle" font-family="'Inter', 'SF Pro Display', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="21" font-weight="700" letter-spacing="-0.5"><tspan fill="#FAFAFA">Context</tspan><tspan fill="#00FF41">Stats</tspan></text>
 </svg>
