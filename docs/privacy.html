@@ -18,6 +18,7 @@
   <meta name="theme-color" content="#0a0a0a">
   <link rel="preload" href="assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/site.css">
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -37,17 +38,19 @@
       <img src="assets/logo/logo-mark.svg" alt="" width="30" height="30">
       <span>context<b>-stats</b></span>
     </a>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
-      <svg><use href="#i-menu"/></svg>
-    </button>
-    <ul class="nav-links" id="nav-links">
-      <li><a href="index.html#solution">Features</a></li>
-      <li><a href="index.html#install">How it works</a></li>
-      <li><a href="index.html#faq">FAQ</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
-    </ul>
+    <nav class="nav-main" aria-label="Main">
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <svg><use href="#i-menu"/></svg>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html#solution">Features</a></li>
+        <li><a href="index.html#install">How it works</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="docs.html">Docs</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
+      </ul>
+    </nav>
   </div>
 </header>
 
@@ -77,10 +80,10 @@
         </nav>
       </aside>
     <article class="prose">
-      <div class="summary-box"><p><b>Summary:</b> The context-stats tool runs on your computer and sends nothing to the project's maintainers. It writes session state to files in your home directory and reads Claude Code's own local logs. This website loads no analytics, trackers, or third-party resources.</p></div>
+      <div class="summary-box"><p><b>Summary:</b> The context-stats tool runs on your computer and sends nothing to the project's maintainers. It writes session state to files in your home directory and reads them back for graphs and reports. This website loads no analytics, trackers, or third-party resources.</p></div>
       <section id="collect">
         <h2>1. Information we collect</h2>
-        <p>None. The maintainers receive no data from the tool or this website. On your machine, the tool writes per-session state files (token counts, model ID, cost, project directory, timing) to <code>~/.claude/statusline/</code>, and the report command reads Claude Code's logs in <code>~/.claude/projects/</code>. If you set <code>show_account=true</code>, it reads your Claude account email from .claude.json to display it; that setting is off by default.</p>
+        <p>None. The maintainers receive no data from the tool or this website. On your machine, the tool writes per-session state files (token counts, model ID, cost, project directory, timing) to <code>~/.claude/statusline/</code>, and the report command aggregates those local state files. If you set <code>show_account=true</code>, it reads your Claude account email from .claude.json to display it; that setting is off by default.</p>
       </section>
       <section id="use">
         <h2>2. How we use it</h2>

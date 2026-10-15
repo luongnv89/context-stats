@@ -17,6 +17,7 @@
   <meta name="theme-color" content="#0a0a0a">
   <link rel="preload" href="assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/site.css">
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -36,17 +37,19 @@
       <img src="assets/logo/logo-mark.svg" alt="" width="30" height="30">
       <span>context<b>-stats</b></span>
     </a>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
-      <svg><use href="#i-menu"/></svg>
-    </button>
-    <ul class="nav-links" id="nav-links">
-      <li><a href="index.html#solution">Features</a></li>
-      <li><a href="index.html#install">How it works</a></li>
-      <li><a href="index.html#faq">FAQ</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="changelog.html" aria-current="page">Changelog</a></li>
-      <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
-    </ul>
+    <nav class="nav-main" aria-label="Main">
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <svg><use href="#i-menu"/></svg>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html#solution">Features</a></li>
+        <li><a href="index.html#install">How it works</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="docs.html">Docs</a></li>
+        <li><a href="changelog.html" aria-current="page">Changelog</a></li>
+        <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
+      </ul>
+    </nav>
   </div>
 </header>
 

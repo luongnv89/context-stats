@@ -25,6 +25,7 @@
   <meta name="theme-color" content="#0a0a0a">
   <link rel="preload" href="assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/site.css">
+  <script>document.documentElement.classList.add("js");</script>
 
   <script type="application/ld+json">
   {
@@ -72,17 +73,19 @@
       <img src="assets/logo/logo-mark.svg" alt="" width="30" height="30">
       <span>context<b>-stats</b></span>
     </a>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
-      <svg><use href="#i-menu"/></svg>
-    </button>
-    <ul class="nav-links" id="nav-links">
-      <li><a href="#solution">Features</a></li>
-      <li><a href="#install">How it works</a></li>
-      <li><a href="#faq">FAQ</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
-    </ul>
+    <nav class="nav-main" aria-label="Main">
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <svg><use href="#i-menu"/></svg>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#solution">Features</a></li>
+        <li><a href="#install">How it works</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="docs.html">Docs</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a class="gh" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></li>
+      </ul>
+    </nav>
   </div>
 </header>
 
@@ -137,7 +140,7 @@
           <span class="plot-marker pop"></span>
         </div>
         <figcaption class="sr-only">Example context-stats status line in Claude Code</figcaption>
-        <code class="statusline" tabindex="0"><span class="s-proj">my-project</span><span class="s-sep"> | </span><span class="s-branch">main [3]</span><span class="s-sep"> | </span><span class="s-ctx">64,000 free (32.0%)</span><span class="s-zone">·Code·ᗤ</span><span class="s-sep"> | </span><span class="s-mi">MI:0.918</span><span class="s-sep"> | </span><span class="s-delta">+2,500</span><span class="s-sep"> | </span><span class="s-cost">$0.42</span><span class="s-sep"> | </span><span class="s-model">Opus 4.6·high</span><span class="s-sep"> | </span><span class="s-sess">abc-123</span><span class="caret" aria-hidden="true"></span></code>
+        <code class="statusline" role="region" tabindex="0" aria-label="Example status line"><span class="s-proj">my-project</span><span class="s-sep"> | </span><span class="s-branch">main [3]</span><span class="s-sep"> | </span><span class="s-ctx">64,000 free (32.0%)</span><span class="s-zone">·Code·ᗤ</span><span class="s-sep"> | </span><span class="s-mi">MI:0.918</span><span class="s-sep"> | </span><span class="s-delta">+2,500</span><span class="s-sep"> | </span><span class="s-cost">$0.42</span><span class="s-sep"> | </span><span class="s-model">Opus 4.6·high</span><span class="s-sep"> | </span><span class="s-sess">abc-123</span><span class="caret" aria-hidden="true"></span></code>
         <div class="meter" aria-hidden="true">
           <span class="z-plan">Planning</span>
           <span class="z-price">Pricing</span>
@@ -230,7 +233,7 @@
 
       <div class="diff reveal">
         <svg aria-hidden="true"><use href="#i-lock"/></svg>
-        <p>No network requests, no account, no runtime dependencies. Session data stays in <code>~/.claude/statusline/</code> on your machine.</p>
+        <p>No telemetry, no account, no runtime dependencies. Session data stays in <code>~/.claude/statusline/</code> on your machine. The only network call is the optional gh PR lookup (<code>show_pr=false</code> turns it off).</p>
       </div>
     </div>
   </section>
@@ -245,12 +248,12 @@
         <article class="card step reveal" data-d="1">
           <div class="icon"><svg aria-hidden="true"><use href="#i-package"/></svg></div>
           <p>Install the package:</p>
-          <div class="cmd"><code id="cmd-install">pip install context-stats</code><button class="copy" type="button" data-copy-target="cmd-install" aria-label="Copy install command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div>
+          <div class="cmd"><code id="cmd-install">pip install context-stats</code><button class="copy" type="button" data-copy-target="cmd-install" aria-label="Copy pip install command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div>
         </article>
         <article class="card step reveal" data-d="2">
           <div class="icon"><svg aria-hidden="true"><use href="#i-wrench"/></svg></div>
           <p>Wire it into Claude Code:</p>
-          <div class="cmd"><code id="cmd-wire">context-stats doctor --fix</code><button class="copy" type="button" data-copy-target="cmd-wire" aria-label="Copy wiring command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div>
+          <div class="cmd"><code id="cmd-wire">context-stats doctor --fix</code><button class="copy" type="button" data-copy-target="cmd-wire" aria-label="Copy doctor fix command"><svg aria-hidden="true"><use href="#i-copy"/></svg><span data-label>Copy</span></button></div>
         </article>
         <article class="card step reveal" data-d="3">
           <div class="icon"><svg aria-hidden="true"><use href="#i-terminal"/></svg></div>
@@ -303,7 +306,7 @@
         </details>
         <details>
           <summary>Does it send my data anywhere?</summary>
-          <p>No. Session data stays in <code>~/.claude/statusline/</code>, and reports read Claude Code's own logs in <code>~/.claude/projects/</code>. The optional PR number is looked up through your local gh CLI.</p>
+          <p>No. Session data stays in <code>~/.claude/statusline/</code>, and reports aggregate those same local state files. The optional PR number is looked up through your local gh CLI, which contacts GitHub (<code>show_pr=false</code> turns it off).</p>
         </details>
         <details>
           <summary>What do I need to run it?</summary>
@@ -330,7 +333,7 @@
     <div class="wrap">
       <img class="final-mark reveal" src="assets/logo/logo-mark.svg" alt="" width="72" height="72">
       <h2 id="final-title" class="reveal">Know your context zone before Claude does.</h2>
-      <p class="reveal" data-d="1">Free and open source. No account, no sign-up, no network requests.</p>
+      <p class="reveal" data-d="1">Free and open source. No account, no sign-up, no telemetry.</p>
       <div class="hero-cta reveal" data-d="2">
         <a class="btn btn-primary" href="#install">Install context-stats <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
         <a class="btn btn-ghost" href="https://github.com/luongnv89/context-stats"><svg aria-hidden="true"><use href="#i-star"/></svg>Star on GitHub</a>

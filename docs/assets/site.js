@@ -17,14 +17,22 @@
   var toggle = document.querySelector(".nav-toggle");
   var links = document.getElementById("nav-links");
   if (toggle && links) {
-    toggle.addEventListener("click", function () {
-      var open = links.classList.toggle("is-open");
+    var setMenu = function (open) {
+      links.classList.toggle("is-open", open);
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    };
+    toggle.addEventListener("click", function () {
+      setMenu(!links.classList.contains("is-open"));
     });
     links.addEventListener("click", function (e) {
-      if (e.target.closest("a")) {
-        links.classList.remove("is-open");
-        toggle.setAttribute("aria-expanded", "false");
+      if (e.target.closest("a")) setMenu(false);
+    });
+    // Escape closes the open menu and hands focus back to the toggle.
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && links.classList.contains("is-open")) {
+        setMenu(false);
+        toggle.focus();
       }
     });
   }
@@ -47,24 +55,49 @@
       finally { document.body.removeChild(ta); }
     });
   }
+  // On copy failure, select the text so the user can copy it by hand.
+  function selectText(el) {
+    if (!el || !window.getSelection) return;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (err) { /* selection unsupported; the status message still explains */ }
+  }
   document.querySelectorAll("[data-copy], [data-copy-target]").forEach(function (btn) {
     var label = btn.querySelector("[data-label]");
     var original = label ? label.textContent : "";
     var status = document.getElementById("copy-status");
     btn.addEventListener("click", function () {
       var target = btn.getAttribute("data-copy-target");
-      var text = target ? (document.getElementById(target) || {}).textContent : btn.getAttribute("data-copy");
+      var targetEl = target ? document.getElementById(target) : null;
+      var text = target ? (targetEl || {}).textContent : btn.getAttribute("data-copy");
       if (!text) return;
+      var reset = function () {
+        setTimeout(function () {
+          btn.classList.remove("is-done", "is-error");
+          if (label) label.textContent = original;
+        }, 1800);
+      };
       copyText(text.trim()).then(function () {
+        btn.classList.remove("is-error");
         btn.classList.add("is-done");
         if (label) label.textContent = "Copied";
         if (status) status.textContent = "Copied to clipboard: " + text.trim();
-        setTimeout(function () {
-          btn.classList.remove("is-done");
-          if (label) label.textContent = original;
-        }, 1800);
+        reset();
       }, function () {
+        btn.classList.remove("is-done");
+        btn.classList.add("is-error");
+        selectText(targetEl);
         if (label) label.textContent = "Press Ctrl+C";
+        if (status) {
+          status.textContent = targetEl
+            ? "Copy failed. The text is selected; press Ctrl+C (Cmd+C on Mac) to copy it."
+            : "Copy failed. Copy it manually: " + text.trim();
+        }
+        reset();
       });
     });
   });
